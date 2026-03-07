@@ -1,0 +1,4 @@
+interface:
+  display_name: "Personal Coding Standards"
+  short_description: "Apply or review against personal coding standards"
+  default_prompt: "Use $personal-coding-standards to apply or review a repository against these standards."

@@ -1,0 +1,44 @@
+# Standards Index
+
+This repository uses a tiered rules model so preferences and hard requirements do not get flattened into the same voice.
+
+## Rule levels
+
+- `must`: mandatory unless a documented local exception exists
+- `should`: default behavior; deviations need a deliberate reason
+- `may`: optional guidance that is useful when it improves clarity or maintainability
+
+## How to use this corpus
+
+1. Start with the core standards.
+2. Load only the language packs that apply to the repository.
+3. Copy the thin local templates into the downstream repo.
+4. Document repo-specific exceptions instead of silently drifting.
+
+## Core standards
+
+- [Architecture](core/architecture.md)
+- [Code Shape](core/code-shape.md)
+- [Testing](core/testing.md)
+
+## Language packs
+
+- [Rust](languages/rust.md)
+- [TypeScript / JavaScript](languages/typescript-javascript.md)
+
+## Downstream interfaces
+
+The supported downstream interfaces for v1 are:
+
+- this index page as the discovery entrypoint
+- the rule-card format used by each standards page
+- the templates in `templates/`
+- the optional Codex skill in `skills/personal-coding-standards/`
+
+## Review model
+
+When reviewing code against these standards:
+
+- treat `must` violations as findings unless a local override exists
+- treat `should` violations as strong refactor recommendations
+- use `may` guidance to improve clarity when the code is already otherwise sound
