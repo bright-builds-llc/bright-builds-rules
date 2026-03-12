@@ -6,6 +6,14 @@ This repository is the canonical source for the Bright Builds coding and archite
 
 If the task is to adopt these requirements into another repository, start with `AI-ADOPTION.md`.
 
+Use the status-first decision rule from `AI-ADOPTION.md`:
+
+- run `scripts/manage-downstream.sh status` first
+- use `install` only for `Repo state: fresh`
+- use `update` only for `Repo state: managed`
+- do not overwrite unclear local files automatically when `Repo state: conflict`
+- use `install --force` only as an explicit legacy replacement path, which first creates `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`
+
 ## Canonical sources
 
 - AI adoption flow: `AI-ADOPTION.md`

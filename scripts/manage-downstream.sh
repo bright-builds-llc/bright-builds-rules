@@ -3,6 +3,8 @@ set -euo pipefail
 
 default_repo_slug="bright-builds-llc/coding-and-architecture-requirements"
 default_ref="main"
+canonical_repo_url="https://github.com/${default_repo_slug}"
+backup_root=".coding-and-architecture-requirements-backups"
 
 managed_pairs=(
   "templates/AGENTS.md|AGENTS.md"
@@ -40,6 +42,9 @@ local_source_root=""
 current_source=""
 current_ref=""
 current_entrypoint=""
+current_source_is_canonical=0
+repo_state=""
+recommended_action=""
 repo_slug=""
 repo_url=""
 ref=""
@@ -48,10 +53,12 @@ standards_index_url=""
 raw_base=""
 last_operation=""
 last_updated_utc=""
+last_backup_relative_root=""
 force=0
 remove_overrides=0
 repo_was_explicit=0
 ref_was_explicit=0
+conflicting_paths=()
 
 cleanup() {
   if [[ -n "$tmp_dir" && -d "$tmp_dir" ]]; then
@@ -63,14 +70,20 @@ usage() {
   cat <<'EOF'
 Usage: manage-downstream.sh <install|update|status|uninstall> [options]
 
+Run `status` first to classify the repo as `fresh`, `managed`, or `conflict`
+before choosing an action.
+
 Commands:
   install     Use for a fresh downstream adoption. Writes the managed files
-              and audit trail, and fails if managed files already exist unless
-              --force is passed.
-  update      Use when the downstream repo already appears adopted from this
-              standards repo. Refreshes the managed files and audit trail.
-  status      Show which managed files are present plus the detected source/ref
-              from the audit manifest or AGENTS.md.
+              and audit trail. If conflicting legacy files already occupy the
+              managed paths, install stops unless --force is passed, in which
+              case those files are backed up first.
+  update      Use only when the downstream repo already appears adopted from
+              https://github.com/bright-builds-llc/coding-and-architecture-requirements.
+              Refreshes the managed files and audit trail and fails for fresh
+              or conflicting repos.
+  status      Show which managed files are present, classify the repo state,
+              and print the recommended next action.
   uninstall   Remove AGENTS.md, CONTRIBUTING.md, and the PR template. Keeps
               standards-overrides.md and the audit manifest unless
               --remove-overrides is passed.
@@ -84,6 +97,8 @@ Options:
   --repo-root <path>       Target downstream repository root. Defaults to the
                            current directory.
   --force                  Overwrite conflicting managed files during install.
+                           Back up those files into
+                           .coding-and-architecture-requirements-backups/<UTC-timestamp> first.
                            Do not use automatically for unclear conflicts.
   --remove-overrides       Also delete standards-overrides.md and
                            coding-and-architecture-requirements.audit.md
@@ -158,6 +173,17 @@ extract_repo_slug_from_url() {
   local repo_url="$1"
 
   printf '%s' "$repo_url" | sed -n 's#^https://github.com/\(.*\)$#\1#p' | sed 's#/$##'
+}
+
+normalize_repo_url() {
+  printf '%s' "$1" | sed 's#/*$##'
+}
+
+source_points_to_canonical() {
+  local normalized_source=""
+
+  normalized_source="$(normalize_repo_url "$1")"
+  [[ -n "$normalized_source" && "$normalized_source" == "$canonical_repo_url" ]]
 }
 
 render_breadcrumb_block() {
@@ -329,6 +355,65 @@ resolve_current_install_metadata() {
   fi
 }
 
+collect_conflicting_paths() {
+  local relative_destination=""
+
+  conflicting_paths=()
+
+  for relative_destination in "${install_blocking_paths[@]}"; do
+    if [[ -f "${repo_root}/${relative_destination}" ]]; then
+      conflicting_paths+=("$relative_destination")
+    fi
+  done
+}
+
+determine_repo_state() {
+  current_source_is_canonical=0
+  repo_state=""
+  recommended_action=""
+
+  collect_conflicting_paths
+
+  if source_points_to_canonical "$current_source"; then
+    current_source_is_canonical=1
+  fi
+
+  if [[ "$current_source_is_canonical" -eq 1 ]]; then
+    repo_state="managed"
+    recommended_action="update"
+    return
+  fi
+
+  if [[ "${#conflicting_paths[@]}" -gt 0 ]]; then
+    repo_state="conflict"
+    recommended_action="manual-review"
+    return
+  fi
+
+  repo_state="fresh"
+  recommended_action="install"
+}
+
+backup_conflicting_paths() {
+  local backup_timestamp=""
+  local relative_destination=""
+  local source_path=""
+  local backup_path=""
+
+  [[ "${#conflicting_paths[@]}" -gt 0 ]] || return
+
+  backup_timestamp="$(date -u +"%Y%m%dT%H%M%SZ")"
+  last_backup_relative_root="${backup_root}/${backup_timestamp}"
+
+  for relative_destination in "${conflicting_paths[@]}"; do
+    source_path="${repo_root}/${relative_destination}"
+    backup_path="${repo_root}/${last_backup_relative_root}/${relative_destination}"
+    mkdir -p "$(dirname "$backup_path")"
+    cp "$source_path" "$backup_path"
+    note "Backed up ${relative_destination} -> ${last_backup_relative_root}/${relative_destination}"
+  done
+}
+
 install_or_update() {
   local operation="$1"
   local pair=""
@@ -346,10 +431,14 @@ install_or_update() {
 
 status() {
   local relative_destination=""
-  local display_source="$current_source"
-  local display_ref="$current_ref"
 
   note "Target repository: ${repo_root}"
+  note "Repo state: ${repo_state}"
+  note "Recommended action: ${recommended_action}"
+
+  if [[ "$repo_state" == "conflict" ]]; then
+    note "Conflicting paths: ${conflicting_paths[*]}"
+  fi
 
   for relative_destination in "${managed_paths[@]}"; do
     local destination_path=""
@@ -363,21 +452,25 @@ status() {
     fi
   done
 
-  if [[ -z "$display_source" && -n "$repo_url" ]]; then
-    display_source="$repo_url"
+  if [[ -f "${repo_root}/${audit_destination}" ]]; then
+    note "Audit trail: ${audit_destination}"
   fi
 
-  if [[ -z "$display_ref" && -n "$ref" ]]; then
-    display_ref="$ref"
-  fi
-
-  if [[ -n "$current_source" || -n "$current_ref" || -f "${repo_root}/${audit_destination}" || -f "${repo_root}/AGENTS.md" ]]; then
-    if [[ -n "$display_source" ]]; then
-      note "Pinned source: ${display_source}"
+  if [[ "$repo_state" == "managed" ]]; then
+    if [[ -n "$current_source" ]]; then
+      note "Pinned source: ${current_source}"
     fi
 
-    if [[ -n "$display_ref" ]]; then
-      note "Pinned ref: ${display_ref}"
+    if [[ -n "$current_ref" ]]; then
+      note "Pinned ref: ${current_ref}"
+    fi
+  elif [[ "$repo_state" == "conflict" ]]; then
+    if [[ -n "$current_source" ]]; then
+      note "Detected source: ${current_source}"
+    fi
+
+    if [[ -n "$current_ref" ]]; then
+      note "Detected ref: ${current_ref}"
     fi
   fi
 }
@@ -477,6 +570,7 @@ done
 repo_root="$(cd "$repo_root" && pwd)"
 
 resolve_current_install_metadata
+determine_repo_state
 
 if [[ "$repo_was_explicit" -eq 0 && -n "$current_source" ]]; then
   maybe_repo_slug="$(extract_repo_slug_from_url "$current_source")"
@@ -504,31 +598,46 @@ standards_index_url="${repo_url}/blob/${ref}/standards/index.md"
 
 case "$command_name" in
   install)
-    existing_managed_files=()
-    relative_destination=""
+    if [[ "$repo_state" == "managed" ]]; then
+      die "repo already appears adopted from ${canonical_repo_url}. Use update instead and inspect ${audit_destination} for the current paper trail."
+    fi
 
-    for relative_destination in "${install_blocking_paths[@]}"; do
-      if [[ -f "${repo_root}/${relative_destination}" ]]; then
-        existing_managed_files+=("$relative_destination")
-      fi
-    done
+    if [[ "$repo_state" == "conflict" && "$force" -ne 1 ]]; then
+      die "repo has conflicting managed-file paths: ${conflicting_paths[*]}. Stop for manual review or re-run install --force to back up and replace them. Inspect ${audit_destination} if present."
+    fi
 
-    if [[ "${#existing_managed_files[@]}" -gt 0 && "$force" -ne 1 ]]; then
-      die "managed files already exist: ${existing_managed_files[*]}. Re-run with --force or use update."
+    if [[ "$repo_state" == "conflict" && "$force" -eq 1 ]]; then
+      backup_conflicting_paths
     fi
 
     install_or_update "install"
     note "Pinned canonical standards to ${repo_url} @ ${ref}"
+    if [[ -n "$last_backup_relative_root" ]]; then
+      note "Legacy backup: ${last_backup_relative_root}"
+    fi
+    note "Audit trail: ${audit_destination}"
     ;;
   update)
+    if [[ "$repo_state" == "fresh" ]]; then
+      die "repo does not appear adopted from ${canonical_repo_url}. Use install for a fresh adoption."
+    fi
+
+    if [[ "$repo_state" == "conflict" ]]; then
+      die "repo has conflicting managed-file paths without clear Bright Builds provenance: ${conflicting_paths[*]}. Stop for manual review instead of running update. Inspect ${audit_destination} if present."
+    fi
+
     install_or_update "update"
     note "Updated canonical standards pin to ${repo_url} @ ${ref}"
+    note "Audit trail: ${audit_destination}"
     ;;
   status)
     status
     ;;
   uninstall)
     uninstall
+    if [[ "$remove_overrides" -eq 0 ]]; then
+      note "Audit trail: ${audit_destination}"
+    fi
     ;;
   *)
     die "unknown command: ${command_name}"

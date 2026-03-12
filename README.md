@@ -24,35 +24,69 @@ Suggested user phrase for an AI:
 
 `Adopt the requirements from https://github.com/bright-builds-llc/coding-and-architecture-requirements into this repo.`
 
+Suggested user phrase for safe legacy adoption:
+
+`Adopt the requirements from https://github.com/bright-builds-llc/coding-and-architecture-requirements into this repo, but do not overwrite unclear existing AGENTS.md, CONTRIBUTING.md, or PR template files automatically.`
+
 The intended AI behavior is:
 
-- inspect the target repo first
-- run `install` for a fresh adoption
-- run `update` when `coding-and-architecture-requirements.audit.md` or a pinned `AGENTS.md` already shows an existing Bright Builds adoption
+- run `status` first
+- run `install` when `status` reports `Repo state: fresh`
+- run `update` when `status` reports `Repo state: managed`
+- stop for review when `status` reports `Repo state: conflict`, unless the user explicitly wants `install --force`
+- use `install --force` only as an opt-in legacy replacement path, which first backs up conflicting files into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`
 - report `coding-and-architecture-requirements.audit.md` as the downstream paper trail after completion
 
 ## Quick install
 
 Run these from the root of the downstream repository that should adopt the standards.
 
-Use `install` for a fresh adoption when the repo does not already contain a Bright Builds audit file or pinned `AGENTS.md`.
+Start with `status` for both new repos and legacy codebases:
 
-Install the generic downstream adoption layer:
+```bash
+curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- status
+```
+
+The status output classifies the repo with stable lines:
+
+- `Repo state: fresh`
+- `Repo state: managed`
+- `Repo state: conflict`
+- `Recommended action: install|update|manual-review`
+
+If `Repo state: fresh`, install the generic downstream adoption layer:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- install --ref main
 ```
 
-Use `update` when the repo already appears to be adopted from this repository and you want to refresh the managed files and audit trail.
+If `Repo state: managed`, refresh the existing Bright Builds adoption:
 
-Check or refresh an existing install:
+```bash
+curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- update --ref main
+```
+
+If `Repo state: conflict`, stop and review the conflicting local files before replacing them. If the repo is a legacy codebase and you intentionally want to replace those files, use `install --force`, which first backs them up into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- install --force --ref main
+```
+
+New repo vs legacy repo:
+
+- A new repo normally reports `fresh`.
+- A legacy repo with no conflicting managed filenames also reports `fresh`, so a normal `install` works.
+- A legacy repo with existing `AGENTS.md`, `CONTRIBUTING.md`, `.github/pull_request_template.md`, or `coding-and-architecture-requirements.audit.md` but no clear Bright Builds provenance reports `conflict`.
+- A verified Bright Builds adoption reports `managed`, including a repo after the default partial uninstall flow.
+
+The manager installs `AGENTS.md`, `CONTRIBUTING.md`, `standards-overrides.md`, `.github/pull_request_template.md`, and `coding-and-architecture-requirements.audit.md`. Prefer replacing `main` with a tag or commit SHA once you start cutting releases.
+
+Check or refresh an existing install at any time:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- status
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- update --ref main
 ```
-
-The manager installs `AGENTS.md`, `CONTRIBUTING.md`, `standards-overrides.md`, `.github/pull_request_template.md`, and `coding-and-architecture-requirements.audit.md`. Prefer replacing `main` with a tag or commit SHA once you start cutting releases.
 
 ## Breadcrumbs and Audit Trail
 
@@ -80,7 +114,8 @@ These breadcrumbs exist to make downstream debugging and auditing more intuitive
 Behavior by command:
 
 - `install` writes the managed files, hidden breadcrumb comments, and the audit manifest
-- `update` refreshes the managed files, breadcrumb comments, and audit manifest
+- `install --force` first backs up conflicting legacy files into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/` before replacing them
+- `update` refreshes the managed files, breadcrumb comments, and audit manifest, but only for verified Bright Builds adoptions
 - `status` reads from the audit manifest when present and falls back to `AGENTS.md` for older installs
 - `uninstall` removes `AGENTS.md`, `CONTRIBUTING.md`, and the PR template, but intentionally keeps `standards-overrides.md` and `coding-and-architecture-requirements.audit.md` so the paper trail remains
 - `uninstall --remove-overrides` removes both `standards-overrides.md` and `coding-and-architecture-requirements.audit.md`

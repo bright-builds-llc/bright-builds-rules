@@ -12,6 +12,7 @@ This repository uses a simple release-notes model instead of a heavyweight chang
 - Generic downstream installation flow with language-agnostic templates and docs
 - Hidden breadcrumb comments plus a visible audit manifest for downstream installs and partial uninstalls
 - Dedicated AI adoption guide plus repo-root agent routing for URL-only adoption workflows
+- Legacy-adoption hardening with status-first repo classification, provenance-gated updates, and force-install backups for conflicting files
 
 ## Release note guidance
 
