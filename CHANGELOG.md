@@ -11,6 +11,7 @@ This repository uses a simple release-notes model instead of a heavyweight chang
 - Downstream management script plus README one-liners for install, update, status, and uninstall
 - Generic downstream installation flow with language-agnostic templates and docs
 - Hidden breadcrumb comments plus a visible audit manifest for downstream installs and partial uninstalls
+- Dedicated AI adoption guide plus repo-root agent routing for URL-only adoption workflows
 
 ## Release note guidance
 

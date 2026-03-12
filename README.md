@@ -8,15 +8,42 @@ This repository is a versioned policy and adoption kit for a personal, opinionat
 - Teams can copy thin local templates into their own repositories.
 - Codex users can opt into a thin skill that points back to the canonical docs.
 
+## For AI Agents
+
+If an AI is given only this repository URL and asked to adopt these requirements into another repository, the AI should start with [AI-ADOPTION.md](AI-ADOPTION.md).
+
+Direct fetch targets for AI tooling:
+
+- Repository URL: `https://github.com/bright-builds-llc/coding-and-architecture-requirements`
+- Raw README URL: `https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/README.md`
+- Raw AI adoption guide URL: `https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/AI-ADOPTION.md`
+- Raw install script URL: `https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh`
+- Standards index URL: `https://github.com/bright-builds-llc/coding-and-architecture-requirements/blob/main/standards/index.md`
+
+Suggested user phrase for an AI:
+
+`Adopt the requirements from https://github.com/bright-builds-llc/coding-and-architecture-requirements into this repo.`
+
+The intended AI behavior is:
+
+- inspect the target repo first
+- run `install` for a fresh adoption
+- run `update` when `coding-and-architecture-requirements.audit.md` or a pinned `AGENTS.md` already shows an existing Bright Builds adoption
+- report `coding-and-architecture-requirements.audit.md` as the downstream paper trail after completion
+
 ## Quick install
 
 Run these from the root of the downstream repository that should adopt the standards.
+
+Use `install` for a fresh adoption when the repo does not already contain a Bright Builds audit file or pinned `AGENTS.md`.
 
 Install the generic downstream adoption layer:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- install --ref main
 ```
+
+Use `update` when the repo already appears to be adopted from this repository and you want to refresh the managed files and audit trail.
 
 Check or refresh an existing install:
 
@@ -62,6 +89,8 @@ Behavior by command:
 
 ```text
 .
+├── AGENTS.md
+├── AI-ADOPTION.md
 ├── CHANGELOG.md
 ├── scripts/
 ├── skills/
@@ -74,6 +103,7 @@ Behavior by command:
 
 ## Canonical entrypoints
 
+- AI adoption guide: [AI-ADOPTION.md](AI-ADOPTION.md)
 - Standards index: [standards/index.md](standards/index.md)
 - Core architecture: [standards/core/architecture.md](standards/core/architecture.md)
 - Code shape: [standards/core/code-shape.md](standards/core/code-shape.md)
@@ -91,7 +121,7 @@ Behavior by command:
 4. Record any repo-specific deviations in the downstream `standards-overrides.md`.
 5. Optionally use the Codex skill to bootstrap adoption or review work against the standards.
 
-The intended downstream footprint is small: a local `AGENTS.md`, a local `CONTRIBUTING.md`, an overrides file, and a PR template. The canonical standards remain here.
+The intended downstream footprint is still small: a local `AGENTS.md`, a local `CONTRIBUTING.md`, an overrides file, a PR template, and the audit trail file. The canonical standards remain here.
 
 ## Uninstall
 

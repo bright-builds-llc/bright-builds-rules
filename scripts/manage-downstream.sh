@@ -64,22 +64,30 @@ usage() {
 Usage: manage-downstream.sh <install|update|status|uninstall> [options]
 
 Commands:
-  install     Install the managed files into the target repository.
-  update      Refresh the managed files from a newer or different ref.
-  status      Show which managed files are present and the current pin.
-  uninstall   Remove managed files. Keeps standards-overrides.md unless
+  install     Use for a fresh downstream adoption. Writes the managed files
+              and audit trail, and fails if managed files already exist unless
+              --force is passed.
+  update      Use when the downstream repo already appears adopted from this
+              standards repo. Refreshes the managed files and audit trail.
+  status      Show which managed files are present plus the detected source/ref
+              from the audit manifest or AGENTS.md.
+  uninstall   Remove AGENTS.md, CONTRIBUTING.md, and the PR template. Keeps
+              standards-overrides.md and the audit manifest unless
               --remove-overrides is passed.
 
 Options:
-  --ref <git-ref>          Source ref to pin in AGENTS.md. Defaults to the
-                           current pin for update, otherwise main.
+  --ref <git-ref>          Source ref to pin in downstream files. Defaults to
+                           the current detected pin for update, otherwise main.
   --repo <owner/repo>      Source GitHub repository. Defaults to the current
                            AGENTS.md source for update, otherwise
                            bright-builds-llc/coding-and-architecture-requirements.
-  --repo-root <path>       Target repository root. Defaults to the current
-                           directory.
-  --force                  Overwrite existing managed files during install.
-  --remove-overrides       Also delete standards-overrides.md during uninstall.
+  --repo-root <path>       Target downstream repository root. Defaults to the
+                           current directory.
+  --force                  Overwrite conflicting managed files during install.
+                           Do not use automatically for unclear conflicts.
+  --remove-overrides       Also delete standards-overrides.md and
+                           coding-and-architecture-requirements.audit.md
+                           during uninstall.
   -h, --help               Show this help text.
 EOF
 }
