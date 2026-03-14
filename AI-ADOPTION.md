@@ -16,10 +16,10 @@ Use this decision rule:
 
 1. Confirm you are in the root of the repository that should adopt these requirements.
 2. Run `status`.
-3. If `status` reports `Repo state: fresh`, run `install`.
-4. If `status` reports `Repo state: managed`, run `update`.
-5. If `status` reports `Repo state: conflict`, stop and explain the conflict instead of forcing an overwrite automatically.
-6. Use `install --force` only when the user explicitly wants to replace conflicting legacy files. That command first backs them up into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`.
+3. If `status` reports `Repo state: installable`, run `install`.
+4. If `status` reports `Repo state: installed`, run `update`.
+5. If `status` reports `Repo state: blocked`, stop and explain the blocking files instead of forcing an overwrite automatically.
+6. Use `install --force` only when the user explicitly wants to replace blocked managed files. That command first backs them up into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`.
 7. After install or update, report the files written and point the user to `coding-and-architecture-requirements.audit.md` as the paper trail.
 
 ## Commands
@@ -38,7 +38,7 @@ Fresh adoption:
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- install --ref main
 ```
 
-Existing adoption from this repository:
+Marker-based adoption already installed:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- update --ref main
@@ -50,7 +50,7 @@ Status / confirmation:
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- status
 ```
 
-Explicit legacy replacement with backup first:
+Explicit replacement with backup first:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- install --force --ref main
@@ -59,28 +59,31 @@ curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-archit
 Expected downstream files after a successful install or update:
 
 - `AGENTS.md`
+- `AGENTS.bright-builds.md`
 - `CONTRIBUTING.md`
-- `standards-overrides.md`
 - `.github/pull_request_template.md`
 - `coding-and-architecture-requirements.audit.md`
+- `standards-overrides.md` when it did not already exist
 
 ## Inspection hints
 
 Use the `status` output as the primary decision signal. It emits stable lines such as:
 
-- `Repo state: fresh`
-- `Repo state: managed`
-- `Repo state: conflict`
-- `Recommended action: install|update|manual-review`
+- `Repo state: installable`
+- `Repo state: installed`
+- `Repo state: blocked`
+- `Recommended action: install|update|install --force`
 
 Interpret those states this way:
 
-- a new repo normally reports `fresh`
-- a legacy repo with no conflicting managed filenames also reports `fresh`
-- a verified Bright Builds adoption reports `managed`
-- a legacy repo with conflicting local `AGENTS.md`, `CONTRIBUTING.md`, `.github/pull_request_template.md`, or `coding-and-architecture-requirements.audit.md` but no clear Bright Builds provenance reports `conflict`
+- a new repo normally reports `installable`
+- a repo with an existing unmarked local `AGENTS.md` and no other managed-file conflicts also reports `installable`
+- a repo with the managed AGENTS marker block plus `AGENTS.bright-builds.md` reports `installed`
+- a repo with conflicting managed files such as `CONTRIBUTING.md`, `.github/pull_request_template.md`, `AGENTS.bright-builds.md`, or `coding-and-architecture-requirements.audit.md` reports `blocked`
 
-If the repo reports `conflict`, inspect the listed paths and do not use `--force` automatically.
+If the repo reports `installable` and already has a local `AGENTS.md`, `install` preserves that file and appends the managed Bright Builds block to the end.
+
+If the repo reports `blocked`, inspect the listed paths and do not use `--force` automatically.
 
 ## Failure handling
 
@@ -98,11 +101,11 @@ If you do not know which repository should receive the adoption:
 
 If the downstream repository already contains conflicting managed files:
 
-- explain which files conflict
-- explain whether they look like an existing Bright Builds adoption or unrelated local files
-- use `update` only when `status` reports `managed`
+- explain which files block installation
+- explain whether they look like marker-based Bright Builds files or unrelated local files
+- use `update` only when `status` reports `installed`
 - otherwise stop and ask how the user wants to reconcile the conflict
-- if the user explicitly chooses replacement, tell them `install --force` will back up the conflicting files into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/` before writing the managed files
+- if the user explicitly chooses replacement, tell them `install --force` will back up the blocked files into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/` before writing the managed files
 
 ## Success confirmation
 
@@ -110,9 +113,6 @@ After a successful install or update, mention:
 
 - which command you ran
 - which files were written or refreshed
+- whether `AGENTS.md` was created or had the managed Bright Builds block appended to it
 - that `coding-and-architecture-requirements.audit.md` records the source URL, pinned ref, and managed files
 - that the standards corpus starts at `https://github.com/bright-builds-llc/coding-and-architecture-requirements/blob/main/standards/index.md`
-
-Suggested user phrase for safe legacy adoption:
-
-`Adopt the requirements from https://github.com/bright-builds-llc/coding-and-architecture-requirements into this repo, but do not overwrite unclear existing AGENTS.md, CONTRIBUTING.md, or PR template files automatically.`

@@ -24,24 +24,21 @@ Suggested user phrase for an AI:
 
 `Adopt the requirements from https://github.com/bright-builds-llc/coding-and-architecture-requirements into this repo.`
 
-Suggested user phrase for safe legacy adoption:
-
-`Adopt the requirements from https://github.com/bright-builds-llc/coding-and-architecture-requirements into this repo, but do not overwrite unclear existing AGENTS.md, CONTRIBUTING.md, or PR template files automatically.`
-
 The intended AI behavior is:
 
 - run `status` first
-- run `install` when `status` reports `Repo state: fresh`
-- run `update` when `status` reports `Repo state: managed`
-- stop for review when `status` reports `Repo state: conflict`, unless the user explicitly wants `install --force`
-- use `install --force` only as an opt-in legacy replacement path, which first backs up conflicting files into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`
+- run `install` when `status` reports `Repo state: installable`
+- run `update` when `status` reports `Repo state: installed`
+- stop for review when `status` reports `Repo state: blocked`, unless the user explicitly wants `install --force`
+- preserve a pre-existing unmarked `AGENTS.md` by appending the managed Bright Builds block to the end during `install`
+- use `install --force` only as an opt-in replacement path for blocked managed files, which first backs them up into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`
 - report `coding-and-architecture-requirements.audit.md` as the downstream paper trail after completion
 
 ## Quick install
 
 Run these from the root of the downstream repository that should adopt the standards.
 
-Start with `status` for both new repos and legacy codebases:
+Start with `status` for both new repos and existing codebases:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- status
@@ -49,37 +46,40 @@ curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-archit
 
 The status output classifies the repo with stable lines:
 
-- `Repo state: fresh`
-- `Repo state: managed`
-- `Repo state: conflict`
-- `Recommended action: install|update|manual-review`
+- `Repo state: installable`
+- `Repo state: installed`
+- `Repo state: blocked`
+- `Recommended action: install|update|install --force`
 
-If `Repo state: fresh`, install the generic downstream adoption layer:
+If `Repo state: installable`, install the downstream adoption layer:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- install --ref main
 ```
 
-If `Repo state: managed`, refresh the existing Bright Builds adoption:
+If the repository already has an unmarked local `AGENTS.md`, `install` keeps that file and appends the managed Bright Builds block to the end. The same command also writes `AGENTS.bright-builds.md`, `CONTRIBUTING.md`, `.github/pull_request_template.md`, `coding-and-architecture-requirements.audit.md`, and `standards-overrides.md` when the overrides file does not already exist.
+
+If `Repo state: installed`, refresh the existing marker-based Bright Builds adoption:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- update --ref main
 ```
 
-If `Repo state: conflict`, stop and review the conflicting local files before replacing them. If the repo is a legacy codebase and you intentionally want to replace those files, use `install --force`, which first backs them up into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`:
+If `Repo state: blocked`, stop and review the blocking managed files before replacing them. If you intentionally want to replace those files, use `install --force`, which first backs them up into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- install --force --ref main
 ```
 
-New repo vs legacy repo:
+New repo vs existing repo:
 
-- A new repo normally reports `fresh`.
-- A legacy repo with no conflicting managed filenames also reports `fresh`, so a normal `install` works.
-- A legacy repo with existing `AGENTS.md`, `CONTRIBUTING.md`, `.github/pull_request_template.md`, or `coding-and-architecture-requirements.audit.md` but no clear Bright Builds provenance reports `conflict`.
-- A verified Bright Builds adoption reports `managed`, including a repo after the default partial uninstall flow.
+- A new repo normally reports `installable`.
+- A repo with an existing local `AGENTS.md` and no other managed-file conflicts also reports `installable`.
+- A repo with existing managed conflicts such as `CONTRIBUTING.md`, `.github/pull_request_template.md`, `AGENTS.bright-builds.md`, or `coding-and-architecture-requirements.audit.md` reports `blocked`.
+- A repo with the managed AGENTS marker block plus `AGENTS.bright-builds.md` reports `installed`.
+- A repo using the previous standalone downstream layout from this repository reports `blocked` until you explicitly replace it.
 
-The manager installs `AGENTS.md`, `CONTRIBUTING.md`, `standards-overrides.md`, `.github/pull_request_template.md`, and `coding-and-architecture-requirements.audit.md`. Prefer replacing `main` with a tag or commit SHA once you start cutting releases.
+The manager installs a managed block inside `AGENTS.md`, writes `AGENTS.bright-builds.md`, writes `CONTRIBUTING.md`, writes `.github/pull_request_template.md`, writes `coding-and-architecture-requirements.audit.md`, and creates `standards-overrides.md` if it is missing. Prefer replacing `main` with a tag or commit SHA once you start cutting releases.
 
 Check or refresh an existing install at any time:
 
@@ -88,37 +88,37 @@ curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-archit
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- update --ref main
 ```
 
-## Breadcrumbs and Audit Trail
+## AGENTS Marker And Audit Trail
 
-Every managed Markdown file installed by the downstream manager begins with a hidden HTML comment block marked by:
+The downstream install is anchored by two AGENTS files:
 
-- `<!-- coding-and-architecture-requirements:begin -->`
-- `<!-- coding-and-architecture-requirements:end -->`
+- `AGENTS.md` contains a bounded managed Bright Builds block marked by:
+  - `<!-- coding-and-architecture-requirements-managed:begin -->`
+  - `<!-- coding-and-architecture-requirements-managed:end -->`
+- `AGENTS.bright-builds.md` contains the managed Bright Builds guidance and a visible warning that the file is installed from this repository and should not be edited directly.
 
-That hidden block records the source repository URL, pinned version/ref, canonical entrypoint URL, and the path to `coding-and-architecture-requirements.audit.md`.
-
-The visible `coding-and-architecture-requirements.audit.md` file is the main paper trail. It records:
+The visible `coding-and-architecture-requirements.audit.md` file is the paper trail. It records:
 
 - which repository these requirements came from
 - which revision is pinned
-- which managed files are currently present
+- which managed files are currently tracked
 - which install/update/uninstall action most recently touched the downstream repo
 - when that action last ran in UTC
 
-These breadcrumbs exist to make downstream debugging and auditing more intuitive for both humans and tools. They make it easy to answer:
+These files exist to make downstream debugging and auditing more intuitive for both humans and tools. They make it easy to answer:
 
 - where did these requirements come from?
 - which revision is this repo pinned to?
-- what did the downstream manager last install, update, or intentionally leave behind?
+- what did the downstream manager last install or update?
 
 Behavior by command:
 
-- `install` writes the managed files, hidden breadcrumb comments, and the audit manifest
-- `install --force` first backs up conflicting legacy files into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/` before replacing them
-- `update` refreshes the managed files, breadcrumb comments, and audit manifest, but only for verified Bright Builds adoptions
-- `status` reads from the audit manifest when present and falls back to `AGENTS.md` for older installs
-- `uninstall` removes `AGENTS.md`, `CONTRIBUTING.md`, and the PR template, but intentionally keeps `standards-overrides.md` and `coding-and-architecture-requirements.audit.md` so the paper trail remains
-- `uninstall --remove-overrides` removes both `standards-overrides.md` and `coding-and-architecture-requirements.audit.md`
+- `install` writes or refreshes the managed AGENTS block, writes `AGENTS.bright-builds.md`, refreshes the managed files, writes the audit manifest, and creates `standards-overrides.md` if it is missing
+- rerunning `install` on an already installed repo refreshes the managed block and does not duplicate it
+- `install --force` first backs up blocked managed files into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/` before replacing them
+- `update` refreshes the managed AGENTS block, sidecar, managed files, and audit manifest, but only for the new marker-based installs
+- `status` uses the managed AGENTS marker block plus `AGENTS.bright-builds.md` as the install signal
+- `uninstall` removes the managed AGENTS block, `AGENTS.bright-builds.md`, `CONTRIBUTING.md`, the PR template, and the audit manifest, while preserving `standards-overrides.md`
 
 ## Repository layout
 
@@ -146,6 +146,7 @@ Behavior by command:
 - Rust guidance: [standards/languages/rust.md](standards/languages/rust.md)
 - TypeScript/JavaScript guidance: [standards/languages/typescript-javascript.md](standards/languages/typescript-javascript.md)
 - Downstream adoption templates: [templates/AGENTS.md](templates/AGENTS.md)
+- Downstream sidecar template: [templates/AGENTS.bright-builds.md](templates/AGENTS.bright-builds.md)
 - Optional Codex skill: [skills/personal-coding-standards/SKILL.md](skills/personal-coding-standards/SKILL.md)
 
 ## Adoption flow
@@ -156,20 +157,14 @@ Behavior by command:
 4. Record any repo-specific deviations in the downstream `standards-overrides.md`.
 5. Optionally use the Codex skill to bootstrap adoption or review work against the standards.
 
-The intended downstream footprint is still small: a local `AGENTS.md`, a local `CONTRIBUTING.md`, an overrides file, a PR template, and the audit trail file. The canonical standards remain here.
+The intended downstream footprint is still small: a local `AGENTS.md` with a managed Bright Builds block, a local `AGENTS.bright-builds.md` sidecar, a local `CONTRIBUTING.md`, an overrides file, a PR template, and the audit trail file. The canonical standards remain here.
 
 ## Uninstall
 
-Remove the main managed files from a downstream repository while preserving the local override history and audit trail:
+Remove the managed AGENTS block and the managed Bright Builds files from a downstream repository while preserving the local override history:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- uninstall
-```
-
-Also remove `standards-overrides.md` and `coding-and-architecture-requirements.audit.md` if the downstream repository no longer needs any local trace of the installation:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- uninstall --remove-overrides
 ```
 
 ## Versioning and releases
@@ -195,7 +190,13 @@ Run the docs hygiene checks with:
 ./scripts/verify-docs.sh
 ```
 
-The script runs Markdown linting and internal link checks for the repository.
+Run the downstream manager integration checks with:
+
+```bash
+bash ./scripts/test-manage-downstream.sh
+```
+
+The scripts run Markdown linting, internal link checks, and installer integration coverage for the repository.
 
 ## Initial source material
 

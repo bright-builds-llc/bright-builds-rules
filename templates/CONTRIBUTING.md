@@ -1,10 +1,3 @@
-<!-- coding-and-architecture-requirements:begin -->
-<!-- source-repository: REPLACE_WITH_REPO_URL -->
-<!-- version-pin: REPLACE_WITH_TAG_OR_COMMIT -->
-<!-- canonical-entrypoint: REPLACE_WITH_TAGGED_STANDARDS_INDEX_URL -->
-<!-- audit-manifest: REPLACE_WITH_AUDIT_MANIFEST_PATH -->
-<!-- coding-and-architecture-requirements:end -->
-
 # CONTRIBUTING.md
 
 Use this file as the starting point for a downstream repository's contribution guide.

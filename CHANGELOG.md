@@ -10,9 +10,9 @@ This repository uses a simple release-notes model instead of a heavyweight chang
 - Docs verification script and Markdown lint configuration
 - Downstream management script plus README one-liners for install, update, status, and uninstall
 - Generic downstream installation flow with language-agnostic templates and docs
-- Hidden breadcrumb comments plus a visible audit manifest for downstream installs and partial uninstalls
 - Dedicated AI adoption guide plus repo-root agent routing for URL-only adoption workflows
-- Legacy-adoption hardening with status-first repo classification, provenance-gated updates, and force-install backups for conflicting files
+- Breaking reset to a marker-based downstream installer with `AGENTS.bright-builds.md`, append-only `AGENTS.md` integration, and `installable|installed|blocked` status
+- Simplified downstream audit trail and uninstall flow, including removal of breadcrumb comments and preservation of repo-local `standards-overrides.md`
 
 ## Release note guidance
 
