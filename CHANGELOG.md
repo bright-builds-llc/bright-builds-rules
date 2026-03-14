@@ -13,6 +13,7 @@ This repository uses a simple release-notes model instead of a heavyweight chang
 - Dedicated AI adoption guide plus repo-root agent routing for URL-only adoption workflows
 - Breaking reset to a marker-based downstream installer with `AGENTS.bright-builds.md`, append-only `AGENTS.md` integration, and `installable|installed|blocked` status
 - Simplified downstream audit trail and uninstall flow, including removal of breadcrumb comments and preservation of repo-local `standards-overrides.md`
+- Exact-commit provenance recorded alongside the requested ref in `AGENTS.bright-builds.md`, the audit trail, and installed `status`
 
 ## Release note guidance
 

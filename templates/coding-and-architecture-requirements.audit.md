@@ -6,6 +6,7 @@ This file records that this repository is using the Bright Builds coding and arc
 
 - Source repository: `REPLACE_WITH_REPO_URL`
 - Version pin: `REPLACE_WITH_TAG_OR_COMMIT`
+- Exact commit: `REPLACE_WITH_EXACT_COMMIT`
 - Canonical entrypoint: `REPLACE_WITH_TAGGED_STANDARDS_INDEX_URL`
 - Managed sidecar path: `REPLACE_WITH_MANAGED_SIDECAR_PATH`
 - AGENTS integration mode: `append-only managed block`

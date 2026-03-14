@@ -20,7 +20,7 @@ Use this decision rule:
 4. If `status` reports `Repo state: installed`, run `update`.
 5. If `status` reports `Repo state: blocked`, stop and explain the blocking files instead of forcing an overwrite automatically.
 6. Use `install --force` only when the user explicitly wants to replace blocked managed files. That command first backs them up into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`.
-7. After install or update, report the files written and point the user to `coding-and-architecture-requirements.audit.md` as the paper trail.
+7. After install or update, report the files written and point the user to `coding-and-architecture-requirements.audit.md` as the paper trail, including the source URL, requested ref, and exact resolved commit when available.
 
 ## Commands
 
@@ -114,5 +114,5 @@ After a successful install or update, mention:
 - which command you ran
 - which files were written or refreshed
 - whether `AGENTS.md` was created or had the managed Bright Builds block appended to it
-- that `coding-and-architecture-requirements.audit.md` records the source URL, pinned ref, and managed files
+- that `coding-and-architecture-requirements.audit.md` records the source URL, pinned ref, exact commit when resolved, and managed files
 - that the standards corpus starts at `https://github.com/bright-builds-llc/coding-and-architecture-requirements/blob/main/standards/index.md`

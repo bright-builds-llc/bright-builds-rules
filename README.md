@@ -33,6 +33,7 @@ The intended AI behavior is:
 - preserve a pre-existing unmarked `AGENTS.md` by appending the managed Bright Builds block to the end during `install`
 - use `install --force` only as an opt-in replacement path for blocked managed files, which first backs them up into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`
 - report `coding-and-architecture-requirements.audit.md` as the downstream paper trail after completion
+- report the pinned source URL, requested ref, and exact resolved commit when available
 
 ## Quick install
 
@@ -79,7 +80,7 @@ New repo vs existing repo:
 - A repo with the managed AGENTS marker block plus `AGENTS.bright-builds.md` reports `installed`.
 - A repo using the previous standalone downstream layout from this repository reports `blocked` until you explicitly replace it.
 
-The manager installs a managed block inside `AGENTS.md`, writes `AGENTS.bright-builds.md`, writes `CONTRIBUTING.md`, writes `.github/pull_request_template.md`, writes `coding-and-architecture-requirements.audit.md`, and creates `standards-overrides.md` if it is missing. Prefer replacing `main` with a tag or commit SHA once you start cutting releases.
+The manager installs a managed block inside `AGENTS.md`, writes `AGENTS.bright-builds.md`, writes `CONTRIBUTING.md`, writes `.github/pull_request_template.md`, writes `coding-and-architecture-requirements.audit.md`, and creates `standards-overrides.md` if it is missing. It keeps the requested `Version pin` breadcrumb and also records the exact resolved commit when that provenance can be determined. Prefer replacing `main` with a tag or commit SHA once you start cutting releases.
 
 Check or refresh an existing install at any time:
 
@@ -101,6 +102,7 @@ The visible `coding-and-architecture-requirements.audit.md` file is the paper tr
 
 - which repository these requirements came from
 - which revision is pinned
+- which exact commit was installed when it could be resolved
 - which managed files are currently tracked
 - which install/update/uninstall action most recently touched the downstream repo
 - when that action last ran in UTC
@@ -109,6 +111,7 @@ These files exist to make downstream debugging and auditing more intuitive for b
 
 - where did these requirements come from?
 - which revision is this repo pinned to?
+- which exact commit was actually installed?
 - what did the downstream manager last install or update?
 
 Behavior by command:
@@ -118,6 +121,7 @@ Behavior by command:
 - `install --force` first backs up blocked managed files into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/` before replacing them
 - `update` refreshes the managed AGENTS block, sidecar, managed files, and audit manifest, but only for the new marker-based installs
 - `status` uses the managed AGENTS marker block plus `AGENTS.bright-builds.md` as the install signal
+- installed `status` also reports the pinned exact commit from the audit trail when present
 - `uninstall` removes the managed AGENTS block, `AGENTS.bright-builds.md`, `CONTRIBUTING.md`, the PR template, and the audit manifest, while preserving `standards-overrides.md`
 
 ## Repository layout

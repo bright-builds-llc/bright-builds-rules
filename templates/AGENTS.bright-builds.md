@@ -10,6 +10,7 @@ Record repo-specific changes in `AGENTS.md` or `standards-overrides.md`, not in 
 
 - Standards repository: `REPLACE_WITH_REPO_URL`
 - Version pin: `REPLACE_WITH_TAG_OR_COMMIT`
+- Exact commit: `REPLACE_WITH_EXACT_COMMIT`
 - Canonical entrypoint: `REPLACE_WITH_TAGGED_STANDARDS_INDEX_URL`
 - Audit manifest path: `REPLACE_WITH_AUDIT_MANIFEST_PATH`
 

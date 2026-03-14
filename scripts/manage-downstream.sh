@@ -43,11 +43,14 @@ local_source_root=""
 current_source=""
 current_ref=""
 current_entrypoint=""
+current_exact_commit=""
 repo_state=""
 recommended_action=""
 repo_slug=""
 repo_url=""
 ref=""
+exact_commit=""
+exact_commit_unavailable="Unavailable"
 repo_root="$(pwd)"
 standards_index_url=""
 raw_base=""
@@ -147,6 +150,14 @@ build_managed_files_markdown() {
   printf '%s' "$output"
 }
 
+is_full_commit_sha() {
+  [[ "${1:-}" =~ ^[0-9a-fA-F]{40}$ ]]
+}
+
+normalize_commit_sha() {
+  printf '%s\n' "$1" | tr '[:upper:]' '[:lower:]'
+}
+
 extract_markdown_value() {
   local file_path="$1"
   local label="$2"
@@ -202,6 +213,7 @@ render_template_file() {
 
       line="${line//REPLACE_WITH_REPO_URL/$repo_url}"
       line="${line//REPLACE_WITH_TAG_OR_COMMIT/$ref}"
+      line="${line//REPLACE_WITH_EXACT_COMMIT/$exact_commit}"
       line="${line//REPLACE_WITH_TAGGED_STANDARDS_INDEX_URL/$standards_index_url}"
       line="${line//REPLACE_WITH_AUDIT_MANIFEST_PATH/$audit_destination}"
       line="${line//REPLACE_WITH_LAST_OPERATION/$last_operation}"
@@ -210,6 +222,61 @@ render_template_file() {
       printf '%s\n' "$line"
     done < "$source_path"
   } > "$output_path"
+}
+
+resolve_exact_commit() {
+  local resolved_commit=""
+  local remote_url=""
+  local ls_remote_output=""
+
+  if command -v git >/dev/null 2>&1 && [[ -n "$local_source_root" ]]; then
+    if resolved_commit="$(git -C "$local_source_root" rev-parse HEAD 2>/dev/null)" && is_full_commit_sha "$resolved_commit"; then
+      exact_commit="$(normalize_commit_sha "$resolved_commit")"
+      return
+    fi
+  fi
+
+  if is_full_commit_sha "$ref"; then
+    exact_commit="$(normalize_commit_sha "$ref")"
+    return
+  fi
+
+  if ! command -v git >/dev/null 2>&1; then
+    exact_commit="$exact_commit_unavailable"
+    return
+  fi
+
+  remote_url="https://github.com/${repo_slug}.git"
+
+  if ! ls_remote_output="$(git ls-remote "$remote_url" "$ref" "$ref^{}" 2>/dev/null)" || [[ -z "$ls_remote_output" ]]; then
+    exact_commit="$exact_commit_unavailable"
+    return
+  fi
+
+  resolved_commit="$(printf '%s\n' "$ls_remote_output" | awk '
+    $2 ~ /\^\{\}$/ {
+      print $1
+      found = 1
+      exit
+    }
+
+    NR == 1 && first == "" {
+      first = $1
+    }
+
+    END {
+      if (found != 1 && first != "") {
+        print first
+      }
+    }
+  ')"
+
+  if is_full_commit_sha "$resolved_commit"; then
+    exact_commit="$(normalize_commit_sha "$resolved_commit")"
+    return
+  fi
+
+  exact_commit="$exact_commit_unavailable"
 }
 
 render_template_to_tmp_path() {
@@ -459,6 +526,7 @@ resolve_current_install_metadata() {
   current_source=""
   current_ref=""
   current_entrypoint=""
+  current_exact_commit=""
 
   if [[ ! -f "${repo_root}/${audit_destination}" ]]; then
     return
@@ -466,6 +534,7 @@ resolve_current_install_metadata() {
 
   current_source="$(extract_markdown_value "${repo_root}/${audit_destination}" "Source repository")"
   current_ref="$(extract_markdown_value "${repo_root}/${audit_destination}" "Version pin")"
+  current_exact_commit="$(extract_markdown_value "${repo_root}/${audit_destination}" "Exact commit")"
   current_entrypoint="$(extract_markdown_value "${repo_root}/${audit_destination}" "Canonical entrypoint")"
 }
 
@@ -598,6 +667,10 @@ status() {
     if [[ -n "$current_ref" ]]; then
       note "Pinned ref: ${current_ref}"
     fi
+
+    if [[ -n "$current_exact_commit" ]]; then
+      note "Pinned commit: ${current_exact_commit}"
+    fi
   fi
 }
 
@@ -717,6 +790,7 @@ fi
 repo_url="https://github.com/${repo_slug}"
 raw_base="https://raw.githubusercontent.com/${repo_slug}/${ref}"
 standards_index_url="${repo_url}/blob/${ref}/standards/index.md"
+resolve_exact_commit
 
 case "$command_name" in
   install)
