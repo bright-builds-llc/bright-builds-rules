@@ -21,7 +21,8 @@ Use this decision rule:
 5. If `status` reports `Repo state: blocked`, stop and explain the blocking files instead of forcing an overwrite automatically.
 6. Use `install --force` only when the user explicitly wants to replace blocked managed files. That command first backs them up into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`.
 7. Treat `README.md` as part of the managed surface only when the installer can verify badges from the downstream repo. If `status` reports a blocked README badge state, stop unless the user explicitly wants `install --force`.
-8. After install or update, report the files written and point the user to `coding-and-architecture-requirements.audit.md` as the paper trail, including the source URL, requested ref, exact resolved commit when available, and whether a managed README badge block was installed or refreshed.
+8. Let the installer resolve downstream auto-update to `disabled` unless the downstream GitHub repo owner or current GitHub user is trusted. Trusted identities are `pRizz` and `bright-builds-llc`. Respect `--auto-update enabled|disabled` when the user asks for an override.
+9. After install or update, report the files written and point the user to `coding-and-architecture-requirements.audit.md` as the paper trail, including the source URL, requested ref, exact resolved commit when available, whether a managed README badge block was installed or refreshed, and whether auto-update ended up enabled or disabled.
 
 ## Commands
 
@@ -57,6 +58,13 @@ Explicit replacement with backup first:
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- install --force --ref main
 ```
 
+Explicit auto-update overrides when needed:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- install --ref main --auto-update enabled
+curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- install --ref main --auto-update disabled
+```
+
 Expected downstream files after a successful install or update:
 
 - `AGENTS.md`
@@ -66,6 +74,7 @@ Expected downstream files after a successful install or update:
 - `coding-and-architecture-requirements.audit.md`
 - `README.md` when the downstream repo has at least one verified default badge and the installer adds or refreshes the managed badge block
 - `standards-overrides.md` when it did not already exist
+- `scripts/bright-builds-auto-update.sh` and `.github/workflows/bright-builds-auto-update.yml` when auto-update resolves to `enabled`
 
 ## Inspection hints
 
@@ -76,6 +85,8 @@ Use the `status` output as the primary decision signal. It emits stable lines su
 - `Repo state: blocked`
 - `Recommended action: install|update|install --force`
 - `README badge block: present|absent|partial|ambiguous|not applicable`
+- `Auto-update: enabled|disabled`
+- `Auto-update reason: explicit|trusted repo owner <owner>|trusted GitHub user <login>|default disabled`
 
 Interpret those states this way:
 
@@ -86,6 +97,14 @@ Interpret those states this way:
 - a repo whose managed README insertion zone already contains badge-like content, or whose README badge marker block is partial, also reports `blocked` and includes `README.md` in `Blocking paths:`
 
 If the repo reports `installable` and already has a local `AGENTS.md`, `install` preserves that file and appends the managed Bright Builds block to the end.
+
+Auto-update defaults behave this way:
+
+- fresh installs default to `disabled`
+- fresh installs default to `enabled` when the downstream GitHub repo owner is trusted
+- fresh installs also default to `enabled` when the current GitHub user is trusted and the repo owner is not
+- once installed, later `update` runs reuse the persisted auto-update setting from the audit trail unless `--auto-update` is passed again
+- when enabled, auto-update tracks the currently pinned ref exactly, runs on the fixed UTC schedule `0 14 * * *`, pushes to the default branch when possible, and falls back to the branch `bright-builds/auto-update` plus a pull request when direct push is rejected
 
 The installer manages README badges conservatively:
 
@@ -105,6 +124,7 @@ If you do not have shell access:
 - tell the user to run it from the root of the downstream repository
 - tell the user the expected downstream files listed above
 - tell the user to inspect `coding-and-architecture-requirements.audit.md` after installation
+- tell the user that auto-update is GitHub-only and remains disabled unless they trust the default or pass `--auto-update enabled`
 
 If you do not know which repository should receive the adoption:
 
@@ -128,5 +148,6 @@ After a successful install or update, mention:
 - which files were written or refreshed
 - whether `AGENTS.md` was created or had the managed Bright Builds block appended to it
 - whether `README.md` received a managed badge block, was left unchanged because no verified badges applied, or had its managed badge block removed on update
-- that `coding-and-architecture-requirements.audit.md` records the source URL, pinned ref, exact commit when resolved, and managed files
+- whether auto-update was enabled or disabled, and whether that came from an explicit override or a trust-based default
+- that `coding-and-architecture-requirements.audit.md` records the source URL, pinned ref, exact commit when resolved, auto-update state, and managed files
 - that the standards corpus starts at `https://github.com/bright-builds-llc/coding-and-architecture-requirements/blob/main/standards/index.md`

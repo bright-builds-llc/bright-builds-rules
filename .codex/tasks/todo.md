@@ -2,23 +2,26 @@
 
 ## Current task
 
-- [x] Add a new core `should` rule for rerunnable, observable repo-owned scripts
-- [x] Propagate the new script guidance into downstream `AGENTS.bright-builds.md`, `CONTRIBUTING.md`, and `CHANGELOG.md`
-- [x] Cover the updated downstream wording in installer integration tests
+- [x] Add explicit auto-update state and trust-based defaulting to the downstream manager
+- [x] Manage the downstream auto-update workflow and helper script when auto-update is enabled
+- [x] Extend installer and auto-update tests for trust defaults, persistence, and push/PR behavior
+- [x] Update adoption docs and release notes for the new auto-update mechanism
 
 ## Current verification
 
 - [x] `bash ./scripts/test-manage-downstream.sh` passes
+- [x] `bash ./scripts/test-bright-builds-auto-update.sh` passes
 - [x] `./scripts/verify-docs.sh` passes
 - [x] Diff reviewed for unintended side effects
 
 ## Current completion review
 
-Completed on 2026-03-15.
+Completed on 2026-03-16.
 
 Residual risks:
 
-- The new script rule is intentionally advisory and repo-local, so downstream repos still need to choose and document their own gitignored log path.
+- The trust-based default still depends on GitHub identity signals that may be absent or unauthenticated in some local environments, so those installs intentionally fall back to `default disabled`.
+- The auto-update workflow is intentionally GitHub-only and assumes the repository can run Actions with `contents: write` and `pull-requests: write`; repos with stricter policies will use the PR fallback or remain manual.
 
 ## Previous work
 

@@ -11,6 +11,8 @@ This file records that this repository is using the Bright Builds coding and arc
 - Managed sidecar path: `REPLACE_WITH_MANAGED_SIDECAR_PATH`
 - AGENTS integration mode: `append-only managed block`
 - Audit manifest path: `REPLACE_WITH_AUDIT_MANIFEST_PATH`
+- Auto-update: `REPLACE_WITH_AUTO_UPDATE_MODE`
+- Auto-update reason: `REPLACE_WITH_AUTO_UPDATE_REASON`
 - Last operation: `REPLACE_WITH_LAST_OPERATION`
 - Last updated (UTC): `REPLACE_WITH_LAST_UPDATED_UTC`
 

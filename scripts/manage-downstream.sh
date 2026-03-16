@@ -13,18 +13,29 @@ overrides_source="templates/standards-overrides.md"
 overrides_destination="standards-overrides.md"
 audit_source="templates/coding-and-architecture-requirements.audit.md"
 audit_destination="coding-and-architecture-requirements.audit.md"
+auto_update_script_source="templates/bright-builds-auto-update.sh"
+auto_update_script_destination="scripts/bright-builds-auto-update.sh"
+auto_update_workflow_source="templates/bright-builds-auto-update.yml"
+auto_update_workflow_destination=".github/workflows/bright-builds-auto-update.yml"
 agents_block_begin="<!-- coding-and-architecture-requirements-managed:begin -->"
 agents_block_end="<!-- coding-and-architecture-requirements-managed:end -->"
 readme_destination="README.md"
 readme_badges_begin="<!-- coding-and-architecture-requirements-readme-badges:begin -->"
 readme_badges_end="<!-- coding-and-architecture-requirements-readme-badges:end -->"
+auto_update_branch="bright-builds/auto-update"
+auto_update_commit_message="chore: update Bright Builds requirements"
+auto_update_cron="0 14 * * *"
+trusted_auto_update_identities=(
+  "prizz"
+  "bright-builds-llc"
+)
 
-managed_pairs=(
+base_managed_pairs=(
   "${sidecar_source}|${sidecar_destination}"
   "templates/CONTRIBUTING.md|CONTRIBUTING.md"
   "templates/pull_request_template.md|.github/pull_request_template.md"
 )
-managed_status_paths=(
+base_managed_status_paths=(
   "${agents_destination}"
   "${sidecar_destination}"
   "CONTRIBUTING.md"
@@ -32,7 +43,7 @@ managed_status_paths=(
   "${audit_destination}"
   "${overrides_destination}"
 )
-managed_audit_entries_base=(
+base_managed_audit_entries=(
   "${agents_destination} (managed block)"
   "${sidecar_destination}"
   "CONTRIBUTING.md"
@@ -47,6 +58,8 @@ current_source=""
 current_ref=""
 current_entrypoint=""
 current_exact_commit=""
+current_auto_update=""
+current_auto_update_reason=""
 repo_state=""
 recommended_action=""
 repo_slug=""
@@ -63,16 +76,22 @@ last_backup_relative_root=""
 force=0
 repo_was_explicit=0
 ref_was_explicit=0
+auto_update_was_explicit=0
 agents_block_state="absent"
 readme_badge_state="absent"
 readme_badge_blocking_reason=""
 readme_badges_markdown=""
 readme_has_verified_badges=0
+auto_update_request="auto"
+auto_update_mode=""
+auto_update_reason=""
 downstream_repo_slug=""
 downstream_repo_url=""
+downstream_repo_owner=""
 downstream_ci_workflow_path=""
 downstream_deploy_workflow_path=""
 downstream_license_file=""
+current_github_user=""
 blocking_paths=()
 
 cleanup() {
@@ -91,17 +110,22 @@ Run `status` first to classify the repo as `installable`, `installed`, or
 Commands:
   install     Install the managed AGENTS block, AGENTS.bright-builds.md,
               CONTRIBUTING.md, PR template, audit trail, and default README
-              badge block when verified badges are available. A pre-existing
-              unmarked AGENTS.md is preserved and receives the managed block at
-              the end. Blocked repos stop unless --force is passed.
+              badge block when verified badges are available, plus the managed
+              auto-update workflow and helper script when auto-update resolves
+              to enabled. A pre-existing unmarked AGENTS.md is preserved and
+              receives the managed block at the end. Blocked repos stop unless
+              --force is passed.
   update      Refresh the managed AGENTS block, AGENTS.bright-builds.md, the
-              managed files, README badge block, and the audit trail for repos
-              already using the marker-based layout.
+              managed files, README badge block, audit trail, and managed
+              auto-update files for repos already using the marker-based
+              layout.
   status      Show which managed files are present, classify the repo state,
-              print the recommended next action, and report README badge state.
+              print the recommended next action, and report README badge state
+              plus the resolved auto-update mode and reason.
   uninstall   Remove the managed AGENTS block, AGENTS.bright-builds.md,
-              CONTRIBUTING.md, the PR template, audit trail, and managed README
-              badges. Keeps standards-overrides.md.
+              CONTRIBUTING.md, the PR template, audit trail, managed README
+              badges, and managed auto-update files. Keeps
+              standards-overrides.md.
 
 Options:
   --ref <git-ref>          Source ref to pin in downstream files. Defaults to
@@ -112,6 +136,10 @@ Options:
                            bright-builds-llc/coding-and-architecture-requirements.
   --repo-root <path>       Target downstream repository root. Defaults to the
                            current directory.
+  --auto-update <mode>     Auto-update mode for install/update. Use
+                           auto|enabled|disabled. Defaults to auto for fresh
+                           installs and reuses the persisted audit setting on
+                           later updates unless explicitly overridden.
   --force                  Back up and replace blocked managed files during
                            install. The backup is written to
                            .coding-and-architecture-requirements-backups/<UTC-timestamp>.
@@ -195,6 +223,33 @@ extract_repo_slug_from_url() {
   printf '%s' "$input_url" | sed -n 's#^https://github.com/\(.*\)$#\1#p' | sed 's#/$##'
 }
 
+extract_repo_owner_from_slug() {
+  local repo_slug_value="$1"
+
+  printf '%s\n' "$repo_slug_value" | cut -d/ -f1
+}
+
+normalize_github_identity() {
+  printf '%s\n' "${1:-}" | tr '[:upper:]' '[:lower:]'
+}
+
+is_trusted_auto_update_identity() {
+  local candidate="${1:-}"
+  local normalized_candidate=""
+  local trusted_identity=""
+
+  normalized_candidate="$(normalize_github_identity "$candidate")"
+  [[ -n "$normalized_candidate" ]] || return 1
+
+  for trusted_identity in "${trusted_auto_update_identities[@]}"; do
+    if [[ "$normalized_candidate" == "$trusted_identity" ]]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 download_file() {
   local source_path="$1"
   local output_path="$2"
@@ -232,6 +287,12 @@ render_template_file() {
       line="${line//REPLACE_WITH_LAST_OPERATION/$last_operation}"
       line="${line//REPLACE_WITH_LAST_UPDATED_UTC/$last_updated_utc}"
       line="${line//REPLACE_WITH_MANAGED_SIDECAR_PATH/$sidecar_destination}"
+      line="${line//REPLACE_WITH_AUTO_UPDATE_MODE/$auto_update_mode}"
+      line="${line//REPLACE_WITH_AUTO_UPDATE_REASON/$auto_update_reason}"
+      line="${line//REPLACE_WITH_AUTO_UPDATE_SCRIPT_PATH/$auto_update_script_destination}"
+      line="${line//REPLACE_WITH_AUTO_UPDATE_BRANCH/$auto_update_branch}"
+      line="${line//REPLACE_WITH_AUTO_UPDATE_COMMIT_MESSAGE/$auto_update_commit_message}"
+      line="${line//REPLACE_WITH_AUTO_UPDATE_CRON/$auto_update_cron}"
       printf '%s\n' "$line"
     done < "$source_path"
   } > "$output_path"
@@ -591,6 +652,7 @@ resolve_downstream_repo_slug() {
 
   downstream_repo_slug=""
   downstream_repo_url=""
+  downstream_repo_owner=""
 
   if ! command -v git >/dev/null 2>&1; then
     return
@@ -606,6 +668,29 @@ resolve_downstream_repo_slug() {
   fi
 
   downstream_repo_url="https://github.com/${downstream_repo_slug}"
+  downstream_repo_owner="$(extract_repo_owner_from_slug "$downstream_repo_slug")"
+}
+
+resolve_current_github_user() {
+  local maybe_actor="${GITHUB_ACTOR:-}"
+  local maybe_login=""
+
+  current_github_user=""
+
+  if [[ -n "$maybe_actor" ]] && [[ "$(normalize_github_identity "$maybe_actor")" != "github-actions[bot]" ]]; then
+    current_github_user="$maybe_actor"
+    return
+  fi
+
+  if ! command -v gh >/dev/null 2>&1; then
+    return
+  fi
+
+  maybe_login="$(gh api user --jq .login 2>/dev/null || true)"
+
+  if [[ -n "$maybe_login" ]] && [[ "$(normalize_github_identity "$maybe_login")" != "github-actions[bot]" ]]; then
+    current_github_user="$maybe_login"
+  fi
 }
 
 detect_node_version_info() {
@@ -889,6 +974,57 @@ resolve_downstream_badges() {
   if [[ -n "$maybe_go_version" ]]; then
     append_readme_badge "$(build_static_badge_markdown "Go" "$maybe_go_version" "00ADD8" "go" "white" "https://go.dev/")"
   fi
+}
+
+resolve_auto_update_default() {
+  auto_update_mode="disabled"
+  auto_update_reason="default disabled"
+
+  if is_trusted_auto_update_identity "$downstream_repo_owner"; then
+    auto_update_mode="enabled"
+    auto_update_reason="trusted repo owner ${downstream_repo_owner}"
+    return
+  fi
+
+  resolve_current_github_user
+
+  if is_trusted_auto_update_identity "$current_github_user"; then
+    auto_update_mode="enabled"
+    auto_update_reason="trusted GitHub user ${current_github_user}"
+  fi
+}
+
+resolve_auto_update_state() {
+  auto_update_mode=""
+  auto_update_reason=""
+
+  if [[ "$auto_update_was_explicit" -eq 0 ]] && [[ "$current_auto_update" == "enabled" || "$current_auto_update" == "disabled" ]]; then
+    auto_update_mode="$current_auto_update"
+    auto_update_reason="$current_auto_update_reason"
+
+    if [[ -z "$auto_update_reason" ]]; then
+      auto_update_reason="explicit"
+    fi
+
+    return
+  fi
+
+  case "$auto_update_request" in
+    enabled|disabled)
+      auto_update_mode="$auto_update_request"
+      auto_update_reason="explicit"
+      ;;
+    auto)
+      resolve_auto_update_default
+      ;;
+    *)
+      die "unsupported auto-update mode: ${auto_update_request}"
+      ;;
+  esac
+}
+
+auto_update_files_are_relevant() {
+  [[ "$auto_update_mode" == "enabled" || "$current_auto_update" == "enabled" ]]
 }
 
 detect_marker_block_state() {
@@ -1395,14 +1531,54 @@ ensure_overrides_file() {
   write_rendered_file "$overrides_source" "$overrides_destination"
 }
 
+build_current_managed_status_paths() {
+  local entries=("${base_managed_status_paths[@]}")
+
+  if auto_update_files_are_relevant; then
+    entries+=("${auto_update_script_destination}" "${auto_update_workflow_destination}")
+  fi
+
+  printf '%s\n' "${entries[@]}"
+}
+
 build_current_managed_files_markdown() {
-  local entries=("${managed_audit_entries_base[@]}")
+  local entries=("${base_managed_audit_entries[@]}")
 
   if [[ "$readme_badge_state" == "present" ]]; then
     entries+=("${readme_destination} (managed badges block)")
   fi
 
+  if [[ "$auto_update_mode" == "enabled" ]]; then
+    entries+=("${auto_update_script_destination}" "${auto_update_workflow_destination}")
+  fi
+
   build_managed_files_markdown "${entries[@]}"
+}
+
+remove_auto_update_files() {
+  local relative_destination=""
+
+  for relative_destination in "${auto_update_script_destination}" "${auto_update_workflow_destination}"; do
+    if [[ -f "${repo_root}/${relative_destination}" ]]; then
+      rm -f "${repo_root}/${relative_destination}"
+      note "Removed ${relative_destination}"
+    fi
+  done
+
+  rmdir "${repo_root}/.github/workflows" 2>/dev/null || true
+  rmdir "${repo_root}/.github" 2>/dev/null || true
+}
+
+sync_auto_update_files() {
+  if [[ "$auto_update_mode" == "enabled" ]]; then
+    write_rendered_file "$auto_update_script_source" "$auto_update_script_destination"
+    write_rendered_file "$auto_update_workflow_source" "$auto_update_workflow_destination"
+    return
+  fi
+
+  if [[ "$current_auto_update" == "enabled" ]]; then
+    remove_auto_update_files
+  fi
 }
 
 write_or_update_readme_file() {
@@ -1517,6 +1693,8 @@ resolve_current_install_metadata() {
   current_ref=""
   current_entrypoint=""
   current_exact_commit=""
+  current_auto_update=""
+  current_auto_update_reason=""
 
   if [[ ! -f "${repo_root}/${audit_destination}" ]]; then
     return
@@ -1526,11 +1704,14 @@ resolve_current_install_metadata() {
   current_ref="$(extract_markdown_value "${repo_root}/${audit_destination}" "Version pin")"
   current_exact_commit="$(extract_markdown_value "${repo_root}/${audit_destination}" "Exact commit")"
   current_entrypoint="$(extract_markdown_value "${repo_root}/${audit_destination}" "Canonical entrypoint")"
+  current_auto_update="$(extract_markdown_value "${repo_root}/${audit_destination}" "Auto-update")"
+  current_auto_update_reason="$(extract_markdown_value "${repo_root}/${audit_destination}" "Auto-update reason")"
 }
 
 determine_repo_state() {
   local agents_path="${repo_root}/${agents_destination}"
   local path=""
+  local auto_update_path=""
   local installed_signal=0
 
   repo_state=""
@@ -1560,6 +1741,22 @@ determine_repo_state() {
     for path in "CONTRIBUTING.md" ".github/pull_request_template.md" "${audit_destination}"; do
       if [[ -f "${repo_root}/${path}" ]]; then
         append_unique_blocking_path "$path"
+      fi
+    done
+
+    if auto_update_files_are_relevant; then
+      for auto_update_path in "${auto_update_script_destination}" "${auto_update_workflow_destination}"; do
+        if [[ -f "${repo_root}/${auto_update_path}" ]]; then
+          append_unique_blocking_path "$auto_update_path"
+        fi
+      done
+    fi
+  fi
+
+  if [[ "$installed_signal" -eq 1 && "$auto_update_mode" == "enabled" && "$current_auto_update" != "enabled" ]]; then
+    for auto_update_path in "${auto_update_script_destination}" "${auto_update_workflow_destination}"; do
+      if [[ -f "${repo_root}/${auto_update_path}" ]]; then
+        append_unique_blocking_path "$auto_update_path"
       fi
     done
   fi
@@ -1622,6 +1819,7 @@ clear_blocking_paths() {
     note "Removed conflicting ${relative_destination}"
   done
 
+  rmdir "${repo_root}/.github/workflows" 2>/dev/null || true
   rmdir "${repo_root}/.github" 2>/dev/null || true
 }
 
@@ -1633,13 +1831,14 @@ install_or_update() {
 
   write_or_update_agents_file
 
-  for pair in "${managed_pairs[@]}"; do
+  for pair in "${base_managed_pairs[@]}"; do
     IFS='|' read -r source_path relative_destination <<< "$pair"
     write_rendered_file "$source_path" "$relative_destination"
   done
 
   ensure_overrides_file
   write_or_update_readme_file
+  sync_auto_update_files
   write_audit_manifest "$operation"
 }
 
@@ -1652,6 +1851,8 @@ status() {
   note "Recommended action: ${recommended_action}"
   note "AGENTS marker: ${agents_block_state}"
   note "README badge block: ${readme_badge_state}"
+  note "Auto-update: ${auto_update_mode}"
+  note "Auto-update reason: ${auto_update_reason}"
 
   if [[ -n "$readme_badge_blocking_reason" ]]; then
     note "README badge reason: ${readme_badge_blocking_reason}"
@@ -1661,7 +1862,7 @@ status() {
     note "Blocking paths: ${blocking_paths[*]}"
   fi
 
-  for relative_destination in "${managed_status_paths[@]}"; do
+  while IFS= read -r relative_destination; do
     destination_path="${repo_root}/${relative_destination}"
 
     if [[ -f "$destination_path" ]]; then
@@ -1669,7 +1870,7 @@ status() {
     else
       note "[missing] ${relative_destination}"
     fi
-  done
+  done < <(build_current_managed_status_paths)
 
   if [[ -f "${repo_root}/${audit_destination}" ]]; then
     note "Audit trail: ${audit_destination}"
@@ -1739,6 +1940,10 @@ uninstall() {
     note "Skipped ${readme_destination} because the managed badge block is incomplete"
   fi
 
+  if [[ "$current_auto_update" == "enabled" ]]; then
+    remove_auto_update_files
+  fi
+
   for relative_destination in "${sidecar_destination}" "CONTRIBUTING.md" ".github/pull_request_template.md" "${audit_destination}"; do
     if [[ -f "${repo_root}/${relative_destination}" ]]; then
       rm -f "${repo_root}/${relative_destination}"
@@ -1746,6 +1951,7 @@ uninstall() {
     fi
   done
 
+  rmdir "${repo_root}/.github/workflows" 2>/dev/null || true
   rmdir "${repo_root}/.github" 2>/dev/null || true
 }
 
@@ -1785,6 +1991,12 @@ while [[ $# -gt 0 ]]; do
       repo_root="$2"
       shift 2
       ;;
+    --auto-update)
+      [[ $# -ge 2 ]] || die "missing value for --auto-update"
+      auto_update_request="$2"
+      auto_update_was_explicit=1
+      shift 2
+      ;;
     --force)
       force=1
       shift
@@ -1804,6 +2016,7 @@ repo_root="$(cd "$repo_root" && pwd)"
 
 resolve_current_install_metadata
 resolve_downstream_badges
+resolve_auto_update_state
 determine_repo_state
 
 if [[ "$repo_was_explicit" -eq 0 && -n "$current_source" ]]; then

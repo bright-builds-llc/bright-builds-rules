@@ -1,0 +1,22 @@
+name: Bright Builds Auto Update
+
+on:
+  schedule:
+    - cron: 'REPLACE_WITH_AUTO_UPDATE_CRON'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bright-builds-auto-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Run Bright Builds auto-update
+        run: bash ./REPLACE_WITH_AUTO_UPDATE_SCRIPT_PATH
