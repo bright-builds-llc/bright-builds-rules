@@ -19,7 +19,7 @@ Record repo-specific changes in `AGENTS.md` or `standards-overrides.md`, not in 
 - Prefer functional core / imperative shell for business logic.
 - Prefer early returns over nesting.
 - Treat functions over roughly 200 lines as refactor triggers.
-- Keep workflow config thin and move non-trivial inline scripts into repo-owned script files.
+- Keep workflow config thin and move non-trivial inline scripts into repo-owned script files that are rerunnable when sensible and leave breadcrumb-heavy logs and summaries in a repo-defined gitignored location.
 - Treat files over roughly 628 lines as refactor triggers.
 - Parse boundary data into domain types instead of re-validating primitives everywhere.
 - Make illegal states unrepresentable when the language makes that practical.

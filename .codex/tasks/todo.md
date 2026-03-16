@@ -2,10 +2,9 @@
 
 ## Current task
 
-- [x] Extend the downstream installer with bounded default `README.md` badge management
-- [x] Add conservative README badge blocking, force-repair handling, and audit/status reporting
-- [x] Cover README badge install, update, force, uninstall, and detector behavior in integration tests
-- [x] Update adoption docs, repo routing guidance, and the changelog for the new README badge contract
+- [x] Add a new core `should` rule for rerunnable, observable repo-owned scripts
+- [x] Propagate the new script guidance into downstream `AGENTS.bright-builds.md`, `CONTRIBUTING.md`, and `CHANGELOG.md`
+- [x] Cover the updated downstream wording in installer integration tests
 
 ## Current verification
 
@@ -19,7 +18,7 @@ Completed on 2026-03-15.
 
 Residual risks:
 
-- Badge detection is intentionally root-only and conservative, so workspace or multi-package repos may need repo-local README badges outside the managed default block.
+- The new script rule is intentionally advisory and repo-local, so downstream repos still need to choose and document their own gitignored log path.
 
 ## Previous work
 

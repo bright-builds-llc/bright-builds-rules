@@ -4,6 +4,7 @@ This repository uses a simple release-notes model instead of a heavyweight chang
 
 ## Unreleased
 
+- Added `should` guidance for repo-owned scripts to be rerunnable when sensible and to persist breadcrumb-heavy logs plus run summaries in a repo-defined gitignored path, plus matching downstream template wording
 - Added `should` guidance to keep workflow config thin and extract non-trivial inline scripts into repo-owned files, plus matching downstream summary wording in managed templates
 - Initial standards corpus for architecture, code shape, testing, Rust, and TypeScript/JavaScript
 - Downstream adoption templates for `AGENTS.md`, `CONTRIBUTING.md`, overrides, and PRs

@@ -155,6 +155,34 @@ handleCheckout()
 - Review questions: Is this YAML still orchestration, or is it hiding script logic? Would the logic be easier to reuse, test, lint, or run locally from `scripts/`, `tools/`, or a language-native entrypoint?
 - Automation potential: Linters can flag large multiline `run:` blocks, but deciding when the logic has crossed from glue into a script still needs reviewer judgment.
 
+## Make Scripts Safe To Re-Run And Easy To Diagnose
+
+- Level: `should`
+- Intent: Make repo-owned scripts safer to retry and easier to debug after unattended or partial runs.
+- Rule: For checked-in scripts and automation entrypoints such as shell, Python, Node, maintenance, CI helper, and ops scripts, prefer idempotent-safe behavior when the task allows. Design repeated or partial reruns to converge instead of duplicating work, corrupting state, or surprising an operator. When true idempotence is not appropriate, make that explicit through guards, naming, or documentation. Emit breadcrumb-heavy progress logs during execution and persist a concise final summary plus detailed logs to a repo-defined gitignored path.
+- Rationale: Scripts often run under CI, cron, or incident pressure, where retries are common and the original operator may not be available. Rerunnable behavior lowers recovery risk, while persisted breadcrumbs and run summaries make async debugging and auditability much easier.
+- Good example:
+
+```text
+scripts/sync-config.sh
+  - checks whether each target already matches before rewriting
+  - logs major decisions, skips, and retries as it runs
+  - writes a final changed/skipped/failed summary and detailed logs to a repo-local gitignored path
+```
+
+- Bad example:
+
+```text
+scripts/bootstrap.sh
+  - blindly appends the same block on every run
+  - prints only "starting" and "done"
+  - leaves no persisted logs or run summary after CI or cron finishes
+```
+
+- Exceptions or escape hatches: Trivial one-liners, intentionally one-shot or destructive scripts, and scripts whose job is to create unique resources may not be idempotent. In those cases, make the non-idempotent behavior obvious and log enough context to understand what happened where practical.
+- Review questions: Can this script be safely rerun after a partial failure, or is the non-idempotence made explicit? Could someone diagnose a failed unattended run from the persisted breadcrumbs and summary without reproducing it live? Is the log destination intentionally gitignored and locally documented by the repo?
+- Automation potential: Tests and linters can catch some duplicate-output or append-every-time patterns, but rerun safety and useful operational logging still require reviewer judgment.
+
 ## Split Oversized Files Into Modules
 
 - Level: `should`
