@@ -15,6 +15,9 @@ audit_source="templates/coding-and-architecture-requirements.audit.md"
 audit_destination="coding-and-architecture-requirements.audit.md"
 agents_block_begin="<!-- coding-and-architecture-requirements-managed:begin -->"
 agents_block_end="<!-- coding-and-architecture-requirements-managed:end -->"
+readme_destination="README.md"
+readme_badges_begin="<!-- coding-and-architecture-requirements-readme-badges:begin -->"
+readme_badges_end="<!-- coding-and-architecture-requirements-readme-badges:end -->"
 
 managed_pairs=(
   "${sidecar_source}|${sidecar_destination}"
@@ -29,7 +32,7 @@ managed_status_paths=(
   "${audit_destination}"
   "${overrides_destination}"
 )
-managed_audit_entries=(
+managed_audit_entries_base=(
   "${agents_destination} (managed block)"
   "${sidecar_destination}"
   "CONTRIBUTING.md"
@@ -61,6 +64,15 @@ force=0
 repo_was_explicit=0
 ref_was_explicit=0
 agents_block_state="absent"
+readme_badge_state="absent"
+readme_badge_blocking_reason=""
+readme_badges_markdown=""
+readme_has_verified_badges=0
+downstream_repo_slug=""
+downstream_repo_url=""
+downstream_ci_workflow_path=""
+downstream_deploy_workflow_path=""
+downstream_license_file=""
 blocking_paths=()
 
 cleanup() {
@@ -78,17 +90,18 @@ Run `status` first to classify the repo as `installable`, `installed`, or
 
 Commands:
   install     Install the managed AGENTS block, AGENTS.bright-builds.md,
-              CONTRIBUTING.md, PR template, and audit trail. A pre-existing
+              CONTRIBUTING.md, PR template, audit trail, and default README
+              badge block when verified badges are available. A pre-existing
               unmarked AGENTS.md is preserved and receives the managed block at
               the end. Blocked repos stop unless --force is passed.
   update      Refresh the managed AGENTS block, AGENTS.bright-builds.md, the
-              managed files, and the audit trail for repos already using the
-              marker-based layout.
+              managed files, README badge block, and the audit trail for repos
+              already using the marker-based layout.
   status      Show which managed files are present, classify the repo state,
-              and print the recommended next action.
+              print the recommended next action, and report README badge state.
   uninstall   Remove the managed AGENTS block, AGENTS.bright-builds.md,
-              CONTRIBUTING.md, the PR template, and the audit trail. Keeps
-              standards-overrides.md.
+              CONTRIBUTING.md, the PR template, audit trail, and managed README
+              badges. Keeps standards-overrides.md.
 
 Options:
   --ref <git-ref>          Source ref to pin in downstream files. Defaults to
@@ -333,23 +346,570 @@ trim_trailing_blank_lines() {
   ' "$input_path" > "$output_path"
 }
 
-detect_agents_block_state() {
+trim_value() {
+  printf '%s' "${1:-}" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//'
+}
+
+urlencode_component() {
+  local input="${1:-}"
+  local output=""
+  local index=""
+  local character=""
+  local hex=""
+  local ascii_code=""
+
+  LC_ALL=C
+
+  for (( index = 0; index < ${#input}; index++ )); do
+    character="${input:index:1}"
+
+    case "$character" in
+      [a-zA-Z0-9._~-])
+        output="${output}${character}"
+        ;;
+      ' ')
+        output="${output}%20"
+        ;;
+      *)
+        printf -v ascii_code '%d' "'$character"
+        printf -v hex '%%%02X' "$ascii_code"
+        output="${output}${hex}"
+        ;;
+    esac
+  done
+
+  printf '%s\n' "$output"
+}
+
+build_static_badge_markdown() {
+  local label="$1"
+  local version="$2"
+  local color="$3"
+  local logo="${4:-}"
+  local logo_color="${5:-}"
+  local link_target="$6"
+  local encoded_label=""
+  local encoded_version=""
+  local image_url=""
+
+  encoded_label="$(urlencode_component "$label")"
+  encoded_version="$(urlencode_component "$version")"
+  image_url="https://img.shields.io/badge/${encoded_label}-${encoded_version}-${color}"
+
+  if [[ -n "$logo" ]]; then
+    image_url="${image_url}?logo=$(urlencode_component "$logo")"
+    if [[ -n "$logo_color" ]]; then
+      image_url="${image_url}&logoColor=$(urlencode_component "$logo_color")"
+    fi
+  fi
+
+  printf '[![%s %s](%s)](%s)\n' "$label" "$version" "$image_url" "$link_target"
+}
+
+append_readme_badge() {
+  local badge_markdown="$1"
+
+  [[ -n "$badge_markdown" ]] || return
+
+  if [[ -n "$readme_badges_markdown" ]]; then
+    readme_badges_markdown="${readme_badges_markdown}
+"
+  fi
+
+  readme_badges_markdown="${readme_badges_markdown}${badge_markdown}"
+  readme_has_verified_badges=1
+}
+
+normalize_badge_version() {
+  local raw_value="$1"
+  local normalized=""
+
+  normalized="$(trim_value "$raw_value")"
+  normalized="${normalized#\"}"
+  normalized="${normalized%\"}"
+  normalized="${normalized#\'}"
+  normalized="${normalized%\'}"
+  normalized="$(trim_value "$normalized")"
+
+  [[ -n "$normalized" ]] || return 1
+
+  if [[ "$normalized" =~ [[:space:],|] ]]; then
+    return 1
+  fi
+
+  case "$normalized" in
+    ^*|~*)
+      normalized="${normalized:1}"
+      ;;
+    ==*)
+      normalized="${normalized#==}"
+      ;;
+    =*)
+      normalized="${normalized#=}"
+      ;;
+  esac
+
+  if [[ "$normalized" =~ ^[vV]([0-9]+([.][0-9]+){0,2})$ ]]; then
+    normalized="${BASH_REMATCH[1]}"
+  elif [[ "$normalized" =~ ^([0-9]+([.][0-9]+){0,2})([xX*]|[.][xX*])$ ]]; then
+    normalized="${BASH_REMATCH[1]}"
+  fi
+
+  if [[ "$normalized" =~ ^(>=|<=|>|<)([0-9]+([.][0-9]+){0,2})$ ]]; then
+    printf '%s\n' "${BASH_REMATCH[1]}${BASH_REMATCH[2]}"
+    return 0
+  fi
+
+  if [[ "$normalized" =~ ^[0-9A-Za-z._+-]+$ ]]; then
+    printf '%s\n' "$normalized"
+    return 0
+  fi
+
+  return 1
+}
+
+select_single_normalized_version() {
+  local raw_value=""
+  local normalized=""
+  local maybe_existing=""
+  local seen_values=()
+  local already_seen=0
+
+  while IFS= read -r raw_value; do
+    if ! normalized="$(normalize_badge_version "$raw_value" 2>/dev/null)"; then
+      continue
+    fi
+
+    already_seen=0
+    for maybe_existing in "${seen_values[@]-}"; do
+      if [[ "$maybe_existing" == "$normalized" ]]; then
+        already_seen=1
+        break
+      fi
+    done
+
+    if [[ "$already_seen" -eq 0 ]]; then
+      seen_values+=("$normalized")
+    fi
+  done
+
+  if [[ "${#seen_values[@]}" -eq 1 ]]; then
+    printf '%s\n' "${seen_values[0]}"
+    return 0
+  fi
+
+  return 1
+}
+
+compact_json_file() {
   local file_path="$1"
+
+  [[ -f "$file_path" ]] || return
+  tr '\n' ' ' < "$file_path"
+}
+
+extract_json_object_string_values() {
+  local compact_json="$1"
+  local object_key="$2"
+  local item_key="$3"
+  local section=""
+  local value=""
+
+  while IFS= read -r section; do
+    [[ -n "$section" ]] || continue
+    value="$(printf '%s\n' "$section" | sed -n "s/.*\"${item_key}\"[[:space:]]*:[[:space:]]*\"\\([^\"]*\\)\".*/\\1/p")"
+    if [[ -n "$value" ]]; then
+      printf '%s\n' "$value"
+    fi
+  done < <(printf '%s' "$compact_json" | grep -oE "\"${object_key}\"[[:space:]]*:[[:space:]]*\\{[^}]*\\}" || true)
+}
+
+extract_package_json_dependency_values() {
+  local compact_json="$1"
+  local package_name="$2"
+  local section=""
+  local value=""
+
+  for section in dependencies devDependencies; do
+    while IFS= read -r value; do
+      [[ -n "$value" ]] || continue
+      printf '%s\n' "$value"
+    done < <(
+      while IFS= read -r maybe_section; do
+        [[ -n "$maybe_section" ]] || continue
+        printf '%s\n' "$maybe_section" | sed -n "s/.*\"${package_name}\"[[:space:]]*:[[:space:]]*\"\\([^\"]*\\)\".*/\\1/p"
+      done < <(printf '%s' "$compact_json" | grep -oE "\"${section}\"[[:space:]]*:[[:space:]]*\\{[^}]*\\}" || true)
+    )
+  done
+}
+
+detect_existing_path() {
+  local candidate=""
+
+  for candidate in "$@"; do
+    if [[ -f "${repo_root}/${candidate}" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+detect_license_file() {
+  detect_existing_path \
+    "LICENSE" \
+    "LICENSE.md" \
+    "LICENSE.txt" \
+    "COPYING" \
+    "COPYING.md" \
+    "COPYING.txt"
+}
+
+extract_github_slug_from_remote_url() {
+  local remote_url="$1"
+  local maybe_slug=""
+
+  maybe_slug="$(printf '%s' "$remote_url" | sed -n \
+    -e 's#^https://github.com/\([^/][^ ]*\)$#\1#p' \
+    -e 's#^git@github.com:\([^/][^ ]*\)$#\1#p' \
+    -e 's#^ssh://git@github.com/\([^/][^ ]*\)$#\1#p' \
+    -e 's#^git://github.com/\([^/][^ ]*\)$#\1#p')"
+  maybe_slug="${maybe_slug%.git}"
+  maybe_slug="${maybe_slug%/}"
+
+  if [[ "$maybe_slug" =~ ^[^/]+/[^/]+$ ]]; then
+    printf '%s\n' "$maybe_slug"
+    return 0
+  fi
+
+  return 1
+}
+
+resolve_downstream_repo_slug() {
+  local remote_url=""
+
+  downstream_repo_slug=""
+  downstream_repo_url=""
+
+  if ! command -v git >/dev/null 2>&1; then
+    return
+  fi
+
+  if ! remote_url="$(git -C "$repo_root" remote get-url origin 2>/dev/null)"; then
+    return
+  fi
+
+  if ! downstream_repo_slug="$(extract_github_slug_from_remote_url "$remote_url" 2>/dev/null)"; then
+    downstream_repo_slug=""
+    return
+  fi
+
+  downstream_repo_url="https://github.com/${downstream_repo_slug}"
+}
+
+detect_node_version_info() {
+  local package_json_path="${repo_root}/package.json"
+  local compact_json=""
+  local maybe_raw_engine=""
+  local maybe_normalized=""
+  local maybe_nvmrc_path="${repo_root}/.nvmrc"
+  local maybe_nvmrc_line=""
+  local maybe_ci_version=""
+
+  if [[ -f "$package_json_path" ]]; then
+    compact_json="$(compact_json_file "$package_json_path")"
+    maybe_raw_engine="$(extract_json_object_string_values "$compact_json" "engines" "node" | head -n 1)"
+
+    if [[ -n "$maybe_raw_engine" ]]; then
+      if maybe_normalized="$(normalize_badge_version "$maybe_raw_engine" 2>/dev/null)"; then
+        printf '%s|package.json\n' "$maybe_normalized"
+      fi
+      return
+    fi
+  fi
+
+  if [[ -f "$maybe_nvmrc_path" ]]; then
+    maybe_nvmrc_line="$(awk 'NF { print; exit }' "$maybe_nvmrc_path")"
+    if [[ -n "$maybe_nvmrc_line" ]]; then
+      if maybe_normalized="$(normalize_badge_version "$maybe_nvmrc_line" 2>/dev/null)"; then
+        printf '%s|.nvmrc\n' "$maybe_normalized"
+      fi
+      return
+    fi
+  fi
+
+  if [[ -n "$downstream_ci_workflow_path" ]] && grep -q 'actions/setup-node' "${repo_root}/${downstream_ci_workflow_path}"; then
+    maybe_ci_version="$(
+      grep -E '^[[:space:]]*node-version:[[:space:]]*' "${repo_root}/${downstream_ci_workflow_path}" \
+        | sed -n "s/^[[:space:]]*node-version:[[:space:]]*['\"]\{0,1\}\([^'\"#[:space:]]*\)['\"]\{0,1\}.*/\\1/p" \
+        | select_single_normalized_version || true
+    )"
+    if [[ -n "$maybe_ci_version" ]]; then
+      printf '%s|%s\n' "$maybe_ci_version" "$downstream_ci_workflow_path"
+    fi
+  fi
+}
+
+detect_package_json_dependency_version() {
+  local package_name="$1"
+  local package_json_path="${repo_root}/package.json"
+  local compact_json=""
+
+  [[ -f "$package_json_path" ]] || return 0
+
+  compact_json="$(compact_json_file "$package_json_path")"
+  extract_package_json_dependency_values "$compact_json" "$package_name" | select_single_normalized_version || true
+}
+
+detect_framework_badge_info() {
+  local maybe_next=""
+  local maybe_solid=""
+  local maybe_react=""
+  local maybe_vue=""
+  local maybe_svelte=""
+  local candidates=()
+
+  maybe_next="$(detect_package_json_dependency_version "next" || true)"
+  maybe_solid="$(detect_package_json_dependency_version "solid-js" || true)"
+  maybe_react="$(detect_package_json_dependency_version "react" || true)"
+  maybe_vue="$(detect_package_json_dependency_version "vue" || true)"
+  maybe_svelte="$(detect_package_json_dependency_version "svelte" || true)"
+
+  if [[ -n "$maybe_next" ]]; then
+    candidates+=("Next.js|${maybe_next}|000000|nextdotjs|white|https://nextjs.org/")
+  fi
+
+  if [[ -n "$maybe_solid" ]]; then
+    candidates+=("SolidJS|${maybe_solid}|2C4F7C|solid|white|https://www.solidjs.com/")
+  fi
+
+  if [[ -n "$maybe_vue" ]]; then
+    candidates+=("Vue|${maybe_vue}|4FC08D|vuedotjs|white|https://vuejs.org/")
+  fi
+
+  if [[ -n "$maybe_svelte" ]]; then
+    candidates+=("Svelte|${maybe_svelte}|FF3E00|svelte|white|https://svelte.dev/")
+  fi
+
+  if [[ -n "$maybe_react" && -z "$maybe_next" ]]; then
+    candidates+=("React|${maybe_react}|149ECA|react|white|https://react.dev/")
+  fi
+
+  if [[ "${#candidates[@]}" -eq 1 ]]; then
+    printf '%s\n' "${candidates[0]}"
+  fi
+}
+
+extract_toml_value_from_section() {
+  local file_path="$1"
+  local section_name="$2"
+  local key_name="$3"
+
+  [[ -f "$file_path" ]] || return
+
+  awk -v section_name="$section_name" -v key_name="$key_name" '
+    $0 ~ "^[[:space:]]*\\[" section_name "\\][[:space:]]*$" {
+      in_section = 1
+      next
+    }
+
+    in_section == 1 && $0 ~ "^[[:space:]]*\\[" {
+      in_section = 0
+    }
+
+    in_section == 1 && $0 ~ "^[[:space:]]*" key_name "[[:space:]]*=" {
+      value = $0
+      sub(/^[[:space:]]*[^=]+=[[:space:]]*/, "", value)
+      sub(/[[:space:]]*#.*/, "", value)
+      gsub(/^"/, "", value)
+      gsub(/"$/, "", value)
+      gsub(/^'\''/, "", value)
+      gsub(/'\''$/, "", value)
+      print value
+      exit
+    }
+  ' "$file_path"
+}
+
+detect_rust_version() {
+  local maybe_rust_toolchain="${repo_root}/rust-toolchain.toml"
+  local maybe_cargo_toml="${repo_root}/Cargo.toml"
+  local maybe_channel=""
+  local maybe_normalized=""
+
+  if [[ -f "$maybe_rust_toolchain" ]]; then
+    maybe_channel="$(extract_toml_value_from_section "$maybe_rust_toolchain" "toolchain" "channel")"
+    if [[ -n "$maybe_channel" ]]; then
+      if maybe_normalized="$(normalize_badge_version "$maybe_channel" 2>/dev/null)"; then
+        printf '%s\n' "$maybe_normalized"
+      fi
+      return
+    fi
+  fi
+
+  if [[ -f "$maybe_cargo_toml" ]]; then
+    maybe_channel="$(extract_toml_value_from_section "$maybe_cargo_toml" "package" "rust-version")"
+    if [[ -n "$maybe_channel" ]]; then
+      if maybe_normalized="$(normalize_badge_version "$maybe_channel" 2>/dev/null)"; then
+        printf '%s\n' "$maybe_normalized"
+      fi
+    fi
+  fi
+}
+
+detect_python_version() {
+  local maybe_pyproject="${repo_root}/pyproject.toml"
+  local maybe_python_version_file="${repo_root}/.python-version"
+  local maybe_requires_python=""
+  local maybe_normalized=""
+
+  if [[ -f "$maybe_pyproject" ]]; then
+    maybe_requires_python="$(awk '
+      /^[[:space:]]*requires-python[[:space:]]*=/ {
+        value = $0
+        sub(/^[[:space:]]*requires-python[[:space:]]*=[[:space:]]*/, "", value)
+        sub(/[[:space:]]*#.*/, "", value)
+        gsub(/^"/, "", value)
+        gsub(/"$/, "", value)
+        gsub(/^'\''/, "", value)
+        gsub(/'\''$/, "", value)
+        print value
+        exit
+      }
+    ' "$maybe_pyproject")"
+
+    if [[ -n "$maybe_requires_python" ]]; then
+      if maybe_normalized="$(normalize_badge_version "$maybe_requires_python" 2>/dev/null)"; then
+        printf '%s\n' "$maybe_normalized"
+      fi
+      return
+    fi
+  fi
+
+  if [[ -f "$maybe_python_version_file" ]]; then
+    maybe_requires_python="$(awk 'NF { print; exit }' "$maybe_python_version_file")"
+    if [[ -n "$maybe_requires_python" ]]; then
+      if maybe_normalized="$(normalize_badge_version "$maybe_requires_python" 2>/dev/null)"; then
+        printf '%s\n' "$maybe_normalized"
+      fi
+    fi
+  fi
+}
+
+detect_go_version() {
+  local maybe_go_mod="${repo_root}/go.mod"
+  local maybe_go_version=""
+  local maybe_normalized=""
+
+  [[ -f "$maybe_go_mod" ]] || return 0
+
+  maybe_go_version="$(awk '/^go[[:space:]]+[0-9]+([.][0-9]+){0,2}$/ { print $2; exit }' "$maybe_go_mod")"
+  if [[ -n "$maybe_go_version" ]]; then
+    if maybe_normalized="$(normalize_badge_version "$maybe_go_version" 2>/dev/null)"; then
+      printf '%s\n' "$maybe_normalized"
+    fi
+  fi
+}
+
+resolve_downstream_badges() {
+  local maybe_node_info=""
+  local maybe_node_version=""
+  local maybe_node_link=""
+  local maybe_typescript_version=""
+  local maybe_vite_version=""
+  local maybe_framework_info=""
+  local framework_label=""
+  local framework_version=""
+  local framework_color=""
+  local framework_logo=""
+  local framework_logo_color=""
+  local framework_link=""
+  local maybe_rust_version=""
+  local maybe_python_version=""
+  local maybe_go_version=""
+
+  readme_badges_markdown=""
+  readme_has_verified_badges=0
+  downstream_ci_workflow_path="$(detect_existing_path ".github/workflows/ci.yml" ".github/workflows/ci.yaml" || true)"
+  downstream_deploy_workflow_path="$(detect_existing_path ".github/workflows/deploy-pages.yml" ".github/workflows/deploy-pages.yaml" || true)"
+  downstream_license_file="$(detect_license_file || true)"
+  resolve_downstream_repo_slug
+
+  if [[ -n "$downstream_repo_slug" ]]; then
+    append_readme_badge "[![GitHub Stars](https://img.shields.io/github/stars/${downstream_repo_slug})](${downstream_repo_url})"
+
+    if [[ -n "$downstream_ci_workflow_path" ]]; then
+      append_readme_badge "[![CI](https://github.com/${downstream_repo_slug}/actions/workflows/$(basename "$downstream_ci_workflow_path")/badge.svg)](${downstream_repo_url}/actions/workflows/$(basename "$downstream_ci_workflow_path"))"
+    fi
+
+    if [[ -n "$downstream_deploy_workflow_path" ]]; then
+      append_readme_badge "[![Deploy Pages](https://github.com/${downstream_repo_slug}/actions/workflows/$(basename "$downstream_deploy_workflow_path")/badge.svg)](${downstream_repo_url}/actions/workflows/$(basename "$downstream_deploy_workflow_path"))"
+    fi
+
+    if [[ -n "$downstream_license_file" ]]; then
+      append_readme_badge "[![License](https://img.shields.io/github/license/${downstream_repo_slug}?s)](./${downstream_license_file})"
+    fi
+  fi
+
+  maybe_node_info="$(detect_node_version_info || true)"
+  if [[ -n "$maybe_node_info" ]]; then
+    maybe_node_version="${maybe_node_info%%|*}"
+    maybe_node_link="${maybe_node_info#*|}"
+    append_readme_badge "$(build_static_badge_markdown "Node.js" "$maybe_node_version" "339933" "node.js" "white" "./${maybe_node_link}")"
+  fi
+
+  maybe_typescript_version="$(detect_package_json_dependency_version "typescript" || true)"
+  if [[ -n "$maybe_typescript_version" ]]; then
+    append_readme_badge "$(build_static_badge_markdown "TypeScript" "$maybe_typescript_version" "3178C6" "typescript" "white" "https://www.typescriptlang.org/")"
+  fi
+
+  maybe_framework_info="$(detect_framework_badge_info || true)"
+  if [[ -n "$maybe_framework_info" ]]; then
+    IFS='|' read -r framework_label framework_version framework_color framework_logo framework_logo_color framework_link <<< "$maybe_framework_info"
+    append_readme_badge "$(build_static_badge_markdown "$framework_label" "$framework_version" "$framework_color" "$framework_logo" "$framework_logo_color" "$framework_link")"
+  fi
+
+  maybe_vite_version="$(detect_package_json_dependency_version "vite" || true)"
+  if [[ -n "$maybe_vite_version" ]]; then
+    append_readme_badge "$(build_static_badge_markdown "Vite" "$maybe_vite_version" "646CFF" "vite" "white" "https://vite.dev/")"
+  fi
+
+  maybe_rust_version="$(detect_rust_version || true)"
+  if [[ -n "$maybe_rust_version" ]]; then
+    append_readme_badge "$(build_static_badge_markdown "Rust" "$maybe_rust_version" "000000" "rust" "white" "https://www.rust-lang.org/")"
+  fi
+
+  maybe_python_version="$(detect_python_version || true)"
+  if [[ -n "$maybe_python_version" ]]; then
+    append_readme_badge "$(build_static_badge_markdown "Python" "$maybe_python_version" "3776AB" "python" "white" "https://www.python.org/")"
+  fi
+
+  maybe_go_version="$(detect_go_version || true)"
+  if [[ -n "$maybe_go_version" ]]; then
+    append_readme_badge "$(build_static_badge_markdown "Go" "$maybe_go_version" "00ADD8" "go" "white" "https://go.dev/")"
+  fi
+}
+
+detect_marker_block_state() {
+  local file_path="$1"
+  local begin_marker="$2"
+  local end_marker="$3"
 
   if [[ ! -f "$file_path" ]]; then
     printf 'absent\n'
     return
   fi
 
-  awk -v begin="$agents_block_begin" -v end="$agents_block_end" '
-    $0 == begin {
+  awk -v begin_marker="$begin_marker" -v end_marker="$end_marker" '
+    $0 == begin_marker {
       begin_count++
       if (begin_line == 0) {
         begin_line = NR
       }
     }
 
-    $0 == end {
+    $0 == end_marker {
       end_count++
       if (end_line == 0) {
         end_line = NR
@@ -372,12 +932,115 @@ detect_agents_block_state() {
   ' "$file_path"
 }
 
-replace_managed_block() {
+readme_insertion_zone_has_unmanaged_badges() {
+  local file_path="$1"
+
+  [[ -f "$file_path" ]] || return 1
+
+  awk -v begin_marker="$readme_badges_begin" -v end_marker="$readme_badges_end" '
+    function is_badge_like(line) {
+      return line ~ /(shields\.io|badge\.svg|badge\?)/ || line ~ /<img[^>]*(badge|shields)/;
+    }
+
+    {
+      lines[++count] = $0
+      if (first_h1 == 0 && $0 ~ /^# /) {
+        first_h1 = count
+      }
+    }
+
+    END {
+      start = first_h1 > 0 ? first_h1 + 1 : 1
+
+      for (i = start; i <= count; i++) {
+        line = lines[i]
+
+        if (line == begin_marker) {
+          in_managed = 1
+          continue
+        }
+
+        if (line == end_marker) {
+          in_managed = 0
+          continue
+        }
+
+        if (in_managed == 1 || line ~ /^[[:space:]]*$/) {
+          continue
+        }
+
+        if (is_badge_like(line)) {
+          found = 1
+          continue
+        }
+
+        break
+      }
+
+      if (found == 1) {
+        exit 0
+      }
+
+      exit 1
+    }
+  ' "$file_path"
+}
+
+resolve_readme_badge_state() {
+  local destination_path="${repo_root}/${readme_destination}"
+  local block_state=""
+
+  readme_badge_blocking_reason=""
+
+  if [[ ! -f "$destination_path" ]]; then
+    if [[ "$readme_has_verified_badges" -eq 1 ]]; then
+      printf 'absent\n'
+    else
+      printf 'not applicable\n'
+    fi
+    return
+  fi
+
+  block_state="$(detect_marker_block_state "$destination_path" "$readme_badges_begin" "$readme_badges_end")"
+
+  if [[ "$block_state" == "partial" ]]; then
+    readme_badge_blocking_reason="incomplete managed README badge block"
+    printf 'partial\n'
+    return
+  fi
+
+  if { [[ "$readme_has_verified_badges" -eq 1 ]] || [[ "$block_state" == "present" ]]; } && readme_insertion_zone_has_unmanaged_badges "$destination_path"; then
+    readme_badge_blocking_reason="existing badge-like content in the managed README insertion zone"
+    printf 'ambiguous\n'
+    return
+  fi
+
+  if [[ "$block_state" == "present" ]]; then
+    printf 'present\n'
+    return
+  fi
+
+  if [[ "$readme_has_verified_badges" -eq 1 ]]; then
+    printf 'absent\n'
+    return
+  fi
+
+  printf 'not applicable\n'
+}
+
+detect_agents_block_state() {
+  local file_path="$1"
+  detect_marker_block_state "$file_path" "$agents_block_begin" "$agents_block_end"
+}
+
+replace_marker_block() {
   local input_path="$1"
   local output_path="$2"
   local replacement_path="$3"
+  local begin_marker="$4"
+  local end_marker="$5"
 
-  awk -v begin="$agents_block_begin" -v end="$agents_block_end" -v replacement_path="$replacement_path" '
+  awk -v begin_marker="$begin_marker" -v end_marker="$end_marker" -v replacement_path="$replacement_path" '
     BEGIN {
       while ((getline line < replacement_path) > 0) {
         replacement[++replacement_count] = line
@@ -385,7 +1048,7 @@ replace_managed_block() {
       close(replacement_path)
     }
 
-    $0 == begin && in_block == 0 {
+    $0 == begin_marker && in_block == 0 {
       for (i = 1; i <= replacement_count; i++) {
         print replacement[i]
       }
@@ -395,7 +1058,7 @@ replace_managed_block() {
     }
 
     in_block == 1 {
-      if ($0 == end) {
+      if ($0 == end_marker) {
         in_block = 0
       }
       next
@@ -413,19 +1076,29 @@ replace_managed_block() {
   ' "$input_path" > "$output_path"
 }
 
-remove_managed_block() {
+replace_managed_block() {
+  replace_marker_block "$1" "$2" "$3" "$agents_block_begin" "$agents_block_end"
+}
+
+replace_readme_badges_block() {
+  replace_marker_block "$1" "$2" "$3" "$readme_badges_begin" "$readme_badges_end"
+}
+
+remove_marker_block() {
   local input_path="$1"
   local output_path="$2"
+  local begin_marker="$3"
+  local end_marker="$4"
 
-  awk -v begin="$agents_block_begin" -v end="$agents_block_end" '
-    $0 == begin && in_block == 0 {
+  awk -v begin_marker="$begin_marker" -v end_marker="$end_marker" '
+    $0 == begin_marker && in_block == 0 {
       in_block = 1
       removed = 1
       next
     }
 
     in_block == 1 {
-      if ($0 == end) {
+      if ($0 == end_marker) {
         in_block = 0
       }
       next
@@ -441,6 +1114,214 @@ remove_managed_block() {
       }
     }
   ' "$input_path" > "$output_path"
+}
+
+remove_managed_block() {
+  remove_marker_block "$1" "$2" "$agents_block_begin" "$agents_block_end"
+}
+
+remove_readme_badges_block() {
+  remove_marker_block "$1" "$2" "$readme_badges_begin" "$readme_badges_end"
+}
+
+remove_readme_badge_markers() {
+  local input_path="$1"
+  local output_path="$2"
+
+  awk -v begin_marker="$readme_badges_begin" -v end_marker="$readme_badges_end" '
+    $0 == begin_marker || $0 == end_marker {
+      next
+    }
+
+    {
+      print
+    }
+  ' "$input_path" > "$output_path"
+}
+
+render_readme_badges_block_to_tmp_path() {
+  local rendered_path=""
+
+  ensure_tmp_dir
+  rendered_path="${tmp_dir}/README.badges.rendered"
+  {
+    printf '%s\n' "$readme_badges_begin"
+    if [[ -n "$readme_badges_markdown" ]]; then
+      printf '%s\n' "$readme_badges_markdown"
+    fi
+    printf '%s\n' "$readme_badges_end"
+  } > "$rendered_path"
+
+  printf '%s\n' "$rendered_path"
+}
+
+insert_readme_badges_block() {
+  local input_path="$1"
+  local output_path="$2"
+  local replacement_path="$3"
+
+  awk -v replacement_path="$replacement_path" '
+    BEGIN {
+      while ((getline line < replacement_path) > 0) {
+        replacement[++replacement_count] = line
+      }
+      close(replacement_path)
+    }
+
+    {
+      lines[++count] = $0
+      if (first_h1 == 0 && $0 ~ /^# /) {
+        first_h1 = count
+      }
+    }
+
+    END {
+      if (first_h1 > 0) {
+        for (i = 1; i <= count; i++) {
+          print lines[i]
+
+          if (i == first_h1) {
+            print ""
+            for (j = 1; j <= replacement_count; j++) {
+              print replacement[j]
+            }
+
+            if (i < count) {
+              print ""
+            }
+
+            while (i + 1 <= count && lines[i + 1] ~ /^[[:space:]]*$/) {
+              i++
+            }
+          }
+        }
+        exit
+      }
+
+      for (j = 1; j <= replacement_count; j++) {
+        print replacement[j]
+      }
+
+      if (count > 0) {
+        print ""
+      }
+
+      first_content = 1
+      while (first_content <= count && lines[first_content] ~ /^[[:space:]]*$/) {
+        first_content++
+      }
+
+      for (i = first_content; i <= count; i++) {
+        print lines[i]
+      }
+    }
+  ' "$input_path" > "$output_path"
+}
+
+strip_readme_badge_region() {
+  local input_path="$1"
+  local output_path="$2"
+
+  awk -v begin_marker="$readme_badges_begin" -v end_marker="$readme_badges_end" '
+    function is_badge_like(line) {
+      return line ~ /(shields\.io|badge\.svg|badge\?)/ || line ~ /<img[^>]*(badge|shields)/;
+    }
+
+    {
+      lines[++count] = $0
+      if (first_h1 == 0 && $0 ~ /^# /) {
+        first_h1 = count
+      }
+    }
+
+    END {
+      start = first_h1 > 0 ? first_h1 + 1 : 1
+
+      if (first_h1 > 0) {
+        for (i = 1; i <= first_h1; i++) {
+          print lines[i]
+        }
+      }
+
+      i = start
+      while (i <= count) {
+        line = lines[i]
+
+        if (in_marker_block == 1) {
+          if (line == end_marker) {
+            in_marker_block = 0
+            i++
+            continue
+          }
+
+          if (line ~ /^[[:space:]]*$/ || is_badge_like(line) || line == begin_marker) {
+            i++
+            continue
+          }
+
+          break
+        }
+
+        if (line == begin_marker) {
+          in_marker_block = 1
+          i++
+          continue
+        }
+
+        if (line == end_marker || line ~ /^[[:space:]]*$/ || is_badge_like(line)) {
+          i++
+          continue
+        }
+
+        break
+      }
+
+      if (first_h1 > 0 && i <= count) {
+        print ""
+      }
+
+      for (; i <= count; i++) {
+        print lines[i]
+      }
+    }
+  ' "$input_path" > "$output_path"
+}
+
+build_readme_title() {
+  printf '# %s\n' "$(basename "$repo_root")"
+}
+
+readme_is_generated_skeleton_after_removal() {
+  local file_path="$1"
+  local expected_title=""
+  local trimmed_content=""
+
+  [[ -f "$file_path" ]] || return 1
+
+  expected_title="$(build_readme_title)"
+  trimmed_content="$(awk '
+    {
+      lines[++count] = $0
+    }
+
+    END {
+      last = count
+      while (last > 0 && lines[last] ~ /^[[:space:]]*$/) {
+        last--
+      }
+
+      first = 1
+      while (first <= last && lines[first] ~ /^[[:space:]]*$/) {
+        first++
+      }
+
+      for (i = first; i <= last; i++) {
+        print lines[i]
+      }
+    }
+  ' "$file_path")"
+
+  [[ "$trimmed_content" == "$expected_title" ]]
 }
 
 append_unique_blocking_path() {
@@ -514,12 +1395,121 @@ ensure_overrides_file() {
   write_rendered_file "$overrides_source" "$overrides_destination"
 }
 
+build_current_managed_files_markdown() {
+  local entries=("${managed_audit_entries_base[@]}")
+
+  if [[ "$readme_badge_state" == "present" ]]; then
+    entries+=("${readme_destination} (managed badges block)")
+  fi
+
+  build_managed_files_markdown "${entries[@]}"
+}
+
+write_or_update_readme_file() {
+  local destination_path="${repo_root}/${readme_destination}"
+  local current_state=""
+  local rendered_block_path=""
+  local base_path=""
+  local updated_path=""
+  local trimmed_path=""
+
+  current_state="$(resolve_readme_badge_state)"
+
+  if [[ "$readme_has_verified_badges" -ne 1 ]]; then
+    if [[ "$current_state" == "present" ]]; then
+      ensure_tmp_dir
+      updated_path="${tmp_dir}/README.unmanaged"
+      trimmed_path="${tmp_dir}/README.trimmed"
+      remove_readme_badges_block "$destination_path" "$updated_path"
+      trim_trailing_blank_lines "$updated_path" "$trimmed_path"
+
+      if file_has_non_whitespace "$trimmed_path"; then
+        cp "$trimmed_path" "$destination_path"
+        note "Updated ${readme_destination}"
+      else
+        rm -f "$destination_path"
+        note "Removed ${readme_destination}"
+      fi
+    fi
+
+    readme_badge_state="$(resolve_readme_badge_state)"
+    return
+  fi
+
+  rendered_block_path="$(render_readme_badges_block_to_tmp_path)"
+
+  if [[ ! -f "$destination_path" ]] || ! file_has_non_whitespace "$destination_path"; then
+    ensure_tmp_dir
+    updated_path="${tmp_dir}/README.generated"
+    {
+      build_readme_title
+      printf '\n'
+      cat "$rendered_block_path"
+    } > "$updated_path"
+    cp "$updated_path" "$destination_path"
+    note "Wrote ${readme_destination}"
+    readme_badge_state="$(resolve_readme_badge_state)"
+    return
+  fi
+
+  case "$current_state" in
+    partial|ambiguous)
+      die "${readme_destination} contains conflicting badge content. Re-run install --force to back up and repair it."
+      ;;
+  esac
+
+  ensure_tmp_dir
+  base_path="${tmp_dir}/README.base"
+  updated_path="${tmp_dir}/README.updated"
+  trimmed_path="${tmp_dir}/README.updated.trimmed"
+
+  if [[ "$current_state" == "present" ]]; then
+    remove_readme_badges_block "$destination_path" "$base_path"
+  else
+    cp "$destination_path" "$base_path"
+  fi
+
+  insert_readme_badges_block "$base_path" "$updated_path" "$rendered_block_path"
+  trim_trailing_blank_lines "$updated_path" "$trimmed_path"
+  cp "$trimmed_path" "$destination_path"
+  note "Updated ${readme_destination}"
+  readme_badge_state="$(resolve_readme_badge_state)"
+}
+
+repair_blocking_readme_file() {
+  local destination_path="${repo_root}/${readme_destination}"
+  local markers_removed_path=""
+  local sanitized_path=""
+  local trimmed_path=""
+
+  [[ -f "$destination_path" ]] || return
+
+  ensure_tmp_dir
+  markers_removed_path="${tmp_dir}/README.markers-removed"
+  sanitized_path="${tmp_dir}/README.sanitized"
+  trimmed_path="${tmp_dir}/README.sanitized.trimmed"
+
+  remove_readme_badge_markers "$destination_path" "$markers_removed_path"
+  strip_readme_badge_region "$markers_removed_path" "$sanitized_path"
+  trim_trailing_blank_lines "$sanitized_path" "$trimmed_path"
+
+  if file_has_non_whitespace "$trimmed_path"; then
+    cp "$trimmed_path" "$destination_path"
+    note "Sanitized conflicting ${readme_destination} badge region"
+  else
+    rm -f "$destination_path"
+    note "Removed conflicting ${readme_destination}"
+  fi
+
+  readme_badge_state="$(resolve_readme_badge_state)"
+}
+
 write_audit_manifest() {
   local operation="$1"
 
   last_operation="$operation"
   last_updated_utc="$(utc_now)"
-  write_rendered_file "$audit_source" "$audit_destination" "$(build_managed_files_markdown "${managed_audit_entries[@]}")"
+  write_rendered_file "$audit_source" "$audit_destination" "$(build_current_managed_files_markdown)"
 }
 
 resolve_current_install_metadata() {
@@ -541,16 +1531,16 @@ resolve_current_install_metadata() {
 determine_repo_state() {
   local agents_path="${repo_root}/${agents_destination}"
   local path=""
+  local installed_signal=0
 
   repo_state=""
   recommended_action=""
   blocking_paths=()
   agents_block_state="$(detect_agents_block_state "$agents_path")"
+  readme_badge_state="$(resolve_readme_badge_state)"
 
   if [[ "$agents_block_state" == "present" && -f "${repo_root}/${sidecar_destination}" ]]; then
-    repo_state="installed"
-    recommended_action="update"
-    return
+    installed_signal=1
   fi
 
   if [[ "$agents_block_state" == "partial" ]]; then
@@ -566,15 +1556,27 @@ determine_repo_state() {
     append_unique_blocking_path "$sidecar_destination"
   fi
 
-  for path in "CONTRIBUTING.md" ".github/pull_request_template.md" "${audit_destination}"; do
-    if [[ -f "${repo_root}/${path}" ]]; then
-      append_unique_blocking_path "$path"
-    fi
-  done
+  if [[ "$installed_signal" -ne 1 ]]; then
+    for path in "CONTRIBUTING.md" ".github/pull_request_template.md" "${audit_destination}"; do
+      if [[ -f "${repo_root}/${path}" ]]; then
+        append_unique_blocking_path "$path"
+      fi
+    done
+  fi
+
+  if [[ "$readme_badge_state" == "partial" || "$readme_badge_state" == "ambiguous" ]]; then
+    append_unique_blocking_path "$readme_destination"
+  fi
 
   if [[ "${#blocking_paths[@]}" -gt 0 ]]; then
     repo_state="blocked"
     recommended_action="install --force"
+    return
+  fi
+
+  if [[ "$installed_signal" -eq 1 ]]; then
+    repo_state="installed"
+    recommended_action="update"
     return
   fi
 
@@ -597,8 +1599,10 @@ backup_blocking_paths() {
     source_path="${repo_root}/${relative_destination}"
     backup_path="${repo_root}/${last_backup_relative_root}/${relative_destination}"
     mkdir -p "$(dirname "$backup_path")"
-    cp "$source_path" "$backup_path"
-    note "Backed up ${relative_destination} -> ${last_backup_relative_root}/${relative_destination}"
+    if [[ -f "$source_path" ]]; then
+      cp "$source_path" "$backup_path"
+      note "Backed up ${relative_destination} -> ${last_backup_relative_root}/${relative_destination}"
+    fi
   done
 }
 
@@ -608,6 +1612,12 @@ clear_blocking_paths() {
 
   for relative_destination in "${blocking_paths[@]-}"; do
     destination_path="${repo_root}/${relative_destination}"
+
+    if [[ "$relative_destination" == "$readme_destination" ]]; then
+      repair_blocking_readme_file
+      continue
+    fi
+
     rm -f "$destination_path"
     note "Removed conflicting ${relative_destination}"
   done
@@ -629,6 +1639,7 @@ install_or_update() {
   done
 
   ensure_overrides_file
+  write_or_update_readme_file
   write_audit_manifest "$operation"
 }
 
@@ -640,6 +1651,11 @@ status() {
   note "Repo state: ${repo_state}"
   note "Recommended action: ${recommended_action}"
   note "AGENTS marker: ${agents_block_state}"
+  note "README badge block: ${readme_badge_state}"
+
+  if [[ -n "$readme_badge_blocking_reason" ]]; then
+    note "README badge reason: ${readme_badge_blocking_reason}"
+  fi
 
   if [[ "$repo_state" == "blocked" ]]; then
     note "Blocking paths: ${blocking_paths[*]}"
@@ -676,9 +1692,11 @@ status() {
 
 uninstall() {
   local destination_path="${repo_root}/${agents_destination}"
+  local readme_path="${repo_root}/${readme_destination}"
   local updated_path=""
   local trimmed_path=""
   local state=""
+  local readme_state=""
   local relative_destination=""
 
   state="$(detect_agents_block_state "$destination_path")"
@@ -699,6 +1717,26 @@ uninstall() {
     fi
   elif [[ "$state" == "partial" ]]; then
     note "Skipped ${agents_destination} because the managed marker block is incomplete"
+  fi
+
+  readme_state="$(detect_marker_block_state "$readme_path" "$readme_badges_begin" "$readme_badges_end")"
+
+  if [[ "$readme_state" == "present" ]]; then
+    ensure_tmp_dir
+    updated_path="${tmp_dir}/README.unmanaged"
+    trimmed_path="${tmp_dir}/README.unmanaged.trimmed"
+    remove_readme_badges_block "$readme_path" "$updated_path"
+    trim_trailing_blank_lines "$updated_path" "$trimmed_path"
+
+    if readme_is_generated_skeleton_after_removal "$trimmed_path" || ! file_has_non_whitespace "$trimmed_path"; then
+      rm -f "$readme_path"
+      note "Removed ${readme_destination}"
+    else
+      cp "$trimmed_path" "$readme_path"
+      note "Updated ${readme_destination}"
+    fi
+  elif [[ "$readme_state" == "partial" ]]; then
+    note "Skipped ${readme_destination} because the managed badge block is incomplete"
   fi
 
   for relative_destination in "${sidecar_destination}" "CONTRIBUTING.md" ".github/pull_request_template.md" "${audit_destination}"; do
@@ -765,6 +1803,7 @@ done
 repo_root="$(cd "$repo_root" && pwd)"
 
 resolve_current_install_metadata
+resolve_downstream_badges
 determine_repo_state
 
 if [[ "$repo_was_explicit" -eq 0 && -n "$current_source" ]]; then

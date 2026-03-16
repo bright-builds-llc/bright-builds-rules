@@ -31,6 +31,7 @@ The intended AI behavior is:
 - run `update` when `status` reports `Repo state: installed`
 - stop for review when `status` reports `Repo state: blocked`, unless the user explicitly wants `install --force`
 - preserve a pre-existing unmarked `AGENTS.md` by appending the managed Bright Builds block to the end during `install`
+- manage a bounded `README.md` badge block when the downstream repo has verified badge inputs and the top badge zone is unambiguous
 - use `install --force` only as an opt-in replacement path for blocked managed files, which first backs them up into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`
 - report `coding-and-architecture-requirements.audit.md` as the downstream paper trail after completion
 - report the pinned source URL, requested ref, and exact resolved commit when available
@@ -51,6 +52,7 @@ The status output classifies the repo with stable lines:
 - `Repo state: installed`
 - `Repo state: blocked`
 - `Recommended action: install|update|install --force`
+- `README badge block: present|absent|partial|ambiguous|not applicable`
 
 If `Repo state: installable`, install the downstream adoption layer:
 
@@ -58,7 +60,7 @@ If `Repo state: installable`, install the downstream adoption layer:
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- install --ref main
 ```
 
-If the repository already has an unmarked local `AGENTS.md`, `install` keeps that file and appends the managed Bright Builds block to the end. The same command also writes `AGENTS.bright-builds.md`, `CONTRIBUTING.md`, `.github/pull_request_template.md`, `coding-and-architecture-requirements.audit.md`, and `standards-overrides.md` when the overrides file does not already exist.
+If the repository already has an unmarked local `AGENTS.md`, `install` keeps that file and appends the managed Bright Builds block to the end. The same command also writes `AGENTS.bright-builds.md`, `CONTRIBUTING.md`, `.github/pull_request_template.md`, `coding-and-architecture-requirements.audit.md`, creates `standards-overrides.md` when the overrides file does not already exist, and manages a bounded `README.md` badge block when it can verify at least one default badge.
 
 If `Repo state: installed`, refresh the existing marker-based Bright Builds adoption:
 
@@ -77,10 +79,11 @@ New repo vs existing repo:
 - A new repo normally reports `installable`.
 - A repo with an existing local `AGENTS.md` and no other managed-file conflicts also reports `installable`.
 - A repo with existing managed conflicts such as `CONTRIBUTING.md`, `.github/pull_request_template.md`, `AGENTS.bright-builds.md`, or `coding-and-architecture-requirements.audit.md` reports `blocked`.
+- A repo whose README insertion zone already contains unmanaged badge-like content, or whose managed README badge block is partial, also reports `blocked`.
 - A repo with the managed AGENTS marker block plus `AGENTS.bright-builds.md` reports `installed`.
 - A repo using the previous standalone downstream layout from this repository reports `blocked` until you explicitly replace it.
 
-The manager installs a managed block inside `AGENTS.md`, writes `AGENTS.bright-builds.md`, writes `CONTRIBUTING.md`, writes `.github/pull_request_template.md`, writes `coding-and-architecture-requirements.audit.md`, and creates `standards-overrides.md` if it is missing. It keeps the requested `Version pin` breadcrumb and also records the exact resolved commit when that provenance can be determined. Prefer replacing `main` with a tag or commit SHA once you start cutting releases.
+The manager installs a managed block inside `AGENTS.md`, writes `AGENTS.bright-builds.md`, writes `CONTRIBUTING.md`, writes `.github/pull_request_template.md`, writes `coding-and-architecture-requirements.audit.md`, creates `standards-overrides.md` if it is missing, and inserts or refreshes a managed README badge block when verified badges are available. It keeps the requested `Version pin` breadcrumb and also records the exact resolved commit when that provenance can be determined. Prefer replacing `main` with a tag or commit SHA once you start cutting releases.
 
 Check or refresh an existing install at any time:
 
@@ -88,6 +91,26 @@ Check or refresh an existing install at any time:
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- status
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- update --ref main
 ```
+
+## Default README Badges
+
+When the downstream repository has verifiable inputs, the installer manages a bounded badge block in `README.md`:
+
+- it inserts the block after the first `# ...` H1, or at the top when no H1 exists
+- if `README.md` is missing and at least one verified badge is available, it creates a minimal README skeleton using the repo directory name as the H1
+- it blocks conservatively when the top insertion zone already contains unmanaged badge-like content or a partial managed badge block
+- `install --force` backs up `README.md`, repairs only that badge region, and preserves the rest of the README body
+
+Supported default detectors are intentionally conservative and root-only:
+
+- GitHub stars, CI, deploy-pages, and license from the downstream `origin` GitHub remote plus root workflow and license files
+- Node.js from `package.json.engines.node`, else `.nvmrc`, else `actions/setup-node` in the root CI workflow
+- TypeScript, Vite, and one framework badge from `solid-js|react|next|vue|svelte` from root `package.json` dependencies or devDependencies
+- Rust from `rust-toolchain.toml`, else `Cargo.toml`
+- Python from `pyproject.toml`, else `.python-version`
+- Go from `go.mod`
+
+If the relevant version source is missing, conflicting, or ambiguous, the installer skips that badge instead of guessing.
 
 ## AGENTS Marker And Audit Trail
 
@@ -104,6 +127,7 @@ The visible `coding-and-architecture-requirements.audit.md` file is the paper tr
 - which revision is pinned
 - which exact commit was installed when it could be resolved
 - which managed files are currently tracked
+- whether the managed README badge block is currently part of that tracked footprint
 - which install/update/uninstall action most recently touched the downstream repo
 - when that action last ran in UTC
 
@@ -112,17 +136,19 @@ These files exist to make downstream debugging and auditing more intuitive for b
 - where did these requirements come from?
 - which revision is this repo pinned to?
 - which exact commit was actually installed?
+- is the README badge block managed by the installer right now?
 - what did the downstream manager last install or update?
 
 Behavior by command:
 
-- `install` writes or refreshes the managed AGENTS block, writes `AGENTS.bright-builds.md`, refreshes the managed files, writes the audit manifest, and creates `standards-overrides.md` if it is missing
+- `install` writes or refreshes the managed AGENTS block, writes `AGENTS.bright-builds.md`, refreshes the managed files, writes or repairs the managed README badge block when verified badges are available, writes the audit manifest, and creates `standards-overrides.md` if it is missing
 - rerunning `install` on an already installed repo refreshes the managed block and does not duplicate it
-- `install --force` first backs up blocked managed files into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/` before replacing them
-- `update` refreshes the managed AGENTS block, sidecar, managed files, and audit manifest, but only for the new marker-based installs
+- `install --force` first backs up blocked managed files into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/` before replacing them, and repairs only the top README badge region when `README.md` is blocked
+- `update` refreshes the managed AGENTS block, sidecar, managed files, managed README badge block, and audit manifest, but only for the new marker-based installs
 - `status` uses the managed AGENTS marker block plus `AGENTS.bright-builds.md` as the install signal
+- `status` also reports explicit README badge state so AI agents can distinguish `present`, `absent`, `partial`, `ambiguous`, and `not applicable`
 - installed `status` also reports the pinned exact commit from the audit trail when present
-- `uninstall` removes the managed AGENTS block, `AGENTS.bright-builds.md`, `CONTRIBUTING.md`, the PR template, and the audit manifest, while preserving `standards-overrides.md`
+- `uninstall` removes the managed AGENTS block, managed README badge block, `AGENTS.bright-builds.md`, `CONTRIBUTING.md`, the PR template, and the audit manifest, while preserving `standards-overrides.md`
 
 ## Repository layout
 
@@ -161,7 +187,7 @@ Behavior by command:
 4. Record any repo-specific deviations in the downstream `standards-overrides.md`.
 5. Optionally use the Codex skill to bootstrap adoption or review work against the standards.
 
-The intended downstream footprint is still small: a local `AGENTS.md` with a managed Bright Builds block, a local `AGENTS.bright-builds.md` sidecar, a local `CONTRIBUTING.md`, an overrides file, a PR template, and the audit trail file. The canonical standards remain here.
+The intended downstream footprint is still small: a local `AGENTS.md` with a managed Bright Builds block, a local `AGENTS.bright-builds.md` sidecar, a local `CONTRIBUTING.md`, an optional managed README badge block, an overrides file, a PR template, and the audit trail file. The canonical standards remain here.
 
 ## Uninstall
 

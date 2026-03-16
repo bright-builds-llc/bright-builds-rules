@@ -2,14 +2,15 @@
 
 ## Current task
 
-- [x] Add a code-shape rule for extracting non-trivial workflow scripts into repo-owned files
-- [x] Mirror the guidance in managed downstream summaries
-- [x] Record the standards change in the unreleased changelog
+- [x] Extend the downstream installer with bounded default `README.md` badge management
+- [x] Add conservative README badge blocking, force-repair handling, and audit/status reporting
+- [x] Cover README badge install, update, force, uninstall, and detector behavior in integration tests
+- [x] Update adoption docs, repo routing guidance, and the changelog for the new README badge contract
 
 ## Current verification
 
-- [x] `./scripts/verify-docs.sh` passes
 - [x] `bash ./scripts/test-manage-downstream.sh` passes
+- [x] `./scripts/verify-docs.sh` passes
 - [x] Diff reviewed for unintended side effects
 
 ## Current completion review
@@ -18,7 +19,7 @@ Completed on 2026-03-15.
 
 Residual risks:
 
-- The new workflow-script rule is intentionally heuristic rather than threshold-based, so downstream reviewers still need judgment on where trivial glue ends and non-trivial logic begins.
+- Badge detection is intentionally root-only and conservative, so workspace or multi-package repos may need repo-local README badges outside the managed default block.
 
 ## Previous work
 

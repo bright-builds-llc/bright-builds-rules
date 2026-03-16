@@ -20,7 +20,8 @@ Use this decision rule:
 4. If `status` reports `Repo state: installed`, run `update`.
 5. If `status` reports `Repo state: blocked`, stop and explain the blocking files instead of forcing an overwrite automatically.
 6. Use `install --force` only when the user explicitly wants to replace blocked managed files. That command first backs them up into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`.
-7. After install or update, report the files written and point the user to `coding-and-architecture-requirements.audit.md` as the paper trail, including the source URL, requested ref, and exact resolved commit when available.
+7. Treat `README.md` as part of the managed surface only when the installer can verify badges from the downstream repo. If `status` reports a blocked README badge state, stop unless the user explicitly wants `install --force`.
+8. After install or update, report the files written and point the user to `coding-and-architecture-requirements.audit.md` as the paper trail, including the source URL, requested ref, exact resolved commit when available, and whether a managed README badge block was installed or refreshed.
 
 ## Commands
 
@@ -63,6 +64,7 @@ Expected downstream files after a successful install or update:
 - `CONTRIBUTING.md`
 - `.github/pull_request_template.md`
 - `coding-and-architecture-requirements.audit.md`
+- `README.md` when the downstream repo has at least one verified default badge and the installer adds or refreshes the managed badge block
 - `standards-overrides.md` when it did not already exist
 
 ## Inspection hints
@@ -73,6 +75,7 @@ Use the `status` output as the primary decision signal. It emits stable lines su
 - `Repo state: installed`
 - `Repo state: blocked`
 - `Recommended action: install|update|install --force`
+- `README badge block: present|absent|partial|ambiguous|not applicable`
 
 Interpret those states this way:
 
@@ -80,8 +83,17 @@ Interpret those states this way:
 - a repo with an existing unmarked local `AGENTS.md` and no other managed-file conflicts also reports `installable`
 - a repo with the managed AGENTS marker block plus `AGENTS.bright-builds.md` reports `installed`
 - a repo with conflicting managed files such as `CONTRIBUTING.md`, `.github/pull_request_template.md`, `AGENTS.bright-builds.md`, or `coding-and-architecture-requirements.audit.md` reports `blocked`
+- a repo whose managed README insertion zone already contains badge-like content, or whose README badge marker block is partial, also reports `blocked` and includes `README.md` in `Blocking paths:`
 
 If the repo reports `installable` and already has a local `AGENTS.md`, `install` preserves that file and appends the managed Bright Builds block to the end.
+
+The installer manages README badges conservatively:
+
+- it inserts the managed badge block after the first `# ...` H1 in `README.md`, or at the top when no H1 exists
+- if `README.md` is missing and at least one verified badge is available, it creates a minimal README skeleton with the repo directory name as the H1
+- it only emits badges it can verify from the downstream repo, in this order: stars, CI, deploy-pages, license, Node.js, TypeScript, one framework badge from `solid-js|react|next|vue|svelte`, Vite, Rust, Python, and Go
+- it derives those badges from the downstream `origin` GitHub remote, root workflows, root manifests, and root toolchain files only
+- if the relevant version source is missing, conflicting, or ambiguous, it skips that badge instead of guessing
 
 If the repo reports `blocked`, inspect the listed paths and do not use `--force` automatically.
 
@@ -106,6 +118,7 @@ If the downstream repository already contains conflicting managed files:
 - use `update` only when `status` reports `installed`
 - otherwise stop and ask how the user wants to reconcile the conflict
 - if the user explicitly chooses replacement, tell them `install --force` will back up the blocked files into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/` before writing the managed files
+- if `README.md` is the blocking path, explain whether the conflict is a partial managed badge block or existing unmanaged badge-like content near the top insertion zone, because `install --force` will repair only that badge region and preserve the rest of the README body
 
 ## Success confirmation
 
@@ -114,5 +127,6 @@ After a successful install or update, mention:
 - which command you ran
 - which files were written or refreshed
 - whether `AGENTS.md` was created or had the managed Bright Builds block appended to it
+- whether `README.md` received a managed badge block, was left unchanged because no verified badges applied, or had its managed badge block removed on update
 - that `coding-and-architecture-requirements.audit.md` records the source URL, pinned ref, exact commit when resolved, and managed files
 - that the standards corpus starts at `https://github.com/bright-builds-llc/coding-and-architecture-requirements/blob/main/standards/index.md`

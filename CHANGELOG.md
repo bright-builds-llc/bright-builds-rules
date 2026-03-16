@@ -15,6 +15,7 @@ This repository uses a simple release-notes model instead of a heavyweight chang
 - Breaking reset to a marker-based downstream installer with `AGENTS.bright-builds.md`, append-only `AGENTS.md` integration, and `installable|installed|blocked` status
 - Simplified downstream audit trail and uninstall flow, including removal of breadcrumb comments and preservation of repo-local `standards-overrides.md`
 - Exact-commit provenance recorded alongside the requested ref in `AGENTS.bright-builds.md`, the audit trail, and installed `status`
+- Default downstream README badge management with conservative blocking, force-repair support, and detector-driven badge generation for GitHub/workflow, JS/TS, Rust, Python, and Go repos
 
 ## Release note guidance
 
