@@ -92,6 +92,7 @@ downstream_ci_workflow_path=""
 downstream_deploy_workflow_path=""
 downstream_license_file=""
 current_github_user=""
+owner_specific_guidance_markdown=""
 blocking_paths=()
 
 cleanup() {
@@ -233,6 +234,10 @@ normalize_github_identity() {
   printf '%s\n' "${1:-}" | tr '[:upper:]' '[:lower:]'
 }
 
+normalize_personal_owner_identity() {
+  printf '%s\n' "${1:-}" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]'
+}
+
 is_trusted_auto_update_identity() {
   local candidate="${1:-}"
   local normalized_candidate=""
@@ -248,6 +253,41 @@ is_trusted_auto_update_identity() {
   done
 
   return 1
+}
+
+is_openlinks_identity_owner() {
+  local candidate="${1:-}"
+  local normalized_candidate=""
+  local supported_identity=""
+  local supported_identities=(
+    "prizz"
+    "peterryszkiewicz"
+  )
+
+  normalized_candidate="$(normalize_personal_owner_identity "$candidate")"
+  [[ -n "$normalized_candidate" ]] || return 1
+
+  for supported_identity in "${supported_identities[@]}"; do
+    if [[ "$normalized_candidate" == "$supported_identity" ]]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+build_owner_specific_guidance_markdown() {
+  if ! is_openlinks_identity_owner "$downstream_repo_owner"; then
+    return 0
+  fi
+
+  cat <<EOF
+## Owner-specific skill default
+
+- Because the downstream GitHub repo owner resolves to \`${downstream_repo_owner}\`, use the \`openlinks-identity-presence\` skill whenever the task touches README/docs, website or app chrome, profile/about/footer/settings surfaces, or metadata and discovery fields.
+- Follow the skill's low-intrusion placement bias: prefer footer, about, profile, or README "Find me" placement, keep the visible link primary, and add metadata hints only when the surface already supports them cleanly.
+- Keep the host project's main brand and CTA primary. Do not add repetitive or aggressive OpenLinks promotion unless the user explicitly asks for it.
+EOF
 }
 
 download_file() {
@@ -276,6 +316,13 @@ render_template_file() {
     while IFS= read -r line || [[ -n "$line" ]]; do
       if [[ "$line" == "REPLACE_WITH_MANAGED_FILES_LIST" ]]; then
         printf '%s\n' "$managed_files_markdown"
+        continue
+      fi
+
+      if [[ "$line" == "REPLACE_WITH_OWNER_SPECIFIC_GUIDANCE" ]]; then
+        if [[ -n "$owner_specific_guidance_markdown" ]]; then
+          printf '%s\n' "$owner_specific_guidance_markdown"
+        fi
         continue
       fi
 
@@ -974,6 +1021,10 @@ resolve_downstream_badges() {
   if [[ -n "$maybe_go_version" ]]; then
     append_readme_badge "$(build_static_badge_markdown "Go" "$maybe_go_version" "00ADD8" "go" "white" "https://go.dev/")"
   fi
+}
+
+resolve_owner_specific_guidance() {
+  owner_specific_guidance_markdown="$(build_owner_specific_guidance_markdown)"
 }
 
 resolve_auto_update_default() {
@@ -2016,6 +2067,7 @@ repo_root="$(cd "$repo_root" && pwd)"
 
 resolve_current_install_metadata
 resolve_downstream_badges
+resolve_owner_specific_guidance
 resolve_auto_update_state
 determine_repo_state
 

@@ -228,6 +228,7 @@ test_fresh_install_and_reinstall() {
   assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Exact commit: \`${repo_exact_commit}\`" "sidecar should record the exact local commit"
   assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "rerunnable when sensible" "sidecar should include the rerunnable script guidance"
   assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "repo-defined gitignored location" "sidecar should point scripts at a repo-defined gitignored log location"
+  assert_file_not_contains "${repo_path}/AGENTS.bright-builds.md" "openlinks-identity-presence" "non-matching owners should not receive the OpenLinks identity guidance"
   assert_file_contains "${repo_path}/CONTRIBUTING.md" "rerunnable when sensible" "CONTRIBUTING should include the rerunnable script guidance"
   assert_file_contains "${repo_path}/CONTRIBUTING.md" "breadcrumb-heavy logs and summaries" "CONTRIBUTING should require breadcrumb-heavy logs and summaries"
   assert_file_contains "${repo_path}/coding-and-architecture-requirements.audit.md" "Exact commit: \`${repo_exact_commit}\`" "audit trail should record the exact local commit"
@@ -283,6 +284,8 @@ test_trusted_repo_owner_enables_auto_update_by_default() {
   assert_file_exists "${repo_path}/.github/workflows/bright-builds-auto-update.yml"
   assert_file_contains "${repo_path}/coding-and-architecture-requirements.audit.md" "Auto-update: \`enabled\`" "audit should record enabled auto-update"
   assert_file_contains "${repo_path}/coding-and-architecture-requirements.audit.md" "Auto-update reason: \`trusted repo owner pRizz\`" "audit should record the repo-owner trust decision"
+  assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "use the \`openlinks-identity-presence\` skill whenever the task touches README/docs" "matching owners should receive the OpenLinks identity guidance"
+  assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "repo owner resolves to \`pRizz\`" "sidecar should explain why the OpenLinks guidance applies"
   assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "cron: '0 14 * * *'" "workflow should use the fixed UTC schedule"
   assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "bash ./scripts/bright-builds-auto-update.sh" "workflow should invoke the managed helper script"
 }
@@ -303,6 +306,24 @@ test_trusted_github_user_enables_auto_update_by_default() {
   assert_file_exists "${repo_path}/scripts/bright-builds-auto-update.sh"
   assert_file_exists "${repo_path}/.github/workflows/bright-builds-auto-update.yml"
   assert_file_contains "${repo_path}/coding-and-architecture-requirements.audit.md" "Auto-update reason: \`trusted GitHub user pRizz\`" "audit should record the GitHub-user trust decision"
+}
+
+test_peter_ryszkiewicz_owner_gets_openlinks_identity_guidance() {
+  local repo_path=""
+
+  repo_path="$(create_repo peter-owner-guidance)"
+  init_git_repo_with_origin "$repo_path" "git@github.com:Peter-Ryszkiewicz/peter-owner-guidance.git"
+
+  run_manage "$repo_path" status
+  assert_eq "$run_status" "0" "Peter-owned repo status should succeed"
+  assert_contains "$run_output" "Auto-update: disabled" "the OpenLinks owner rule should not change unrelated auto-update defaults"
+  assert_contains "$run_output" "Auto-update reason: default disabled" "non-trusted auto-update owners should keep the default explanation"
+
+  run_manage "$repo_path" install
+  assert_eq "$run_status" "0" "Peter-owned repo install should succeed"
+  assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "repo owner resolves to \`Peter-Ryszkiewicz\`" "owner-specific guidance should include the detected owner"
+  assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "openlinks-identity-presence" "Peter-owned repos should receive the OpenLinks identity guidance"
+  assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Keep the host project's main brand and CTA primary." "guidance should preserve the host brand"
 }
 
 test_untracked_auto_update_files_are_ignored_when_disabled() {
@@ -679,6 +700,7 @@ test_fresh_install_and_reinstall
 test_existing_agents_is_installable
 test_trusted_repo_owner_enables_auto_update_by_default
 test_trusted_github_user_enables_auto_update_by_default
+test_peter_ryszkiewicz_owner_gets_openlinks_identity_guidance
 test_untracked_auto_update_files_are_ignored_when_disabled
 test_auto_update_conflicts_block_when_enabled
 test_blocked_conflicts_and_force_install

@@ -14,6 +14,7 @@ Use the status-first decision rule from `AI-ADOPTION.md`:
 - do not overwrite blocked managed files automatically when `Repo state: blocked`
 - remember that `install` may append the managed Bright Builds block to an existing unmarked downstream `AGENTS.md`
 - remember that install/update may also manage a bounded README badge block when the downstream repo has verified badge inputs
+- remember that install/update may also tailor `AGENTS.bright-builds.md` with an `openlinks-identity-presence` rule when the downstream GitHub repo owner normalizes to `pRizz` or `peterryszkiewicz` (Peter Ryszkiewicz)
 - use `install --force` only as an explicit replacement path, which first creates `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`
 
 ## Canonical sources

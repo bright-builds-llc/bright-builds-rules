@@ -32,6 +32,7 @@ The intended AI behavior is:
 - stop for review when `status` reports `Repo state: blocked`, unless the user explicitly wants `install --force`
 - preserve a pre-existing unmarked `AGENTS.md` by appending the managed Bright Builds block to the end during `install`
 - manage a bounded `README.md` badge block when the downstream repo has verified badge inputs and the top badge zone is unambiguous
+- tailor `AGENTS.bright-builds.md` with an `openlinks-identity-presence` rule when the downstream GitHub repo owner normalizes to `pRizz` or `peterryszkiewicz` (Peter Ryszkiewicz)
 - let the installer resolve downstream auto-update to `disabled` by default unless the downstream GitHub repo owner or current GitHub user is trusted
 - use `install --force` only as an opt-in replacement path for blocked managed files, which first backs them up into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`
 - report `coding-and-architecture-requirements.audit.md` as the downstream paper trail after completion
@@ -63,9 +64,11 @@ If `Repo state: installable`, install the downstream adoption layer:
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- install --ref main
 ```
 
-If the repository already has an unmarked local `AGENTS.md`, `install` keeps that file and appends the managed Bright Builds block to the end. The same command also writes `AGENTS.bright-builds.md`, `CONTRIBUTING.md`, `.github/pull_request_template.md`, `coding-and-architecture-requirements.audit.md`, creates `standards-overrides.md` when the overrides file does not already exist, and manages a bounded `README.md` badge block when it can verify at least one default badge.
+If the repository already has an unmarked local `AGENTS.md`, `install` keeps that file and appends the managed Bright Builds block to the end. The same command also writes `AGENTS.bright-builds.md`, `CONTRIBUTING.md`, `.github/pull_request_template.md`, `coding-and-architecture-requirements.audit.md`, creates `standards-overrides.md` when the overrides file does not already exist, manages a bounded `README.md` badge block when it can verify at least one default badge, and tailors the managed sidecar with owner-specific `openlinks-identity-presence` guidance when the downstream GitHub owner normalizes to Peter Ryszkiewicz or `pRizz`.
 
 Fresh installs resolve auto-update to `disabled` unless the downstream GitHub repo owner or the current GitHub user is trusted. Trusted identities are `pRizz` and `bright-builds-llc`, compared case-insensitively. Override the default with `--auto-update enabled` or `--auto-update disabled` when needed.
+
+When the downstream GitHub owner normalizes to `pRizz` or `peterryszkiewicz`, the managed sidecar also tells agents to use the `openlinks-identity-presence` skill on README/docs, footer/about/profile, app chrome, and metadata/discovery surfaces. That rule follows the same bias as the OpenLinks skill it references: prefer the smallest sufficient placement and keep the host project's primary brand visually primary.
 
 If `Repo state: installed`, refresh the existing marker-based Bright Builds adoption:
 
@@ -144,6 +147,7 @@ The downstream install is anchored by two AGENTS files:
   - `<!-- coding-and-architecture-requirements-managed:begin -->`
   - `<!-- coding-and-architecture-requirements-managed:end -->`
 - `AGENTS.bright-builds.md` contains the managed Bright Builds guidance and a visible warning that the file is installed from this repository and should not be edited directly.
+- when the downstream GitHub owner matches Peter Ryszkiewicz or `pRizz` after normalization, `AGENTS.bright-builds.md` also includes an owner-specific `openlinks-identity-presence` rule for discoverability surfaces
 
 The visible `coding-and-architecture-requirements.audit.md` file is the paper trail. It records:
 

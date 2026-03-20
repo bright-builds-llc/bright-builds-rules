@@ -26,6 +26,8 @@ Record repo-specific changes in `AGENTS.md` or `standards-overrides.md`, not in 
 - Unit test pure code and business logic.
 - Structure unit tests as Arrange, Act, Assert and keep each test focused on one concern.
 
+REPLACE_WITH_OWNER_SPECIFIC_GUIDANCE
+
 ## Local overrides and exceptions
 
 Document repo-specific deviations in `standards-overrides.md`.

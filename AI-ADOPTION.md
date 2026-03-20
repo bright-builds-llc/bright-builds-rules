@@ -22,7 +22,8 @@ Use this decision rule:
 6. Use `install --force` only when the user explicitly wants to replace blocked managed files. That command first backs them up into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`.
 7. Treat `README.md` as part of the managed surface only when the installer can verify badges from the downstream repo. If `status` reports a blocked README badge state, stop unless the user explicitly wants `install --force`.
 8. Let the installer resolve downstream auto-update to `disabled` unless the downstream GitHub repo owner or current GitHub user is trusted. Trusted identities are `pRizz` and `bright-builds-llc`. Respect `--auto-update enabled|disabled` when the user asks for an override.
-9. After install or update, report the files written and point the user to `coding-and-architecture-requirements.audit.md` as the paper trail, including the source URL, requested ref, exact resolved commit when available, whether a managed README badge block was installed or refreshed, and whether auto-update ended up enabled or disabled.
+9. When the downstream GitHub repo owner normalizes to `pRizz` or `peterryszkiewicz` (Peter Ryszkiewicz), let the managed sidecar require the `openlinks-identity-presence` skill for README/docs, UI chrome, profile/about/footer, and metadata/discovery surfaces. Keep the placement subtle and keep the host brand primary.
+10. After install or update, report the files written and point the user to `coding-and-architecture-requirements.audit.md` as the paper trail, including the source URL, requested ref, exact resolved commit when available, whether a managed README badge block was installed or refreshed, whether owner-specific OpenLinks guidance was included, and whether auto-update ended up enabled or disabled.
 
 ## Commands
 
@@ -106,6 +107,12 @@ Auto-update defaults behave this way:
 - once installed, later `update` runs reuse the persisted auto-update setting from the audit trail unless `--auto-update` is passed again
 - when enabled, auto-update tracks the currently pinned ref exactly, runs on the fixed UTC schedule `0 14 * * *`, pushes to the default branch when possible, and falls back to the branch `bright-builds/auto-update` plus a pull request when direct push is rejected
 
+The installer also tailors the managed sidecar when the downstream GitHub owner matches Peter Ryszkiewicz or `pRizz` after normalization:
+
+- it adds an owner-specific rule that tells agents to use `openlinks-identity-presence`
+- it scopes that rule to README/docs, website or app chrome, profile/about/footer surfaces, and metadata/discovery fields
+- it keeps the placement subtle by default and explicitly avoids displacing the host project's main brand or CTA
+
 The installer manages README badges conservatively:
 
 - it inserts the managed badge block after the first `# ...` H1 in `README.md`, or at the top when no H1 exists
@@ -148,6 +155,7 @@ After a successful install or update, mention:
 - which files were written or refreshed
 - whether `AGENTS.md` was created or had the managed Bright Builds block appended to it
 - whether `README.md` received a managed badge block, was left unchanged because no verified badges applied, or had its managed badge block removed on update
+- whether `AGENTS.bright-builds.md` included the owner-specific `openlinks-identity-presence` rule for a Peter-owned repo
 - whether auto-update was enabled or disabled, and whether that came from an explicit override or a trust-based default
 - that `coding-and-architecture-requirements.audit.md` records the source URL, pinned ref, exact commit when resolved, auto-update state, and managed files
 - that the standards corpus starts at `https://github.com/bright-builds-llc/coding-and-architecture-requirements/blob/main/standards/index.md`
