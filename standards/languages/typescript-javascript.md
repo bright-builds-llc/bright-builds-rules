@@ -122,3 +122,7 @@ function createTeam(slug: string): Team {
 ## Testing Notes
 
 Follow the shared testing standard in [../core/testing.md](../core/testing.md). For unit tests, explicit Arrange/Act/Assert sections are the default unless the structure is unmistakable without them.
+
+## Verification Notes
+
+Follow the shared verification standard in [../core/verification.md](../core/verification.md). In TypeScript and JavaScript repositories, prefer repo-owned scripts or task runners first, then Bun/npm/pnpm/yarn script surfaces, then framework-native checks when needed. Linting, typechecking, build, and test commands are common examples, not a required universal set, and affected-package or changed-path modes are preferred when the repository provides them.

@@ -19,6 +19,7 @@ This repository uses a tiered rules model so preferences and hard requirements d
 
 - [Architecture](core/architecture.md)
 - [Code Shape](core/code-shape.md)
+- [Verification](core/verification.md)
 - [Testing](core/testing.md)
 
 ## Language-specific guidance

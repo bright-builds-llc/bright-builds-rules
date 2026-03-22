@@ -2,26 +2,26 @@
 
 ## Current task
 
-- [x] Add explicit auto-update state and trust-based defaulting to the downstream manager
-- [x] Manage the downstream auto-update workflow and helper script when auto-update is enabled
-- [x] Extend installer and auto-update tests for trust defaults, persistence, and push/PR behavior
-- [x] Update adoption docs and release notes for the new auto-update mechanism
+- [x] Add a core `Verification` standard with durable pre-commit guidance, affected-path scope, CI-only heavy-suite exceptions, and hook-aware prompting
+- [x] Propagate the verification standard through the standards index, README entrypoints, language notes, and Codex skill references
+- [x] Refresh downstream managed templates so installed repos receive the new verification guidance and override notes
+- [x] Extend installer regression coverage to assert the new verification wording in managed outputs
 
 ## Current verification
 
+- [x] `./scripts/verify-docs.sh` passes
 - [x] `bash ./scripts/test-manage-downstream.sh` passes
 - [x] `bash ./scripts/test-bright-builds-auto-update.sh` passes
-- [x] `./scripts/verify-docs.sh` passes
 - [x] Diff reviewed for unintended side effects
 
 ## Current completion review
 
-Completed on 2026-03-16.
+Completed on 2026-03-22.
 
 Residual risks:
 
-- The trust-based default still depends on GitHub identity signals that may be absent or unauthenticated in some local environments, so those installs intentionally fall back to `default disabled`.
-- The auto-update workflow is intentionally GitHub-only and assumes the repository can run Actions with `contents: write` and `pull-requests: write`; repos with stricter policies will use the PR fallback or remain manual.
+- Hook detection remains heuristic by design, so downstream repos still need local guidance or overrides when hook-owned verification is partial, stale, or intentionally advisory.
+- The core rule allows heavy suites to remain CI-only when documented locally, so downstream repos still need to define that boundary clearly if they want agents to avoid guessing.
 
 ## Previous work
 

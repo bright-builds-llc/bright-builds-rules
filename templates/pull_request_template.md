@@ -13,8 +13,8 @@ Describe the behavior change and why it is needed.
 
 ## Verification
 
-- [ ] Relevant tests ran
-- [ ] Relevant lint/build/type checks ran
+- [ ] Relevant repo-native verification ran and passed when applicable
+- [ ] Any CI-only or hook-owned verification exception is documented
 - [ ] Changed paths were validated manually when appropriate
 
 ## Risks

@@ -18,12 +18,18 @@ Use this file as the starting point for a downstream repository's contribution g
 - Parse boundary input into domain types when that removes repeated validation.
 - Apply any relevant language-specific guidance from the pinned canonical standards.
 
+## Verification expectations
+
+- Before committing, run the relevant repo-native verification steps for the changed paths and do not commit if they fail.
+- Prefer a repo-owned verify/check/validate/ci command when it exists over reconstructing tool commands by hand.
+- Heavy integration, end-to-end, or external-service suites may stay pre-push or CI-only when local guidance or `standards-overrides.md` documents that choice.
+- If hooks appear to own verification here and the local workflow is unclear, clarify whether the repo expects hooks, manual checks, or both.
+
 ## Test expectations
 
 - Unit test pure code and business logic.
 - Keep each unit test focused on one concept.
 - Use explicit Arrange, Act, Assert sections unless the structure is truly obvious.
-- Run the repository's required verification steps before opening a pull request.
 
 ## Pull request expectations
 

@@ -119,3 +119,7 @@ src/
 ## Testing Notes
 
 Follow the shared testing standard in [../core/testing.md](../core/testing.md). In Rust, explicit Arrange/Act/Assert comments are the default for unit tests, especially once setup grows beyond a line or two.
+
+## Verification Notes
+
+Follow the shared verification standard in [../core/verification.md](../core/verification.md). In Rust repositories, common verification surfaces include `cargo fmt`, `cargo clippy`, `cargo build`, and `cargo test`, but treat those as examples rather than a mandatory universal sequence. Prefer the repo's own Rust-oriented verify/check entrypoint when it exists, and scope runs to the affected crate, package, or workspace when the repository supports that.

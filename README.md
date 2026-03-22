@@ -8,6 +8,8 @@ This repository is a versioned policy and adoption kit for a personal, opinionat
 - Teams can copy thin local templates into their own repositories.
 - Codex users can opt into a thin skill that points back to the canonical docs.
 
+The core corpus currently covers architecture, code shape, verification, and testing, with repo-local overrides for deliberate exceptions.
+
 ## For AI Agents
 
 If an AI is given only this repository URL and asked to adopt these requirements into another repository, the AI should start with [AI-ADOPTION.md](AI-ADOPTION.md).
@@ -203,6 +205,7 @@ Behavior by command:
 - Standards index: [standards/index.md](standards/index.md)
 - Core architecture: [standards/core/architecture.md](standards/core/architecture.md)
 - Code shape: [standards/core/code-shape.md](standards/core/code-shape.md)
+- Verification: [standards/core/verification.md](standards/core/verification.md)
 - Testing: [standards/core/testing.md](standards/core/testing.md)
 - Rust guidance: [standards/languages/rust.md](standards/languages/rust.md)
 - TypeScript/JavaScript guidance: [standards/languages/typescript-javascript.md](standards/languages/typescript-javascript.md)
