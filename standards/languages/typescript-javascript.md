@@ -2,6 +2,35 @@
 
 This page translates the core standards into TypeScript/JavaScript-specific guidance.
 
+## Prefer Bun for New Standalone JS/TS Projects
+
+- Level: `should`
+- Intent: Keep greenfield JavaScript and TypeScript projects on a fast, simple default toolchain unless compatibility needs point elsewhere.
+- Rule: For brand-new standalone JavaScript or TypeScript projects, prefer Bun as the default package manager and script execution surface when the project can reasonably stay on Bun-native paths. Use Bun for installs, lockfiles, and routine script entrypoints by default. Do not churn an existing npm, pnpm, or yarn repository just to satisfy this rule; existing repositories should keep their current package manager unless they intentionally choose to migrate.
+- Rationale: A greenfield default only works if it reduces toolchain sprawl instead of creating migration churn. Bun is a good default when it can own the day-to-day package and script surface cleanly, but existing projects already encode real compatibility and workflow decisions in their current toolchain.
+- Good example:
+
+```text
+New standalone TypeScript service
+- initializes with Bun
+- commits `bun.lock`
+- uses Bun for install and routine script execution
+- keeps framework-required tools only where they add real value
+```
+
+- Bad example:
+
+```text
+Existing pnpm monorepo
+- replaces the lockfile and script surface with Bun midstream
+- updates CI and local docs only to satisfy the preference
+- adds churn without a deliberate migration decision
+```
+
+- Exceptions or escape hatches: If a framework, hosting platform, dependency stack, workspace tool, or deployment contract is not Bun-friendly, use the compatible toolchain and document the local reason when it matters. This rule does not ban framework-required tools; it sets the default package-manager and script/runtime surface for greenfield standalone projects.
+- Review questions: Is this actually a new standalone JS/TS project, or an existing repo that already standardized on another package manager? Can Bun own the routine install and script surface cleanly here, or is there a clear compatibility reason not to use it?
+- Automation potential: Project scaffolds and templates can default to Bun, but compatibility decisions still need repo-level judgment.
+
 ## Prefer Composition Over Class Inheritance
 
 - Level: `must`
@@ -125,4 +154,4 @@ Follow the shared testing standard in [../core/testing.md](../core/testing.md). 
 
 ## Verification Notes
 
-Follow the shared verification standard in [../core/verification.md](../core/verification.md). In TypeScript and JavaScript repositories, prefer repo-owned scripts or task runners first, then Bun/npm/pnpm/yarn script surfaces, then framework-native checks when needed. Linting, typechecking, build, and test commands are common examples, not a required universal set, and affected-package or changed-path modes are preferred when the repository provides them.
+Follow the shared verification standard in [../core/verification.md](../core/verification.md). In TypeScript and JavaScript repositories, prefer repo-owned scripts or task runners first. For new standalone projects, Bun is the preferred default package-manager and script surface; for existing repositories, follow the established local toolchain unless the repo intentionally migrates. Linting, typechecking, build, and test commands are common examples, not a required universal set, and affected-package or changed-path modes are preferred when the repository provides them.

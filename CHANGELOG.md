@@ -4,6 +4,7 @@ This repository uses a simple release-notes model instead of a heavyweight chang
 
 ## Unreleased
 
+- Added `should` guidance for greenfield standalone JavaScript and TypeScript projects to prefer Bun for package management and routine script execution, while leaving existing npm/pnpm/yarn repositories unchanged unless they deliberately migrate
 - Added a core `Verification` standard for pre-commit repo-native checks, including affected-path scope, aggregate-command preference, CI-only heavy-suite exceptions, blocked-environment handling, and hook-aware user prompting
 - Updated downstream managed templates to surface the new verification guidance, including flexible pre-commit wording and documented override notes for hook-owned or CI-only verification
 - Added trust-aware downstream auto-update management, including persisted auto-update state in the audit trail, a managed GitHub Actions workflow plus helper script, and direct-push with PR fallback behavior

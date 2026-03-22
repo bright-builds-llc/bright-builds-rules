@@ -2,16 +2,14 @@
 
 ## Current task
 
-- [x] Add a core `Verification` standard with durable pre-commit guidance, affected-path scope, CI-only heavy-suite exceptions, and hook-aware prompting
-- [x] Propagate the verification standard through the standards index, README entrypoints, language notes, and Codex skill references
-- [x] Refresh downstream managed templates so installed repos receive the new verification guidance and override notes
-- [x] Extend installer regression coverage to assert the new verification wording in managed outputs
+- [x] Add a TS/JS `should` rule that makes Bun the default for new standalone JS/TS projects
+- [x] Scope the Bun preference to greenfield repos only and preserve existing npm/pnpm/yarn repos unless they deliberately migrate
+- [x] Update the TS/JS verification note to prefer Bun for new standalone projects while preserving repo-native verification ordering
+- [x] Record the new language-specific guidance in the changelog
 
 ## Current verification
 
 - [x] `./scripts/verify-docs.sh` passes
-- [x] `bash ./scripts/test-manage-downstream.sh` passes
-- [x] `bash ./scripts/test-bright-builds-auto-update.sh` passes
 - [x] Diff reviewed for unintended side effects
 
 ## Current completion review
@@ -20,8 +18,8 @@ Completed on 2026-03-22.
 
 Residual risks:
 
-- Hook detection remains heuristic by design, so downstream repos still need local guidance or overrides when hook-owned verification is partial, stale, or intentionally advisory.
-- The core rule allows heavy suites to remain CI-only when documented locally, so downstream repos still need to define that boundary clearly if they want agents to avoid guessing.
+- Bun compatibility still depends on the framework, workspace model, hosting platform, and dependency stack, so downstream repos may still need explicit local exceptions when Bun is not the right fit.
+- The rule is intentionally greenfield-only, so repos that want a broader migration posture still need to state that locally instead of assuming the standard requires it.
 
 ## Previous work
 
