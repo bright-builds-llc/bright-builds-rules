@@ -14,7 +14,7 @@ Use this file as the starting point for a downstream repository's contribution g
 - Keep business logic in a functional core when practical.
 - Prefer early returns and shallow control flow.
 - Split oversized functions and files into sensible units.
-- Keep workflow and automation config thin; extract non-trivial inline scripts into repo-owned files in sensible locations, make them rerunnable when sensible, and have them leave breadcrumb-heavy logs and summaries in a repo-defined gitignored location.
+- Do not hide substantial foreign-language logic inside strings; keep workflow and automation config thin, move scripts, queries, and similar artifacts into repo-owned or language-aware files, make checked-in scripts rerunnable when sensible, and have them leave breadcrumb-heavy logs and summaries in a repo-defined gitignored location.
 - Parse boundary input into domain types when that removes repeated validation.
 - Apply any relevant language-specific guidance from the pinned canonical standards.
 

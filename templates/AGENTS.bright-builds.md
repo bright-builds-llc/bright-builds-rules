@@ -19,7 +19,7 @@ Record repo-specific changes in `AGENTS.md` or `standards-overrides.md`, not in 
 - Prefer functional core / imperative shell for business logic.
 - Prefer early returns over nesting.
 - Treat functions over roughly 200 lines as refactor triggers.
-- Keep workflow config thin and move non-trivial inline scripts into repo-owned script files that are rerunnable when sensible and leave breadcrumb-heavy logs and summaries in a repo-defined gitignored location.
+- Do not hide substantial foreign-language logic inside strings; keep orchestration thin, move scripts, queries, and similar artifacts into repo-owned or language-aware files, and make checked-in scripts rerunnable when sensible with breadcrumb-heavy logs and summaries in a repo-defined gitignored location.
 - Treat files over roughly 628 lines as refactor triggers.
 - Before committing, run the relevant repo-native verification steps for the changed paths, including Markdown or shell formatter checks when supported tools are already available and local guidance does not define a clearer workflow, and do not commit if they fail.
 - Prefer the repo's own verify/check/validate entrypoint when it exists, and use affected-path or affected-package modes when the repo supports them.

@@ -114,17 +114,34 @@ handleCheckout()
 - Review questions: Does the function still represent a single concern? Could named helpers reveal the workflow better than comments or blank lines?
 - Automation potential: Length checks are easy to automate, but whether the split is sensible still requires review.
 
-## Keep Workflow Config Thin And Extract Non-Trivial Scripts
+## Do Not Hide Foreign Code Inside Strings
 
 - Level: `should`
-- Intent: Keep automation config readable and make non-trivial workflow logic locally runnable, reusable, and testable.
-- Rule: Keep workflow or automation YAML focused on orchestration. When a workflow step grows into non-trivial script logic such as multiline shell with branching, loops, parsing, reusable logic, or more than trivial glue, extract it into a checked-in script or language-native entrypoint in a sensible repo location like `scripts/`, `tools/`, or the relevant package.
-- Rationale: Inline workflow scripts are hard to review, awkward to debug locally, and easy to duplicate across jobs. Extracted scripts can be named, tested, linted, reused, and run outside the CI system.
+- Intent: Keep each language in a surface where it can be named, reviewed, linted, tested, reused, and run with the right tooling.
+- Rule: Do not embed substantial code from one language inside another via string literals, heredocs, multiline inline blocks, or generated command strings. Keep orchestration and host-language code focused on orchestration, and move foreign-language logic into checked-in scripts, query files, templates, modules, or other language-aware artifacts. This applies across source files, scripts, config, CI or automation YAML, templates, and generated command assembly. If one surface must invoke another language, call a file or native entrypoint instead of pasting that language inline.
+- Rationale: Foreign-language logic hidden inside strings loses syntax-aware tooling, blurs the boundary between orchestration and implementation, and is awkward to run or debug locally. It also increases quoting and escaping mistakes, encourages copy-pasted mini-programs, and makes review harder because the real logic is hiding in a host-language string.
 - Good example:
 
 ```yaml
 - name: Verify docs
   run: ./scripts/verify-docs.sh
+```
+
+- Good example:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+node ./tools/check-config.mjs
+```
+
+- Good example:
+
+```text
+queries/find_stale_accounts.sql
+  - checked in next to the code that owns it
+  - loaded by the host language or replaced with a language-aware query abstraction
 ```
 
 - Bad example:
@@ -151,9 +168,37 @@ handleCheckout()
     fi
 ```
 
-- Exceptions or escape hatches: Short glue commands, obvious one-liners, or tiny invocations of existing tools may stay inline. If a reusable composite action or existing third-party action is clearer than a local script, prefer the clearer abstraction.
-- Review questions: Is this YAML still orchestration, or is it hiding script logic? Would the logic be easier to reuse, test, lint, or run locally from `scripts/`, `tools/`, or a language-native entrypoint?
-- Automation potential: Linters can flag large multiline `run:` blocks, but deciding when the logic has crossed from glue into a script still needs reviewer judgment.
+- Bad example:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+bash -c '
+  node -e "
+    const config = JSON.parse(require(\"node:fs\").readFileSync(\"config.json\", \"utf8\"));
+    if (!config.enabled) {
+      process.exit(1);
+    }
+  "
+'
+```
+
+- Bad example:
+
+```typescript
+const findStaleAccounts = `
+  select id, email
+  from users
+  where deleted_at is null
+    and last_seen_at < now() - interval '90 days'
+  order by last_seen_at asc
+`;
+```
+
+- Exceptions or escape hatches: Keep exceptions rare. Truly trivial host-required glue may stay inline, such as an obvious one-liner, a short invocation of an existing tool, or a tiny literal that is genuinely clearer in place than in a separate artifact. Once the embedded code carries its own logic, quoting complexity, reusable behavior, or independent change pressure, extract it. If a reusable composite action, framework-native abstraction, or third-party integration is clearer than a local file, prefer the clearer abstraction.
+- Review questions: Is this surface still orchestration or host-language logic, or is real foreign-language behavior hiding inside a string? Would a checked-in script, query file, template, or language-aware abstraction make the logic easier to review, lint, test, reuse, or run locally? Is the remaining inline case truly trivial, or did convenience quietly turn it into a second program?
+- Automation potential: Linters can flag large multiline `run:` blocks, heredocs, `bash -c`, `node -e`, `python -c`, and oversized embedded query strings, but deciding when an inline snippet is still genuinely trivial still needs reviewer judgment.
 
 ## Make Scripts Safe To Re-Run And Easy To Diagnose
 
