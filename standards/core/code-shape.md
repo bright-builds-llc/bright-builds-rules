@@ -86,6 +86,66 @@ fn issue_refund(maybe_payment: Option<Payment>) -> Result<(), Error> {
 - Review questions: Is the guard expression direct, or is the function split between a presence check and a later extraction? Does the code use the clearest language feature for the shape of the control flow?
 - Automation potential: Rust-specific linting or review tooling can flag some `let...else` opportunities, but not all cases are equally readable.
 
+## Prefix Nullable Internal Names with `maybe`
+
+- Level: `should`
+- Intent: Make "this value may be absent" obvious before the reader has to inspect a type annotation, implementation, or distant schema.
+- Rule: When an internal name represents a value that may legitimately be nullish or optional, use the language's normal `maybe` form in that name. Apply this to functions returning absence-like success values, to locals, parameters, destructured bindings, and internal fields or properties with those shapes, and to reusable wrapper or alias types only when such a type materially clarifies a repeated nullable surface. Across languages this covers shapes such as `T | null`, `T | undefined`, `T?`, `Option<T>`, `Maybe<T>`, `nil`, `None`, and promise or future-wrapped equivalents such as `Promise<T | null>` or `Future<Option<T>>`. Use `MaybeX`-style type names only when the alias or wrapper adds real clarity; do not invent one-off aliases when the raw type is already obvious. This rule is about absence-like success values, not error channels: plain `Result<T, E>`, thrown exceptions, or similar failure paths do not trigger `maybe` unless the success branch itself is nullable or optional. Ordinary empty collections, maps, slices, or strings also do not trigger this rule when emptiness is still a normal successful result rather than "no value."
+- Rationale: Call sites and local flows are easier to read when absence is advertised in names instead of being hidden in a distant type annotation or implementation detail. A visible `maybe` marker makes nullish paths harder to miss during review, reduces surprise at the use site, and nudges callers to handle the unhappy path explicitly.
+- Good example:
+
+```text
+Internal session flow
+  - `type MaybeSession = Session | null` because the alias is reused across multiple interfaces
+  - `async function maybeLoadSession(maybeToken: string): Promise<MaybeSession>`
+  - `const maybeSession = await maybeLoadSession(maybeToken)`
+  - `const { profile: maybeProfile } = payload`
+  - `const state = { maybeConfigPath: maybeSession?.configPath }`
+```
+
+- Good example:
+
+```rust
+type MaybeCustomerId = Option<CustomerId>;
+
+struct CustomerState {
+    maybe_profile: Option<Profile>,
+}
+
+fn maybe_customer_id(maybe_customer: Option<Customer>) -> MaybeCustomerId {
+    let Some(customer) = maybe_customer else {
+        return None;
+    };
+
+    let maybe_id = Some(customer.id);
+    maybe_id
+}
+```
+
+- Bad example:
+
+```text
+Internal session flow
+  - `type SessionOrNull = Session | null` for a one-off local use
+  - `async function loadSession(token: string | null): Promise<Session | null>`
+  - `const session = await loadSession(token)`
+  - `const { profile } = payload`
+  - `const state = { configPath: session?.configPath }`
+```
+
+- Exception example:
+
+```text
+External or framework-owned contract
+  - JSON field stays `profile` because the wire format is stable
+  - GraphQL schema keeps `user` as a nullable field
+  - adapter maps those into internal `maybeProfile` or `maybeUser` names after the boundary
+```
+
+- Exceptions or escape hatches: Keep exceptions rare. Public or external contract names, framework-required names, trait or interface requirements, wire fields, DB columns, GraphQL schema fields, and third-party integration surfaces may keep their established names when renaming would fight a stable contract. Map those names into internal `maybe` names after the boundary when helpful. Do not treat "find", "lookup", or "try" by themselves as automatic exemptions, and do not invent `MaybeX` aliases unless they clarify a repeated surface.
+- Review questions: Does the internal name warn the reader that a normal use may yield no value? Is the value actually nullish or optional absence, or merely an empty collection or an error channel? If the name skips `maybe`, is the alternate absence signal truly explicit and contract-driven? Does a `MaybeX` alias add clarity, or is it just wrapping a one-off type expression?
+- Automation potential: Static analysis can often pair nullable or optional types with names, but deciding whether an alternate name or alias is a justified exception still needs reviewer judgment.
+
 ## Split Large Functions Into Named Pieces
 
 - Level: `should`

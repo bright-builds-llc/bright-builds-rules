@@ -66,6 +66,54 @@ fn load_customer_id(maybe_customer: Option<Customer>) -> Result<CustomerId, Erro
 - Review questions: Is extraction and guard logic split apart? Is there a later `unwrap` that should have been eliminated by a guard?
 - Automation potential: Static analysis can catch obvious `is_none` plus `unwrap` sequences, but readable use still needs reviewer judgment.
 
+## Prefix Optional Internal Names with `maybe_`
+
+- Level: `should`
+- Intent: Make optional flows visible before the caller has to inspect the signature closely.
+- Rule: When an internal Rust name usually represents `Option<T>`, prefer a `maybe_` name such as `maybe_customer_id`, `maybe_profile`, or `maybe_config_path`. Apply the same idea to functions, locals, parameters, destructured bindings, and internal struct fields, plus async or success branches such as `impl Future<Output = Option<T>>` or `Result<Option<T>, E>`. A reusable alias like `MaybeCustomerId` is acceptable only when it materially clarifies a repeated optional surface. Do not apply this rule to plain `Result<T, E>` when success is still a definite value.
+- Rationale: Rust makes optionality explicit in the type system, but call sites still read faster when names also signal that `Some` is not guaranteed.
+- Good example:
+
+```rust
+type MaybeCustomerId = Option<CustomerId>;
+
+struct CustomerState {
+    maybe_profile: Option<Profile>,
+}
+
+fn maybe_customer_id(maybe_customer: Option<Customer>) -> MaybeCustomerId {
+    let Some(customer) = maybe_customer else {
+        return None;
+    };
+
+    let maybe_id = Some(customer.id);
+    maybe_id
+}
+```
+
+- Bad example:
+
+```rust
+type CustomerIdOrNone = Option<CustomerId>;
+
+struct CustomerState {
+    profile: Option<Profile>,
+}
+
+fn customer_id(customer: Option<Customer>) -> Option<CustomerId> {
+    let Some(customer) = customer else {
+        return None;
+    };
+
+    let id = Some(customer.id);
+    id
+}
+```
+
+- Exceptions or escape hatches: Rare trait, framework, serde, database, or public API contracts that already spell absence out explicitly may keep their required name. Treat that as a narrow boundary exception, not a reason to skip `maybe_` for ordinary helpers, locals, or fields. Do not introduce `MaybeX` aliases unless they clarify a repeated surface.
+- Review questions: Do `Option<T>`-bearing functions, locals, params, and internal fields advertise that possibility in their names? Is the value actually optional absence, or is it just a fallible `Result`? Is a non-`maybe_` name truly forced by a contract, and is a `MaybeX` alias actually helping readability?
+- Automation potential: Type-aware tooling can often match `Option` returns and bindings to names, but reviewers still need to judge whether a non-`maybe_` name or extra alias is justified.
+
 ## Encode Invariants with Newtypes and Enums
 
 - Level: `must`

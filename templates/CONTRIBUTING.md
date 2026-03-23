@@ -13,6 +13,7 @@ Use this file as the starting point for a downstream repository's contribution g
 
 - Keep business logic in a functional core when practical.
 - Prefer early returns and shallow control flow.
+- Prefix internal nullable or optional names with `maybe`, including functions, bindings, and internal fields, and use `MaybeX` aliases only when they materially clarify a repeated nullable surface.
 - Split oversized functions and files into sensible units.
 - Do not hide substantial foreign-language logic inside strings; keep workflow and automation config thin, move scripts, queries, and similar artifacts into repo-owned or language-aware files, make checked-in scripts rerunnable when sensible, and have them leave breadcrumb-heavy logs and summaries in a repo-defined gitignored location.
 - Parse boundary input into domain types when that removes repeated validation.

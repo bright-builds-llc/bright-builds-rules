@@ -116,13 +116,29 @@ async function totalCents(controller: QuoteController): Promise<number> {
 
 - Level: `should`
 - Intent: Use the language's type features and parsing layer to reduce invalid states and ambiguous primitives.
-- Rule: Parse untrusted input into stronger types before it reaches business logic. Use tagged unions, discriminated states, branded types, or factory/parser modules when they make an illegal state impossible or substantially harder to create.
+- Rule: Parse untrusted input into stronger types before it reaches business logic. Use tagged unions, discriminated states, branded types, or factory/parser modules when they make an illegal state impossible or substantially harder to create. When a TS/JS function returns `T | null | undefined`, or a `Promise` of that shape, prefer a `maybe...` name so the nullable path is obvious at the callsite.
 - Rationale: TS/JS cannot enforce as much at runtime as Rust can, but a deliberate parsing layer and stronger types still prevent a large class of mistakes.
 - Good example:
 
 ```ts
 type TeamSlug = string & { readonly __brand: "TeamSlug" };
 
+function maybeParseTeamSlug(value: string): TeamSlug | null {
+  if (!/^[a-z0-9-]+$/.test(value)) {
+    return null;
+  }
+
+  return value as TeamSlug;
+}
+
+async function maybeLoadSession(token: string): Promise<Session | undefined> {
+  // ...
+}
+```
+
+- Bad example:
+
+```ts
 function parseTeamSlug(value: string): TeamSlug | null {
   if (!/^[a-z0-9-]+$/.test(value)) {
     return null;
@@ -130,23 +146,53 @@ function parseTeamSlug(value: string): TeamSlug | null {
 
   return value as TeamSlug;
 }
+
+async function loadSession(token: string): Promise<Session | undefined> {
+  // ...
+}
+```
+
+- Exceptions or escape hatches: Avoid over-modeling trivial fields. Introduce stronger types where they pull real error-checking forward or clarify domain meaning. Rare framework or public-API contracts that already spell absence out explicitly, such as `...OrNull`, may stay non-`maybe`.
+- Review questions: Is the same string or object shape re-validated in multiple layers? Could a tagged union or parser remove nullable or impossible combinations? If the parser or loader returns `null` or `undefined`, does the name advertise that with `maybe`?
+- Automation potential: Static tools can catch some unsafe casts or ad hoc runtime checks, but the right boundary model is still a design decision.
+
+## Prefix Nullish Internal Names with `maybe`
+
+- Level: `should`
+- Intent: Make nullable and optional flows obvious at the use site, not just in the type annotation.
+- Rule: In internal TypeScript and JavaScript code, use `maybe...` for functions, locals, parameters, destructured bindings, and object properties when their value may legitimately be `null` or `undefined`, including Promise-wrapped forms. When a reusable alias materially clarifies a repeated nullable surface, names like `MaybeSession` are appropriate. Do not force a one-off alias when `Session | null` or similar is already clear in place. Public JSON fields, GraphQL schema fields, framework-owned props, and third-party interface names are narrow exceptions; keep their contract name and map them to internal `maybe...` names when helpful.
+- Rationale: TS/JS call sites often lose nullable context in the middle of object flow and async code. Consistent `maybe...` naming keeps the absence signal visible even when the type annotation is not in view.
+- Good example:
+
+```ts
+type MaybeSession = Session | null;
+
+async function maybeLoadSession(maybeToken: string): Promise<MaybeSession> {
+  const maybeSession = await loadFromStore(maybeToken);
+  return maybeSession;
+}
+
+const { profile: maybeProfile } = payload;
+const state = { maybeConfigPath: maybeSession?.configPath };
 ```
 
 - Bad example:
 
 ```ts
-function createTeam(slug: string): Team {
-  if (!/^[a-z0-9-]+$/.test(slug)) {
-    throw new Error("invalid slug");
-  }
+type SessionOrNull = Session | null;
 
-  return { slug };
+async function loadSession(token: string | null): Promise<Session | null> {
+  const session = await loadFromStore(token);
+  return session;
 }
+
+const { profile } = payload;
+const state = { configPath: session?.configPath };
 ```
 
-- Exceptions or escape hatches: Avoid over-modeling trivial fields. Introduce stronger types where they pull real error-checking forward or clarify domain meaning.
-- Review questions: Is the same string or object shape re-validated in multiple layers? Could a tagged union or parser remove nullable or impossible combinations?
-- Automation potential: Static tools can catch some unsafe casts or ad hoc runtime checks, but the right boundary model is still a design decision.
+- Exceptions or escape hatches: External contract fields, framework-required prop names, and established third-party interface shapes may keep their original spelling. Keep that exception at the boundary rather than letting non-`maybe` names spread through internal code.
+- Review questions: Do nullish locals, params, destructured bindings, and internal properties advertise that possibility in their names? Is a `MaybeX` alias clarifying a repeated surface, or just renaming a one-off union? Is a non-`maybe` name truly forced by an external contract?
+- Automation potential: Linters and static analysis can often match `null` or `undefined` types to internal names, but contract exceptions and alias usefulness still need reviewer judgment.
 
 ## Testing Notes
 

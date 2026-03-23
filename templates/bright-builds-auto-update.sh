@@ -116,8 +116,8 @@ restore_audit_if_only_runtime_changed() {
   [[ -f "$audit_before_path" ]] || return
   [[ -f "$audit_path" ]] || return
 
-  grep -vE '^- Last operation: `|^- Last updated \\(UTC\\): `' "$audit_before_path" > "$sanitized_before_path"
-  grep -vE '^- Last operation: `|^- Last updated \\(UTC\\): `' "$audit_path" > "$sanitized_after_path"
+  grep -vE '^- Last operation: `|^- Last updated \(UTC\): `' "$audit_before_path" > "$sanitized_before_path"
+  grep -vE '^- Last operation: `|^- Last updated \(UTC\): `' "$audit_path" > "$sanitized_after_path"
 
   if ! cmp -s "$sanitized_before_path" "$sanitized_after_path"; then
     return

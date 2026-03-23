@@ -12,6 +12,7 @@ This repository uses a simple release-notes model instead of a heavyweight chang
 - Added trust-aware downstream auto-update management, including persisted auto-update state in the audit trail, a managed GitHub Actions workflow plus helper script, and direct-push with PR fallback behavior
 - Added `should` guidance for repo-owned scripts to be rerunnable when sensible and to persist breadcrumb-heavy logs plus run summaries in a repo-defined gitignored path, plus matching downstream template wording
 - Added `should` guidance to avoid hiding foreign-language logic inside strings, keep orchestration thin, and prefer repo-owned or language-aware artifacts over embedded shell, JS, query, or pattern snippets, plus matching downstream template wording
+- Added cross-language `should` guidance to prefix internal nullable or optional names with `maybe`, including functions, bindings, internal fields, and Promise or Future-wrapped nullish values, while reserving `MaybeX` aliases for repeated clarity wins and keeping narrow contract-driven exceptions
 - Initial standards corpus for architecture, code shape, testing, Rust, and TypeScript/JavaScript
 - Downstream adoption templates for `AGENTS.md`, `CONTRIBUTING.md`, overrides, and PRs
 - Optional Codex skill for applying or reviewing against the standards
