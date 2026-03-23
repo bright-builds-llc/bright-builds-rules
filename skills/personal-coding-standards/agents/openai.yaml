@@ -1,4 +1,4 @@
 interface:
   display_name: "Personal Coding Standards"
-  short_description: "Apply, review, audit, or audit-and-fix against personal coding standards"
-  default_prompt: "Use $personal-coding-standards to apply, review, audit, or audit-and-fix a repository against these standards."
+  short_description: "Adopt, refresh, review, audit, or audit-and-fix Bright Builds standards"
+  default_prompt: "Use $personal-coding-standards to check, adopt, refresh, review, audit, or audit-and-fix a repository against the Bright Builds coding and architecture standards."

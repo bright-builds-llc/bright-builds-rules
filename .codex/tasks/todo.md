@@ -2,15 +2,17 @@
 
 ## Current task
 
-- [x] Update the canonical verification standard with conditional Markdown and shell formatter-check guidance
-- [x] Mirror the condensed verification wording into the managed downstream templates
-- [x] Refresh the downstream installer assertions that verify the managed template wording
-- [x] Record the policy change in `CHANGELOG.md`
+- [x] Update the canonical `personal-coding-standards` skill to resolve Bright Builds adoption, status, refresh, review, audit, and audit-and-fix intent explicitly
+- [x] Add helper-first Bright Builds refresh guidance plus graceful no-argument handling and suggested actions
+- [x] Sync the installed `~/.codex/skills/personal-coding-standards` copy and align both `agents/openai.yaml` files
 
 ## Current verification
 
+- [x] Repo and installed `SKILL.md` copies both mention helper-first refresh handling, no-context inference, and suggested actions
+- [x] Repo and installed `agents/openai.yaml` copies both advertise the expanded Bright Builds modes
+- [x] Relative path references remain correct for repo and installed skill copies
 - [x] `./scripts/verify-docs.sh` passes
-- [x] `bash scripts/test-manage-downstream.sh` passes
+- [x] `git diff --check` passes
 - [x] Diff reviewed for unintended side effects
 
 ## Current completion review
@@ -19,8 +21,8 @@ Completed on 2026-03-22.
 
 Residual risks:
 
-- Downstream summaries can drift from the canonical rule if the installer assertions are not kept aligned with the exact template wording.
-- Formatter availability language must stay clearly conditional so agents do not infer they should install new tools.
+- The installed skill copy can drift again from the canonical repo copy if later updates touch only one location.
+- The skill still relies on conversational intent and repo inspection, so ambiguous no-argument invocations may need a short action menu instead of direct execution.
 
 ## Previous work
 
