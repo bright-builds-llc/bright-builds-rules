@@ -2,6 +2,36 @@
 
 This page translates the core standards into Rust-specific guidance.
 
+## Prefer `foo.rs` Plus `foo/` Over `foo/mod.rs`
+
+- Level: `must`
+- Intent: Keep Rust module entry files easy to find by name and make multi-file module layouts more consistent to navigate.
+- Rule: For new or touched multi-file Rust modules, prefer `foo.rs` plus `foo/` over `foo/mod.rs`. When a module has child files or submodules, the module entry file should normally live next to the module directory, not inside it. This rule applies to module entry files for multi-file modules, not crate roots such as `lib.rs`, `main.rs`, or `bin/*.rs`.
+- Rationale: A module entry file named after the module is easier to find in code search, editor file search, and repository navigation than a directory full of `mod.rs` files. The `foo.rs` plus `foo/` shape also makes it more obvious which module a file belongs to without opening the directory first.
+- Good example:
+
+```text
+src/
+  payments.rs
+  payments/
+    retries.rs
+    providers.rs
+```
+
+- Bad example:
+
+```text
+src/
+  payments/
+    mod.rs
+    retries.rs
+    providers.rs
+```
+
+- Exceptions or escape hatches: Do not require broad rename-only cleanup of stable existing `mod.rs` trees. Apply this rule when creating new modules or restructuring touched areas. Narrow exceptions are acceptable for generated code, external tooling or framework constraints, or a clearly documented local convention. If a repository intentionally keeps `mod.rs`, document the local reason rather than treating it as an unspoken preference.
+- Review questions: Is this a new or already-touched multi-file module? Would naming the entry file after the module make it easier to find by filename? Is there a concrete generated-code or tooling constraint that blocks the preferred layout?
+- Automation potential: Repository scans can flag `mod.rs` usage, but only review context can tell whether a module is newly introduced, already being restructured, or intentionally exempt.
+
 ## Use `let...else` for Guard-Style Extraction
 
 - Level: `should`

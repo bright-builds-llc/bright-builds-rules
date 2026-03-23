@@ -4,6 +4,7 @@ This repository uses a simple release-notes model instead of a heavyweight chang
 
 ## Unreleased
 
+- Added a Rust `must` rule that new or touched multi-file modules should use `foo.rs` plus `foo/` instead of `foo/mod.rs`, while leaving stable untouched `mod.rs` trees as non-retroactive migrations
 - Added `should` guidance for greenfield standalone JavaScript and TypeScript projects to prefer Bun for package management and routine script execution, while leaving existing npm/pnpm/yarn repositories unchanged unless they deliberately migrate
 - Added a core `Verification` standard for pre-commit repo-native checks, including affected-path scope, aggregate-command preference, CI-only heavy-suite exceptions, blocked-environment handling, and hook-aware user prompting
 - Updated downstream managed templates to surface the new verification guidance, including flexible pre-commit wording and documented override notes for hook-owned or CI-only verification

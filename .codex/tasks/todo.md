@@ -2,10 +2,10 @@
 
 ## Current task
 
-- [x] Add a TS/JS `should` rule that makes Bun the default for new standalone JS/TS projects
-- [x] Scope the Bun preference to greenfield repos only and preserve existing npm/pnpm/yarn repos unless they deliberately migrate
-- [x] Update the TS/JS verification note to prefer Bun for new standalone projects while preserving repo-native verification ordering
-- [x] Record the new language-specific guidance in the changelog
+- [x] Add a Rust `must` rule that prefers `foo.rs` plus `foo/` over `foo/mod.rs` for new or touched multi-file modules
+- [x] Scope the rule to new modules and touched refactors without forcing repo-wide migration of untouched `mod.rs` trees
+- [x] Document narrow exceptions for generated code, tooling constraints, and explicitly documented local conventions
+- [x] Record the new Rust guidance in the changelog
 
 ## Current verification
 
@@ -18,8 +18,8 @@ Completed on 2026-03-22.
 
 Residual risks:
 
-- Bun compatibility still depends on the framework, workspace model, hosting platform, and dependency stack, so downstream repos may still need explicit local exceptions when Bun is not the right fit.
-- The rule is intentionally greenfield-only, so repos that want a broader migration posture still need to state that locally instead of assuming the standard requires it.
+- Existing Rust codebases may still contain many stable `mod.rs` trees, so reviewers need to apply the non-retroactive migration posture consistently instead of demanding unrelated renames.
+- Some code generators or framework conventions may still require `mod.rs`, so local exceptions need to stay explicit rather than becoming an assumed loophole.
 
 ## Previous work
 
