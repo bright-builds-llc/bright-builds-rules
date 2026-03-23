@@ -28,6 +28,7 @@ Record recurring repo-specific workflow facts in `AGENTS.md` under `## Repo-Loca
 - Prefer the repo's own verify/check/validate entrypoint when it exists, and use affected-path or affected-package modes when the repo supports them.
 - Heavy integration, end-to-end, or external-service suites may stay CI-only when local guidance says so.
 - If hook-managed verification is detected and local docs are silent, ask before duplicating it manually.
+- If the repo tracks shared task or lesson files such as `tasks/todo.md`, `tasks/lessons.md`, `.codex/tasks/todo.md`, or `.codex/tasks/lessons.md`, keep them append-only with stable IDs and timestamps, edit only the relevant block, and avoid hot counters or whole-file rewrites when a localized edit is sufficient.
 - Parse boundary data into domain types instead of re-validating primitives everywhere.
 - Make illegal states unrepresentable when the language makes that practical.
 - Unit test pure code and business logic.

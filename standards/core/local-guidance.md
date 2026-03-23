@@ -31,6 +31,51 @@ This page defines how repositories should capture recurring local knowledge with
 - Review questions: Is there recurring local behavior that a newcomer would likely miss? Has the same clarification already been repeated or already caused a failure? Does this belong in `Repo-Local Guidance`, `standards-overrides.md`, or the canonical standards corpus?
 - Automation potential: Repeated review comments, onboarding notes, or audit findings can suggest candidates, but deciding whether a pattern is durable and truly repo-local still needs judgment.
 
+## Keep Shared Task and Lesson Trackers Merge-Safe
+
+- Level: `should`
+- Intent: Reduce avoidable merge conflicts and stale status churn when a repository chooses to track work in versioned task or lesson files.
+- Rule: If a repository keeps shared tracked task or lesson files such as `tasks/todo.md`, `tasks/lessons.md`, `.codex/tasks/todo.md`, or `.codex/tasks/lessons.md`, structure them as append-only blocks with stable IDs and timestamps in the heading. Append new blocks at the end of the file, update only the targeted task or lesson block when recording progress or completion, and avoid top-of-file status tables, hot counters, or whole-file rewrites when a localized edit is sufficient.
+- Rationale: Shared tracker files often become merge-conflict hotspots because multiple branches touch the same "current" sections, counters, or summary lines. Stable per-block anchors plus localized edits keep concurrent changes mechanically separate and reduce semantic drift between the tracker and the underlying work.
+- Good example:
+
+```text
+# Todo
+
+## task-managed-file-markers | 2026-03-23 14:05 | Tighten managed-file drift handling
+
+- [x] Add visible whole-file managed markers to fully managed outputs
+- [x] Extend integration coverage for drift blocking
+
+## Completion Review
+
+- Verification: `./scripts/verify-docs.sh`, `bash scripts/test-manage-downstream.sh`
+- Residual risk: Legacy exact-match installs still need migration coverage
+```
+
+- Bad example:
+
+```text
+# Todo
+
+## Current task
+
+- [x] Current work item A
+- [ ] Current work item B
+
+## Current verification
+
+- [x] Latest checks
+
+## Current completion review
+
+Completed on 2026-03-23.
+```
+
+- Exceptions or escape hatches: Repositories that keep task tracking unversioned, local-only, or in one-file-per-task layouts do not need this exact shape. Very small single-writer repositories may accept simpler trackers temporarily, but once concurrent branches or multiple agents touch the same file, migrate to stable block-local updates. If a repository intentionally keeps a generated summary, derive it from the task blocks or source files instead of hand-editing it on every change.
+- Review questions: Does the repository track tasks or lessons in shared versioned files? Are multiple changes likely to touch the same "current status" lines? Can the same information be represented as stable per-task blocks or derived summaries instead of hot shared counters?
+- Automation potential: Linters or helper scripts can enforce heading shapes and append-only ordering, but judging whether a summary is truly derived or whether a block-local edit was possible still needs context.
+
 ## Keep Repo-Local Guidance Concise and Durable
 
 - Level: `should`

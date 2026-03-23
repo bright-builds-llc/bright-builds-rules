@@ -4,6 +4,7 @@ This repository uses a simple release-notes model instead of a heavyweight chang
 
 ## Unreleased
 
+- Added `should` guidance to keep shared versioned task and lesson trackers merge-safe with stable-ID append-only blocks, localized updates, and derived summaries instead of hot shared status sections, plus matching downstream managed AGENTS wording
 - Added a core `Local Guidance` standard for promoting recurring repo-specific workflow knowledge into `AGENTS.md` under `## Repo-Local Guidance`, while keeping `standards-overrides.md` reserved for deliberate standards deviations
 - Extended the pre-commit verification guidance so changed Markdown and shell paths pick up conditional check-mode formatter verification when supported tools are already available locally or through the repo's normal runner, without requiring new tool installs
 - Added a Rust `must` rule that new or touched multi-file modules should use `foo.rs` plus `foo/` instead of `foo/mod.rs`, while leaving stable untouched `mod.rs` trees as non-retroactive migrations
