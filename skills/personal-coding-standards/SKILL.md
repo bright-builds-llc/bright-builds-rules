@@ -44,14 +44,15 @@ Use this skill when the user wants to:
    - stop and explain blocking files when status reports `Repo state: blocked`
    - never choose `install --force` automatically
 10. Use `../../templates/` as source material only when editing the managed downstream assets in this repository. Do not bypass the manager flow by manually copying template files into a downstream repo unless the user explicitly wants that lower-level maintenance work.
-11. For review, audit, and audit-and-fix work, read local `AGENTS.md` and `standards-overrides.md` first when present.
-12. For review and audit work, classify deviations according to the standards' `must`, `should`, and `may` levels.
-13. Apply documented local overrides before reporting a deviation.
-14. For `audit`, default to a whole-repo baseline unless the user asks for a narrower scope. If the audit is narrowed, state the audited scope explicitly.
-15. For `audit-and-fix`, perform the audit first, then choose one bounded remediation wave or subsystem instead of attempting whole-repo cleanup in one pass.
-16. In `audit-and-fix`, default to fixing only low-risk, mechanically clear standards issues. Leave larger refactors as remaining findings or next-wave recommendations.
-17. In `audit-and-fix`, do not silently update `standards-overrides.md`; report likely override candidates instead.
-18. When reporting `audit-and-fix` results, separate applied fixes, remaining findings, and recommended next remediation waves.
+11. For review, audit, and audit-and-fix work, read local `AGENTS.md` first, including any `## Repo-Local Guidance` section when present.
+12. Read `standards-overrides.md` for deliberate local deviations when it is present.
+13. For review and audit work, classify deviations according to the standards' `must`, `should`, and `may` levels.
+14. Apply documented local guidance and overrides before reporting a deviation.
+15. For `audit`, default to a whole-repo baseline unless the user asks for a narrower scope. If the audit is narrowed, state the audited scope explicitly.
+16. For `audit-and-fix`, perform the audit first, then choose one bounded remediation wave or subsystem instead of attempting whole-repo cleanup in one pass.
+17. In `audit-and-fix`, default to fixing only low-risk, mechanically clear standards issues. Leave larger refactors as remaining findings or next-wave recommendations.
+18. In `audit-and-fix`, do not silently update `standards-overrides.md`; report likely override candidates instead.
+19. When reporting `audit-and-fix` results, separate applied fixes, remaining findings, and recommended next remediation waves.
 
 ## References
 
@@ -60,6 +61,7 @@ Use this skill when the user wants to:
 - Standards index: `../../standards/index.md`
 - Core architecture: `../../standards/core/architecture.md`
 - Code shape: `../../standards/core/code-shape.md`
+- Local guidance: `../../standards/core/local-guidance.md`
 - Verification: `../../standards/core/verification.md`
 - Testing: `../../standards/core/testing.md`
 - Rust guidance: `../../standards/languages/rust.md`
@@ -72,6 +74,7 @@ Use this skill when the user wants to:
 - When no clear context is available, offer the short action menu instead of failing or inventing intent.
 - When reviewing, focus findings on standards violations and note any documented exception.
 - When auditing, produce findings-first output. Treat `must` violations as findings unless a local override exists, `should` deviations as strong refactor recommendations, and `may` guidance as optional improvements.
+- When auditing, treat missing repo-local guidance as a `should` recommendation only when there is concrete evidence of recurring undocumented local workflow knowledge or a repeated local confusion point.
 - When audit scope is partial, say so explicitly and avoid implying whole-repo coverage.
 - When using `audit-and-fix`, keep the first remediation wave bounded and conservative by default, then report what changed, what still violates the standards, and which override candidates need human confirmation.
 - When proposing changes, preserve the canonical standards in this repository as the source of truth.

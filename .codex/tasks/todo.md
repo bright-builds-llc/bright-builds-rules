@@ -2,17 +2,16 @@
 
 ## Current task
 
-- [x] Update the canonical `personal-coding-standards` skill to resolve Bright Builds adoption, status, refresh, review, audit, and audit-and-fix intent explicitly
-- [x] Add helper-first Bright Builds refresh guidance plus graceful no-argument handling and suggested actions
-- [x] Sync the installed `~/.codex/skills/personal-coding-standards` copy and align both `agents/openai.yaml` files
+- [x] Add a canonical `Local Guidance` core standards page with the new `Repo-Local Guidance` rule cards
+- [x] Wire the new standard into the standards index, README, and repo-local AGENTS guidance
+- [x] Update the downstream AGENTS templates and the personal-coding-standards skill to distinguish `Repo-Local Guidance` from `standards-overrides.md`
+- [x] Refresh downstream integration assertions for the new managed AGENTS wording
+- [x] Record the policy change in `CHANGELOG.md`
 
 ## Current verification
 
-- [x] Repo and installed `SKILL.md` copies both mention helper-first refresh handling, no-context inference, and suggested actions
-- [x] Repo and installed `agents/openai.yaml` copies both advertise the expanded Bright Builds modes
-- [x] Relative path references remain correct for repo and installed skill copies
 - [x] `./scripts/verify-docs.sh` passes
-- [x] `git diff --check` passes
+- [x] `bash scripts/test-manage-downstream.sh` passes
 - [x] Diff reviewed for unintended side effects
 
 ## Current completion review
@@ -21,11 +20,12 @@ Completed on 2026-03-22.
 
 Residual risks:
 
-- The installed skill copy can drift again from the canonical repo copy if later updates touch only one location.
-- The skill still relies on conversational intent and repo inspection, so ambiguous no-argument invocations may need a short action menu instead of direct execution.
+- The new local-guidance rule still depends on reviewer judgment, so audits need to keep requiring concrete evidence before flagging a missing `Repo-Local Guidance` item.
+- The installer now points repos toward `## Repo-Local Guidance`, but it still does not scaffold that section on install, so adoption quality depends on humans or agents following the documented convention.
 
 ## Previous work
 
+- [x] Expand the `personal-coding-standards` skill for Bright Builds adopt/status/refresh flows and graceful no-argument handling
 - [x] Harden downstream adoption for both new repos and legacy codebases
 - [x] Add repo-state classification and provenance-gated updates to the downstream manager
 - [x] Add force-install backups for conflicting legacy files

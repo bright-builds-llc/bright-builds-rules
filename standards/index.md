@@ -13,12 +13,14 @@ This repository uses a tiered rules model so preferences and hard requirements d
 1. Start with the core standards.
 2. Read any language-specific guidance that applies to the repository or task.
 3. Copy the thin local templates into the downstream repo.
-4. Document repo-specific exceptions instead of silently drifting.
+4. Capture recurring repo-local workflow facts in `AGENTS.md` under `## Repo-Local Guidance`.
+5. Document repo-specific exceptions in `standards-overrides.md` instead of silently drifting.
 
 ## Core standards
 
 - [Architecture](core/architecture.md)
 - [Code Shape](core/code-shape.md)
+- [Local Guidance](core/local-guidance.md)
 - [Verification](core/verification.md)
 - [Testing](core/testing.md)
 

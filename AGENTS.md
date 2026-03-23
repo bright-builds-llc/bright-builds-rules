@@ -23,9 +23,10 @@ Use the status-first decision rule from `AI-ADOPTION.md`:
 - Downstream installer: `scripts/manage-downstream.sh`
 - Standards corpus: `standards/index.md`
 
-## Notes
+## Repo-Local Guidance
 
 - Use `scripts/manage-downstream.sh` as the canonical install, update, status, and uninstall mechanism.
+- Keep reusable cross-repo rules in `standards/`, keep downstream managed wording in `templates/`, and keep recurring workflow facts for this repository in this section.
 - The downstream AGENTS model is a managed block inside `AGENTS.md` plus the managed `AGENTS.bright-builds.md` sidecar.
 - The downstream README badge model is a separate bounded block in `README.md`, inserted after the first H1 when verified badges are available and blocked conservatively when the top badge zone is ambiguous.
 - Preserve the downstream audit trail in `coding-and-architecture-requirements.audit.md`.

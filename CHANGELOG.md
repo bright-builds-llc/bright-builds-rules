@@ -4,11 +4,12 @@ This repository uses a simple release-notes model instead of a heavyweight chang
 
 ## Unreleased
 
+- Added a core `Local Guidance` standard for promoting recurring repo-specific workflow knowledge into `AGENTS.md` under `## Repo-Local Guidance`, while keeping `standards-overrides.md` reserved for deliberate standards deviations
 - Extended the pre-commit verification guidance so changed Markdown and shell paths pick up conditional check-mode formatter verification when supported tools are already available locally or through the repo's normal runner, without requiring new tool installs
 - Added a Rust `must` rule that new or touched multi-file modules should use `foo.rs` plus `foo/` instead of `foo/mod.rs`, while leaving stable untouched `mod.rs` trees as non-retroactive migrations
 - Added `should` guidance for greenfield standalone JavaScript and TypeScript projects to prefer Bun for package management and routine script execution, while leaving existing npm/pnpm/yarn repositories unchanged unless they deliberately migrate
 - Added a core `Verification` standard for pre-commit repo-native checks, including affected-path scope, aggregate-command preference, CI-only heavy-suite exceptions, blocked-environment handling, and hook-aware user prompting
-- Updated downstream managed templates to surface the new verification guidance, including flexible pre-commit wording and documented override notes for hook-owned or CI-only verification
+- Updated downstream managed templates to surface the new verification guidance, clarify the `Repo-Local Guidance` versus `standards-overrides.md` split, and keep AGENTS as the local entrypoint
 - Added trust-aware downstream auto-update management, including persisted auto-update state in the audit trail, a managed GitHub Actions workflow plus helper script, and direct-push with PR fallback behavior
 - Added `should` guidance for repo-owned scripts to be rerunnable when sensible and to persist breadcrumb-heavy logs plus run summaries in a repo-defined gitignored path, plus matching downstream template wording
 - Added `should` guidance to avoid hiding foreign-language logic inside strings, keep orchestration thin, and prefer repo-owned or language-aware artifacts over embedded shell, JS, query, or pattern snippets, plus matching downstream template wording
