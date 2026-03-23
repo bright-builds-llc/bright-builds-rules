@@ -24,6 +24,7 @@ Use this decision rule:
 8. Let the installer resolve downstream auto-update to `disabled` unless the downstream GitHub repo owner or current GitHub user is trusted. Trusted identities are `pRizz` and `bright-builds-llc`. Respect `--auto-update enabled|disabled` when the user asks for an override.
 9. When the downstream GitHub repo owner normalizes to `pRizz` or `peterryszkiewicz` (Peter Ryszkiewicz), let the managed sidecar require the `openlinks-identity-presence` skill for README/docs, UI chrome, profile/about/footer, and metadata/discovery surfaces. Keep the placement subtle and keep the host brand primary.
 10. After install or update, report the files written and point the user to `coding-and-architecture-requirements.audit.md` as the paper trail, including the source URL, requested ref, exact resolved commit when available, whether a managed README badge block was installed or refreshed, whether owner-specific OpenLinks guidance was included, and whether auto-update ended up enabled or disabled.
+11. When the downstream repo is pre-existing rather than greenfield, mention that the optional `personal-coding-standards` skill can run a read-only `audit` baseline or an `audit-and-fix` cleanup wave after adoption to surface or start remediating standards drift.
 
 ## Commands
 
@@ -159,3 +160,4 @@ After a successful install or update, mention:
 - whether auto-update was enabled or disabled, and whether that came from an explicit override or a trust-based default
 - that `coding-and-architecture-requirements.audit.md` records the source URL, pinned ref, exact commit when resolved, auto-update state, and managed files
 - that the standards corpus starts at `https://github.com/bright-builds-llc/coding-and-architecture-requirements/blob/main/standards/index.md`
+- for pre-existing repos, that the optional `personal-coding-standards` skill can run a whole-repo `audit` or a bounded `audit-and-fix` cleanup wave after adoption

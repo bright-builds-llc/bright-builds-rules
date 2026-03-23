@@ -221,6 +221,8 @@ Behavior by command:
 4. Record any repo-specific deviations in the downstream `standards-overrides.md`.
 5. Optionally use the Codex skill to bootstrap adoption or review work against the standards.
 
+If the repository already had substantial code before adoption, you can also use the Codex skill to run a read-only `audit` baseline or an `audit-and-fix` cleanup wave after install. The default audit mode is whole-repo and findings-first; the default audit-and-fix mode audits first, then applies one bounded remediation wave rather than attempting a whole-repo rewrite.
+
 The intended downstream footprint is still small: a local `AGENTS.md` with a managed Bright Builds block, a local `AGENTS.bright-builds.md` sidecar, a local `CONTRIBUTING.md`, an optional managed README badge block, an overrides file, a PR template, and the audit trail file. The canonical standards remain here.
 
 ## Uninstall

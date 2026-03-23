@@ -2,10 +2,10 @@
 
 ## Current task
 
-- [x] Add a Rust `must` rule that prefers `foo.rs` plus `foo/` over `foo/mod.rs` for new or touched multi-file modules
-- [x] Scope the rule to new modules and touched refactors without forcing repo-wide migration of untouched `mod.rs` trees
-- [x] Document narrow exceptions for generated code, tooling constraints, and explicitly documented local conventions
-- [x] Record the new Rust guidance in the changelog
+- [x] Extend the `personal-coding-standards` skill with explicit `audit` and `audit-and-fix` modes
+- [x] Define audit as a whole-repo read-only baseline by default and audit-and-fix as audit plus one bounded remediation wave
+- [x] Update the skill metadata and canonical docs hooks so the new audit modes are discoverable after adoption
+- [x] Keep the installer and managed downstream templates unchanged while documenting post-install audit options for pre-existing repos
 
 ## Current verification
 
@@ -18,8 +18,8 @@ Completed on 2026-03-22.
 
 Residual risks:
 
-- Existing Rust codebases may still contain many stable `mod.rs` trees, so reviewers need to apply the non-retroactive migration posture consistently instead of demanding unrelated renames.
-- Some code generators or framework conventions may still require `mod.rs`, so local exceptions need to stay explicit rather than becoming an assumed loophole.
+- Whole-repo audit baselines can still surface a large volume of findings in mature repos, so users may need to narrow scope or work through multiple remediation waves over time.
+- `audit-and-fix` stays intentionally conservative, so repos with larger architectural drift will still need follow-up planning instead of expecting one-pass cleanup.
 
 ## Previous work
 

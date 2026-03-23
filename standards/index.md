@@ -38,7 +38,7 @@ The supported downstream interfaces for v1 are:
 
 ## Review model
 
-When reviewing code against these standards:
+When reviewing or auditing code against these standards:
 
 - treat `must` violations as findings unless a local override exists
 - treat `should` violations as strong refactor recommendations
