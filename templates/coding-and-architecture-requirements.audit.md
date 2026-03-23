@@ -1,5 +1,7 @@
 # Coding and Architecture Requirements Audit Trail
 
+REPLACE_WITH_MANAGED_FILE_MARKER
+
 This file records that this repository is using the Bright Builds coding and architecture requirements and shows where the managed adoption files came from.
 
 ## Current installation
@@ -23,6 +25,6 @@ REPLACE_WITH_MANAGED_FILES_LIST
 ## Why this exists
 
 - It provides a visible paper trail for install, update, and uninstall operations.
-- The installer manages a bounded block inside `AGENTS.md` and the full `AGENTS.bright-builds.md` sidecar.
+- The installer manages a bounded block inside `AGENTS.md`, a bounded README badge block when applicable, and marked whole-file managed surfaces such as the sidecar, audit trail, contribution guide, PR template, and optional auto-update files.
 - `standards-overrides.md` remains repo-local and is preserved during update and uninstall.
 - It helps humans and tools debug which standards revision a repository is pinned to.

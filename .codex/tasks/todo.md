@@ -2,16 +2,18 @@
 
 ## Current task
 
-- [x] Add a canonical `Local Guidance` core standards page with the new `Repo-Local Guidance` rule cards
-- [x] Wire the new standard into the standards index, README, and repo-local AGENTS guidance
-- [x] Update the downstream AGENTS templates and the personal-coding-standards skill to distinguish `Repo-Local Guidance` from `standards-overrides.md`
-- [x] Refresh downstream integration assertions for the new managed AGENTS wording
-- [x] Record the policy change in `CHANGELOG.md`
+- [x] Add visible whole-file managed markers to fully managed downstream outputs without changing the bounded-marker model for `AGENTS.md` or README badges
+- [x] Teach `scripts/manage-downstream.sh` to treat drifted whole-file managed outputs as `blocked`, while still accepting exact-match legacy unmarked installs and migrating them on `update`
+- [x] Make `uninstall` preserve drifted whole-file managed files instead of deleting them blindly
+- [x] Refresh downstream templates, README, AI adoption docs, and changelog wording for whole-file markers and drift handling
+- [x] Extend downstream and auto-update integration tests for marker emission, legacy migration, drift blocking, and conservative uninstall behavior
 
 ## Current verification
 
+- [x] `bash -n scripts/manage-downstream.sh` passes
 - [x] `./scripts/verify-docs.sh` passes
 - [x] `bash scripts/test-manage-downstream.sh` passes
+- [x] `bash scripts/test-bright-builds-auto-update.sh` passes
 - [x] Diff reviewed for unintended side effects
 
 ## Current completion review
@@ -20,8 +22,8 @@ Completed on 2026-03-22.
 
 Residual risks:
 
-- The new local-guidance rule still depends on reviewer judgment, so audits need to keep requiring concrete evidence before flagging a missing `Repo-Local Guidance` item.
-- The installer now points repos toward `## Repo-Local Guidance`, but it still does not scaffold that section on install, so adoption quality depends on humans or agents following the documented convention.
+- Drift detection for fully managed files reconstructs the expected install from persisted install metadata and pinned source templates, so manual edits to the audit metadata itself are only as detectable as the audit trail fields that can be re-rendered from that persisted state.
+- Auto-update correctness now depends on the stored exact commit for reconstructing the currently installed render, so any future change to the audit manifest fields that carry provenance needs matching integration coverage.
 
 ## Previous work
 

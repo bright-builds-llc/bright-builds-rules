@@ -19,6 +19,7 @@ auto_update_workflow_source="templates/bright-builds-auto-update.yml"
 auto_update_workflow_destination=".github/workflows/bright-builds-auto-update.yml"
 agents_block_begin="<!-- coding-and-architecture-requirements-managed:begin -->"
 agents_block_end="<!-- coding-and-architecture-requirements-managed:end -->"
+managed_file_marker_placeholder="REPLACE_WITH_MANAGED_FILE_MARKER"
 readme_destination="README.md"
 readme_badges_begin="<!-- coding-and-architecture-requirements-readme-badges:begin -->"
 readme_badges_end="<!-- coding-and-architecture-requirements-readme-badges:end -->"
@@ -34,6 +35,12 @@ base_managed_pairs=(
   "${sidecar_source}|${sidecar_destination}"
   "templates/CONTRIBUTING.md|CONTRIBUTING.md"
   "templates/pull_request_template.md|.github/pull_request_template.md"
+)
+base_whole_file_managed_pairs=(
+  "${sidecar_source}|${sidecar_destination}"
+  "templates/CONTRIBUTING.md|CONTRIBUTING.md"
+  "templates/pull_request_template.md|.github/pull_request_template.md"
+  "${audit_source}|${audit_destination}"
 )
 base_managed_status_paths=(
   "${agents_destination}"
@@ -60,6 +67,8 @@ current_entrypoint=""
 current_exact_commit=""
 current_auto_update=""
 current_auto_update_reason=""
+current_last_operation=""
+current_last_updated_utc=""
 repo_state=""
 recommended_action=""
 repo_slug=""
@@ -192,6 +201,22 @@ build_managed_files_markdown() {
   printf '%s' "$output"
 }
 
+build_managed_file_marker_line() {
+  local relative_destination="$1"
+
+  case "$relative_destination" in
+    *.md)
+      printf '<!-- coding-and-architecture-requirements-managed-file: %s -->' "$relative_destination"
+      ;;
+    *.sh|*.yml|*.yaml)
+      printf '# coding-and-architecture-requirements-managed-file: %s' "$relative_destination"
+      ;;
+    *)
+      printf '# coding-and-architecture-requirements-managed-file: %s' "$relative_destination"
+      ;;
+  esac
+}
+
 is_full_commit_sha() {
   [[ "${1:-}" =~ ^[0-9a-fA-F]{40}$ ]]
 }
@@ -310,10 +335,24 @@ render_template_file() {
   local source_path="$1"
   local output_path="$2"
   local managed_files_markdown="${3:-}"
+  local relative_destination="${4:-}"
+  local include_managed_file_marker="${5:-enabled}"
+  local managed_file_marker_line=""
   local line=""
+
+  if [[ "$include_managed_file_marker" == "enabled" && -n "$relative_destination" ]]; then
+    managed_file_marker_line="$(build_managed_file_marker_line "$relative_destination")"
+  fi
 
   {
     while IFS= read -r line || [[ -n "$line" ]]; do
+      if [[ "$line" == "$managed_file_marker_placeholder" ]]; then
+        if [[ -n "$managed_file_marker_line" ]]; then
+          printf '%s\n' "$managed_file_marker_line"
+        fi
+        continue
+      fi
+
       if [[ "$line" == "REPLACE_WITH_MANAGED_FILES_LIST" ]]; then
         printf '%s\n' "$managed_files_markdown"
         continue
@@ -404,6 +443,7 @@ render_template_to_tmp_path() {
   local source_path="$1"
   local tmp_stem="$2"
   local managed_files_markdown="${3:-}"
+  local relative_destination="${4:-}"
   local downloaded_path=""
   local rendered_path=""
 
@@ -411,7 +451,61 @@ render_template_to_tmp_path() {
   downloaded_path="${tmp_dir}/${tmp_stem}.source"
   rendered_path="${tmp_dir}/${tmp_stem}.rendered"
   download_file "$source_path" "$downloaded_path"
-  render_template_file "$downloaded_path" "$rendered_path" "$managed_files_markdown"
+  render_template_file "$downloaded_path" "$rendered_path" "$managed_files_markdown" "$relative_destination" "enabled"
+  printf '%s\n' "$rendered_path"
+}
+
+render_template_to_tmp_path_for_install_state() {
+  local source_path="$1"
+  local tmp_stem="$2"
+  local relative_destination="$3"
+  local managed_files_markdown="${4:-}"
+  local include_managed_file_marker="${5:-enabled}"
+  local compare_repo_url="${current_source:-$repo_url}"
+  local compare_requested_ref="${current_ref:-$ref}"
+  local compare_fetch_ref="${current_exact_commit:-$compare_requested_ref}"
+  local compare_exact_commit="${current_exact_commit:-$exact_commit}"
+  local compare_entrypoint="${current_entrypoint:-}"
+  local compare_auto_update_mode="${current_auto_update:-$auto_update_mode}"
+  local compare_auto_update_reason="${current_auto_update_reason:-$auto_update_reason}"
+  local compare_last_operation="${current_last_operation:-}"
+  local compare_last_updated_utc="${current_last_updated_utc:-}"
+  local compare_repo_slug=""
+  local repo_url=""
+  local ref=""
+  local exact_commit=""
+  local standards_index_url=""
+  local auto_update_mode=""
+  local auto_update_reason=""
+  local last_operation=""
+  local last_updated_utc=""
+  local raw_base=""
+  local downloaded_path=""
+  local rendered_path=""
+
+  if [[ -z "$compare_entrypoint" ]]; then
+    compare_entrypoint="${compare_repo_url}/blob/${compare_requested_ref}/standards/index.md"
+  fi
+
+  repo_url="$compare_repo_url"
+  ref="$compare_requested_ref"
+  exact_commit="$compare_exact_commit"
+  standards_index_url="$compare_entrypoint"
+  auto_update_mode="$compare_auto_update_mode"
+  auto_update_reason="$compare_auto_update_reason"
+  last_operation="$compare_last_operation"
+  last_updated_utc="$compare_last_updated_utc"
+  compare_repo_slug="$(extract_repo_slug_from_url "$repo_url")"
+
+  if [[ -n "$compare_repo_slug" ]]; then
+    raw_base="https://raw.githubusercontent.com/${compare_repo_slug}/${compare_fetch_ref}"
+  fi
+
+  ensure_tmp_dir
+  downloaded_path="${tmp_dir}/${tmp_stem}.source"
+  rendered_path="${tmp_dir}/${tmp_stem}.rendered"
+  download_file "$source_path" "$downloaded_path"
+  render_template_file "$downloaded_path" "$rendered_path" "$managed_files_markdown" "$relative_destination" "$include_managed_file_marker"
   printf '%s\n' "$rendered_path"
 }
 
@@ -422,7 +516,7 @@ write_rendered_file() {
   local destination_path="${repo_root}/${relative_destination}"
   local rendered_path=""
 
-  rendered_path="$(render_template_to_tmp_path "$source_path" "$(basename "$relative_destination")" "$managed_files_markdown")"
+  rendered_path="$(render_template_to_tmp_path "$source_path" "$(basename "$relative_destination")" "$managed_files_markdown" "$relative_destination")"
   mkdir -p "$(dirname "$destination_path")"
   cp "$rendered_path" "$destination_path"
   note "Wrote ${relative_destination}"
@@ -1592,18 +1686,28 @@ build_current_managed_status_paths() {
   printf '%s\n' "${entries[@]}"
 }
 
-build_current_managed_files_markdown() {
+build_managed_files_markdown_for_state() {
+  local current_readme_badge_state="$1"
+  local current_auto_update_mode="$2"
   local entries=("${base_managed_audit_entries[@]}")
 
-  if [[ "$readme_badge_state" == "present" ]]; then
+  if [[ "$current_readme_badge_state" == "present" ]]; then
     entries+=("${readme_destination} (managed badges block)")
   fi
 
-  if [[ "$auto_update_mode" == "enabled" ]]; then
+  if [[ "$current_auto_update_mode" == "enabled" ]]; then
     entries+=("${auto_update_script_destination}" "${auto_update_workflow_destination}")
   fi
 
   build_managed_files_markdown "${entries[@]}"
+}
+
+build_current_managed_files_markdown() {
+  build_managed_files_markdown_for_state "$readme_badge_state" "$auto_update_mode"
+}
+
+build_installed_managed_files_markdown() {
+  build_managed_files_markdown_for_state "$readme_badge_state" "${current_auto_update:-$auto_update_mode}"
 }
 
 remove_auto_update_files() {
@@ -1618,6 +1722,86 @@ remove_auto_update_files() {
 
   rmdir "${repo_root}/.github/workflows" 2>/dev/null || true
   rmdir "${repo_root}/.github" 2>/dev/null || true
+}
+
+build_whole_file_managed_pairs_for_mode() {
+  local current_auto_update_mode="$1"
+  local entries=("${base_whole_file_managed_pairs[@]}")
+
+  if [[ "$current_auto_update_mode" == "enabled" ]]; then
+    entries+=(
+      "${auto_update_script_source}|${auto_update_script_destination}"
+      "${auto_update_workflow_source}|${auto_update_workflow_destination}"
+    )
+  fi
+
+  printf '%s\n' "${entries[@]}"
+}
+
+resolve_whole_file_managed_state() {
+  local source_path="$1"
+  local relative_destination="$2"
+  local managed_files_markdown="${3:-}"
+  local destination_path="${repo_root}/${relative_destination}"
+  local marked_path=""
+  local legacy_path=""
+
+  if [[ ! -f "$destination_path" ]]; then
+    printf 'missing\n'
+    return
+  fi
+
+  marked_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").marked" "$relative_destination" "$managed_files_markdown" "enabled")"
+  if cmp -s "$destination_path" "$marked_path"; then
+    printf 'marked\n'
+    return
+  fi
+
+  legacy_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").legacy" "$relative_destination" "$managed_files_markdown" "disabled")"
+  if cmp -s "$destination_path" "$legacy_path"; then
+    printf 'legacy\n'
+    return
+  fi
+
+  printf 'drifted\n'
+}
+
+append_drifted_installed_whole_file_paths() {
+  local pair=""
+  local source_path=""
+  local relative_destination=""
+  local state=""
+  local managed_files_markdown=""
+
+  managed_files_markdown="$(build_installed_managed_files_markdown)"
+
+  while IFS= read -r pair; do
+    IFS='|' read -r source_path relative_destination <<< "$pair"
+    state="$(resolve_whole_file_managed_state "$source_path" "$relative_destination" "$managed_files_markdown")"
+    if [[ "$state" == "drifted" ]]; then
+      append_unique_blocking_path "$relative_destination"
+    fi
+  done < <(build_whole_file_managed_pairs_for_mode "${current_auto_update:-$auto_update_mode}")
+}
+
+remove_clean_installed_whole_file() {
+  local source_path="$1"
+  local relative_destination="$2"
+  local managed_files_markdown="${3:-}"
+  local destination_path="${repo_root}/${relative_destination}"
+  local state=""
+
+  state="$(resolve_whole_file_managed_state "$source_path" "$relative_destination" "$managed_files_markdown")"
+
+  case "$state" in
+    marked|legacy)
+      rm -f "$destination_path"
+      note "Removed ${relative_destination}"
+      ;;
+    drifted)
+      note "Skipped ${relative_destination} because it has downstream edits"
+      ;;
+  esac
 }
 
 sync_auto_update_files() {
@@ -1746,6 +1930,8 @@ resolve_current_install_metadata() {
   current_exact_commit=""
   current_auto_update=""
   current_auto_update_reason=""
+  current_last_operation=""
+  current_last_updated_utc=""
 
   if [[ ! -f "${repo_root}/${audit_destination}" ]]; then
     return
@@ -1757,6 +1943,8 @@ resolve_current_install_metadata() {
   current_entrypoint="$(extract_markdown_value "${repo_root}/${audit_destination}" "Canonical entrypoint")"
   current_auto_update="$(extract_markdown_value "${repo_root}/${audit_destination}" "Auto-update")"
   current_auto_update_reason="$(extract_markdown_value "${repo_root}/${audit_destination}" "Auto-update reason")"
+  current_last_operation="$(extract_markdown_value "${repo_root}/${audit_destination}" "Last operation")"
+  current_last_updated_utc="$(extract_markdown_value "${repo_root}/${audit_destination}" "Last updated (UTC)")"
 }
 
 determine_repo_state() {
@@ -1786,6 +1974,10 @@ determine_repo_state() {
 
   if [[ "$agents_block_state" != "present" && -f "${repo_root}/${sidecar_destination}" ]]; then
     append_unique_blocking_path "$sidecar_destination"
+  fi
+
+  if [[ "$installed_signal" -eq 1 ]]; then
+    append_drifted_installed_whole_file_paths
   fi
 
   if [[ "$installed_signal" -ne 1 ]]; then
@@ -1949,7 +2141,10 @@ uninstall() {
   local trimmed_path=""
   local state=""
   local readme_state=""
+  local pair=""
+  local source_path=""
   local relative_destination=""
+  local managed_files_markdown=""
 
   state="$(detect_agents_block_state "$destination_path")"
 
@@ -1991,16 +2186,28 @@ uninstall() {
     note "Skipped ${readme_destination} because the managed badge block is incomplete"
   fi
 
+  managed_files_markdown="$(build_installed_managed_files_markdown)"
+
   if [[ "$current_auto_update" == "enabled" ]]; then
-    remove_auto_update_files
+    while IFS= read -r pair; do
+      IFS='|' read -r source_path relative_destination <<< "$pair"
+      case "$relative_destination" in
+        "${auto_update_script_destination}"|"${auto_update_workflow_destination}")
+          remove_clean_installed_whole_file "$source_path" "$relative_destination" "$managed_files_markdown"
+          ;;
+      esac
+    done < <(build_whole_file_managed_pairs_for_mode "$current_auto_update")
   fi
 
-  for relative_destination in "${sidecar_destination}" "CONTRIBUTING.md" ".github/pull_request_template.md" "${audit_destination}"; do
-    if [[ -f "${repo_root}/${relative_destination}" ]]; then
-      rm -f "${repo_root}/${relative_destination}"
-      note "Removed ${relative_destination}"
-    fi
-  done
+  while IFS= read -r pair; do
+    IFS='|' read -r source_path relative_destination <<< "$pair"
+    case "$relative_destination" in
+      "${auto_update_script_destination}"|"${auto_update_workflow_destination}")
+        continue
+        ;;
+    esac
+    remove_clean_installed_whole_file "$source_path" "$relative_destination" "$managed_files_markdown"
+  done < <(build_whole_file_managed_pairs_for_mode "disabled")
 
   rmdir "${repo_root}/.github/workflows" 2>/dev/null || true
   rmdir "${repo_root}/.github" 2>/dev/null || true
@@ -2066,10 +2273,6 @@ done
 repo_root="$(cd "$repo_root" && pwd)"
 
 resolve_current_install_metadata
-resolve_downstream_badges
-resolve_owner_specific_guidance
-resolve_auto_update_state
-determine_repo_state
 
 if [[ "$repo_was_explicit" -eq 0 && -n "$current_source" ]]; then
   maybe_repo_slug="$(extract_repo_slug_from_url "$current_source")"
@@ -2095,6 +2298,10 @@ repo_url="https://github.com/${repo_slug}"
 raw_base="https://raw.githubusercontent.com/${repo_slug}/${ref}"
 standards_index_url="${repo_url}/blob/${ref}/standards/index.md"
 resolve_exact_commit
+resolve_downstream_badges
+resolve_owner_specific_guidance
+resolve_auto_update_state
+determine_repo_state
 
 case "$command_name" in
   install)

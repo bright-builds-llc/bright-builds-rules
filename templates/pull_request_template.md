@@ -1,5 +1,7 @@
 # Pull Request Template
 
+REPLACE_WITH_MANAGED_FILE_MARKER
+
 ## Summary
 
 Describe the behavior change and why it is needed.

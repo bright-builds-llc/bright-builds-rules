@@ -18,7 +18,7 @@ Use this decision rule:
 2. Run `status`.
 3. If `status` reports `Repo state: installable`, run `install`.
 4. If `status` reports `Repo state: installed`, run `update`.
-5. If `status` reports `Repo state: blocked`, stop and explain the blocking files instead of forcing an overwrite automatically.
+5. If `status` reports `Repo state: blocked`, stop and explain the blocking files instead of forcing an overwrite automatically. Treat downstream edits inside marked whole-file managed outputs as blocking drift, not as content to overwrite silently.
 6. Use `install --force` only when the user explicitly wants to replace blocked managed files. That command first backs them up into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`.
 7. Treat `README.md` as part of the managed surface only when the installer can verify badges from the downstream repo. If `status` reports a blocked README badge state, stop unless the user explicitly wants `install --force`.
 8. Let the installer resolve downstream auto-update to `disabled` unless the downstream GitHub repo owner or current GitHub user is trusted. Trusted identities are `pRizz` and `bright-builds-llc`. Respect `--auto-update enabled|disabled` when the user asks for an override.
@@ -47,6 +47,13 @@ Marker-based adoption already installed:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- update --ref main
 ```
+
+Whole-file managed downstream outputs now carry visible headers such as:
+
+- `<!-- coding-and-architecture-requirements-managed-file: AGENTS.bright-builds.md -->`
+- `# coding-and-architecture-requirements-managed-file: scripts/bright-builds-auto-update.sh`
+
+Edits to those files block `status`/`update` until the user either restores the expected content or explicitly runs `install --force`.
 
 Status / confirmation:
 
@@ -95,7 +102,9 @@ Interpret those states this way:
 - a new repo normally reports `installable`
 - a repo with an existing unmarked local `AGENTS.md` and no other managed-file conflicts also reports `installable`
 - a repo with the managed AGENTS marker block plus `AGENTS.bright-builds.md` reports `installed`
+- a repo with an exact-match legacy install of the fully managed files but without the new whole-file marker headers still reports `installed`, and `update` migrates those files into the marked format
 - a repo with conflicting managed files such as `CONTRIBUTING.md`, `.github/pull_request_template.md`, `AGENTS.bright-builds.md`, or `coding-and-architecture-requirements.audit.md` reports `blocked`
+- a repo whose marked whole-file managed outputs have downstream edits also reports `blocked` and lists the drifted paths in `Blocking paths:`
 - a repo whose managed README insertion zone already contains badge-like content, or whose README badge marker block is partial, also reports `blocked` and includes `README.md` in `Blocking paths:`
 
 If the repo reports `installable` and already has a local `AGENTS.md`, `install` preserves that file and appends the managed Bright Builds block to the end.
@@ -143,6 +152,7 @@ If the downstream repository already contains conflicting managed files:
 
 - explain which files block installation
 - explain whether they look like marker-based Bright Builds files or unrelated local files
+- if a blocking file is one of the marked whole-file managed surfaces, explain that the downstream copy drifted from the pinned managed render instead of being a safe local extension point
 - use `update` only when `status` reports `installed`
 - otherwise stop and ask how the user wants to reconcile the conflict
 - if the user explicitly chooses replacement, tell them `install --force` will back up the blocked files into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/` before writing the managed files

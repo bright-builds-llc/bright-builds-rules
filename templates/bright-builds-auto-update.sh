@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+REPLACE_WITH_MANAGED_FILE_MARKER
 set -euo pipefail
 
 audit_path="REPLACE_WITH_AUDIT_MANIFEST_PATH"

@@ -82,6 +82,11 @@ create_source_bundle() {
   mkdir -p "${bundle_root}/scripts" "${bundle_root}/templates"
   cp "$script_path" "${bundle_root}/scripts/manage-downstream.sh"
   cp -R "${repo_root}/templates/." "${bundle_root}/templates/"
+  git -C "$bundle_root" init -b main >/dev/null 2>&1
+  git -C "$bundle_root" config user.name "Bundle User"
+  git -C "$bundle_root" config user.email "bundle@example.com"
+  git -C "$bundle_root" add -A
+  git -C "$bundle_root" commit -m "Initial bundle" >/dev/null
   printf '%s\n' "$bundle_root"
 }
 
@@ -113,7 +118,7 @@ install_auto_update_repo() {
   local bundle_root="$1"
   local repo_path="$2"
 
-  bash "${bundle_root}/scripts/manage-downstream.sh" install --auto-update enabled --ref "$repo_exact_commit" --repo-root "$repo_path" >/dev/null
+  bash "${bundle_root}/scripts/manage-downstream.sh" install --auto-update enabled --ref main --repo-root "$repo_path" >/dev/null
 }
 
 run_auto_update() {
@@ -131,10 +136,16 @@ create_fake_curl_bin() {
   local source_root="$2"
 
   mkdir -p "$bin_dir"
-  write_file "${bin_dir}/curl" $'#!/usr/bin/env bash\nset -euo pipefail\noutput=""\nurl=""\nwhile [[ $# -gt 0 ]]; do\n  case "$1" in\n    -o)\n      output="$2"\n      shift 2\n      ;;\n    -f|-s|-S|-L|-fsSL)\n      shift\n      ;;\n    *)\n      url="$1"\n      shift\n      ;;\n  esac\ndone\n[[ -n "$output" ]] || exit 1\nrelative_path="$(printf "%s" "$url" | sed -n "s#^https://raw\\.githubusercontent\\.com/[^/]*/[^/]*/[^/]*/##p")"\n[[ -n "$relative_path" ]] || exit 1\ncp "${FAKE_CURL_SOURCE_ROOT}/${relative_path}" "$output"\n'
+  write_file "${bin_dir}/curl" $'#!/usr/bin/env bash\nset -euo pipefail\noutput=""\nurl=""\nwhile [[ $# -gt 0 ]]; do\n  case "$1" in\n    -o)\n      output="$2"\n      shift 2\n      ;;\n    -f|-s|-S|-L|-fsSL)\n      shift\n      ;;\n    *)\n      url="$1"\n      shift\n      ;;\n  esac\ndone\n[[ -n "$output" ]] || exit 1\nrequested_ref="$(printf "%s" "$url" | sed -n "s#^https://raw\\.githubusercontent\\.com/[^/]*/[^/]*/\\([^/]*\\)/.*#\\1#p")"\nrelative_path="$(printf "%s" "$url" | sed -n "s#^https://raw\\.githubusercontent\\.com/[^/]*/[^/]*/[^/]*/##p")"\n[[ -n "$relative_path" ]] || exit 1\nif [[ -n "$requested_ref" ]] && "${REAL_GIT_PATH}" -C "${FAKE_CURL_SOURCE_ROOT}" rev-parse --verify "${requested_ref}^{commit}" >/dev/null 2>&1; then\n  "${REAL_GIT_PATH}" -C "${FAKE_CURL_SOURCE_ROOT}" show "${requested_ref}:${relative_path}" > "$output"\n  exit 0\nfi\ncp "${FAKE_CURL_SOURCE_ROOT}/${relative_path}" "$output"\n'
   chmod +x "${bin_dir}/curl"
+  write_file "${bin_dir}/git" $'#!/usr/bin/env bash\nset -euo pipefail\nif [[ "${1:-}" == "ls-remote" && "${2:-}" == "https://github.com/bright-builds-llc/coding-and-architecture-requirements.git" ]]; then\n  ref="${3:-}"\n  [[ -n "$ref" ]] || exit 1\n  commit="$("${REAL_GIT_PATH}" -C "${FAKE_GIT_SOURCE_ROOT}" rev-parse "${ref}^{commit}")"\n  printf "%s\\t%s\\n" "$commit" "$ref"\n  exit 0\nfi\nexec "${REAL_GIT_PATH}" "$@"\n'
+  chmod +x "${bin_dir}/git"
   FAKE_CURL_SOURCE_ROOT="$source_root"
+  FAKE_GIT_SOURCE_ROOT="$source_root"
+  REAL_GIT_PATH="$real_git_path"
   export FAKE_CURL_SOURCE_ROOT
+  export FAKE_GIT_SOURCE_ROOT
+  export REAL_GIT_PATH
 }
 
 create_fake_git_bin() {
@@ -142,7 +153,7 @@ create_fake_git_bin() {
   local log_path="$2"
 
   mkdir -p "$bin_dir"
-  write_file "${bin_dir}/git" $'#!/usr/bin/env bash\nset -euo pipefail\nif [[ "${1:-}" == "push" && "${2:-}" == "origin" && "${3:-}" == "HEAD:main" ]]; then\n  printf "rejected direct push\\n" >> "${FAKE_GIT_LOG}"\n  exit 1\nfi\nexec "${REAL_GIT_PATH}" "$@"\n'
+  write_file "${bin_dir}/git" $'#!/usr/bin/env bash\nset -euo pipefail\nif [[ "${1:-}" == "ls-remote" && "${2:-}" == "https://github.com/bright-builds-llc/coding-and-architecture-requirements.git" ]]; then\n  ref="${3:-}"\n  [[ -n "$ref" ]] || exit 1\n  commit="$("${REAL_GIT_PATH}" -C "${FAKE_GIT_SOURCE_ROOT}" rev-parse "${ref}^{commit}")"\n  printf "%s\\t%s\\n" "$commit" "$ref"\n  exit 0\nfi\nif [[ "${1:-}" == "push" && "${2:-}" == "origin" && "${3:-}" == "HEAD:main" ]]; then\n  printf "rejected direct push\\n" >> "${FAKE_GIT_LOG}"\n  exit 1\nfi\nexec "${REAL_GIT_PATH}" "$@"\n'
   chmod +x "${bin_dir}/git"
   REAL_GIT_PATH="$real_git_path"
   FAKE_GIT_LOG="$log_path"
@@ -201,6 +212,8 @@ test_pushes_directly_when_push_succeeds() {
   commit_all "$repo_path" "Initial managed install"
   git -C "$repo_path" push -u origin main >/dev/null
   printf '\n- Added direct-push update marker.\n' >> "${bundle_root}/templates/AGENTS.bright-builds.md"
+  git -C "$bundle_root" add -A
+  git -C "$bundle_root" commit -m "Bundle update" >/dev/null
   create_fake_curl_bin "$fake_bin" "$bundle_root"
 
   run_auto_update "$repo_path" "$fake_bin"
@@ -231,6 +244,8 @@ test_falls_back_to_pull_request_when_direct_push_fails() {
   commit_all "$repo_path" "Initial managed install"
   git -C "$repo_path" push -u origin main >/dev/null
   printf '\n- Added PR fallback update marker.\n' >> "${bundle_root}/templates/AGENTS.bright-builds.md"
+  git -C "$bundle_root" add -A
+  git -C "$bundle_root" commit -m "Bundle update" >/dev/null
   create_fake_curl_bin "$fake_bin" "$bundle_root"
   create_fake_git_bin "$fake_bin" "$fake_git_log"
   create_fake_gh_bin "$fake_bin" "$fake_gh_log"
@@ -268,11 +283,37 @@ test_fails_when_repo_state_is_blocked() {
   assert_eq "$commit_count" "1" "blocked auto-update should not create a new commit"
 }
 
+test_fails_when_repo_state_is_blocked_by_managed_file_drift() {
+  local bundle_root=""
+  local repo_path=""
+  local fake_bin=""
+  local commit_count=""
+
+  bundle_root="$(create_source_bundle blocked-drift)"
+  repo_path="$(create_repo blocked-drift-repo)"
+  fake_bin="${temp_root}/blocked-drift-bin"
+
+  init_git_repo "$repo_path"
+  install_auto_update_repo "$bundle_root" "$repo_path"
+  commit_all "$repo_path" "Initial managed install"
+  printf '\nDrifted downstream edit.\n' >> "${repo_path}/AGENTS.bright-builds.md"
+  create_fake_curl_bin "$fake_bin" "$bundle_root"
+
+  run_auto_update "$repo_path" "$fake_bin"
+  assert_eq "$run_status" "1" "drift-blocked auto-update should fail"
+  assert_contains "$run_output" "Repo state: blocked" "auto-update should surface the blocked repo state when a managed file drifts"
+  assert_contains "$run_output" "Blocking paths: AGENTS.bright-builds.md" "auto-update should surface the drifted managed file path"
+  assert_contains "$run_output" "auto-update requires the repo state to remain installed" "auto-update should stop before mutating drifted repos"
+  commit_count="$(git -C "$repo_path" rev-list --count HEAD)"
+  assert_eq "$commit_count" "1" "drift-blocked auto-update should not create a new commit"
+}
+
 trap cleanup EXIT
 
 test_noop_when_no_changes_exist
 test_pushes_directly_when_push_succeeds
 test_falls_back_to_pull_request_when_direct_push_fails
 test_fails_when_repo_state_is_blocked
+test_fails_when_repo_state_is_blocked_by_managed_file_drift
 
 printf 'All bright-builds auto-update tests passed.\n'

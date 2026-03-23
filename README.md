@@ -33,6 +33,7 @@ The intended AI behavior is:
 - run `update` when `status` reports `Repo state: installed`
 - stop for review when `status` reports `Repo state: blocked`, unless the user explicitly wants `install --force`
 - preserve a pre-existing unmarked `AGENTS.md` by appending the managed Bright Builds block to the end during `install`
+- treat downstream edits to marked whole-file managed files as blocking drift instead of silently overwriting them on `update`
 - manage a bounded `README.md` badge block when the downstream repo has verified badge inputs and the top badge zone is unambiguous
 - tailor `AGENTS.bright-builds.md` with an `openlinks-identity-presence` rule when the downstream GitHub repo owner normalizes to `pRizz` or `peterryszkiewicz` (Peter Ryszkiewicz)
 - let the installer resolve downstream auto-update to `disabled` by default unless the downstream GitHub repo owner or current GitHub user is trusted
@@ -66,7 +67,7 @@ If `Repo state: installable`, install the downstream adoption layer:
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- install --ref main
 ```
 
-If the repository already has an unmarked local `AGENTS.md`, `install` keeps that file and appends the managed Bright Builds block to the end. The same command also writes `AGENTS.bright-builds.md`, `CONTRIBUTING.md`, `.github/pull_request_template.md`, `coding-and-architecture-requirements.audit.md`, creates `standards-overrides.md` when the overrides file does not already exist, manages a bounded `README.md` badge block when it can verify at least one default badge, and tailors the managed sidecar with owner-specific `openlinks-identity-presence` guidance when the downstream GitHub owner normalizes to Peter Ryszkiewicz or `pRizz`.
+If the repository already has an unmarked local `AGENTS.md`, `install` keeps that file and appends the managed Bright Builds block to the end. The same command also writes `AGENTS.bright-builds.md`, `CONTRIBUTING.md`, `.github/pull_request_template.md`, `coding-and-architecture-requirements.audit.md`, creates `standards-overrides.md` when the overrides file does not already exist, manages a bounded `README.md` badge block when it can verify at least one default badge, and tailors the managed sidecar with owner-specific `openlinks-identity-presence` guidance when the downstream GitHub owner normalizes to Peter Ryszkiewicz or `pRizz`. Those fully managed files now carry visible whole-file markers so downstream drift becomes a `blocked` state instead of being overwritten silently.
 
 Downstream `AGENTS.md` stays the entrypoint for concise repo-local workflow facts. Use a `## Repo-Local Guidance` section there for recurring local commands, conventions, and links. Reserve `standards-overrides.md` for deliberate deviations from the canonical standards.
 
@@ -90,12 +91,14 @@ New repo vs existing repo:
 
 - A new repo normally reports `installable`.
 - A repo with an existing local `AGENTS.md` and no other managed-file conflicts also reports `installable`.
+- A repo with the managed AGENTS marker block plus an exact-match legacy copy of the fully managed files but without the new whole-file marker headers still reports `installed`; `update` migrates those files to the marked format.
 - A repo with existing managed conflicts such as `CONTRIBUTING.md`, `.github/pull_request_template.md`, `AGENTS.bright-builds.md`, or `coding-and-architecture-requirements.audit.md` reports `blocked`.
+- A repo whose marked whole-file managed outputs have downstream edits also reports `blocked` and lists the drifted paths.
 - A repo whose README insertion zone already contains unmanaged badge-like content, or whose managed README badge block is partial, also reports `blocked`.
 - A repo with the managed AGENTS marker block plus `AGENTS.bright-builds.md` reports `installed`.
 - A repo using the previous standalone downstream layout from this repository reports `blocked` until you explicitly replace it.
 
-The manager installs a managed block inside `AGENTS.md`, writes `AGENTS.bright-builds.md`, writes `CONTRIBUTING.md`, writes `.github/pull_request_template.md`, writes `coding-and-architecture-requirements.audit.md`, creates `standards-overrides.md` if it is missing, and inserts or refreshes a managed README badge block when verified badges are available. It keeps the requested `Version pin` breadcrumb and also records the exact resolved commit when that provenance can be determined. Prefer replacing `main` with a tag or commit SHA once you start cutting releases.
+The manager installs a managed block inside `AGENTS.md`, writes `AGENTS.bright-builds.md`, writes `CONTRIBUTING.md`, writes `.github/pull_request_template.md`, writes `coding-and-architecture-requirements.audit.md`, creates `standards-overrides.md` if it is missing, and inserts or refreshes a managed README badge block when verified badges are available. The fully managed files carry visible whole-file markers, while `AGENTS.md` and `README.md` keep their bounded-region marker model. The installer keeps the requested `Version pin` breadcrumb and also records the exact resolved commit when that provenance can be determined. Prefer replacing `main` with a tag or commit SHA once you start cutting releases.
 
 When auto-update resolves to `enabled`, the manager also writes:
 
@@ -152,6 +155,8 @@ The downstream install is anchored by two AGENTS files:
   - `<!-- coding-and-architecture-requirements-managed:end -->`
 - The repo-local parts of `AGENTS.md` remain the place for concise local workflow facts; use `## Repo-Local Guidance` for recurring commands, conventions, prerequisites, and links.
 - `AGENTS.bright-builds.md` contains the managed Bright Builds guidance and a visible warning that the file is installed from this repository and should not be edited directly.
+- Fully managed downstream files use visible whole-file markers such as `<!-- coding-and-architecture-requirements-managed-file: AGENTS.bright-builds.md -->` or `# coding-and-architecture-requirements-managed-file: scripts/bright-builds-auto-update.sh`.
+- If one of those whole-file managed outputs drifts downstream, `status` reports `blocked` and `update` stops until the repo is repaired or the user explicitly chooses `install --force`.
 - when the downstream GitHub owner matches Peter Ryszkiewicz or `pRizz` after normalization, `AGENTS.bright-builds.md` also includes an owner-specific `openlinks-identity-presence` rule for discoverability surfaces
 - `standards-overrides.md` remains the place for deliberate deviations from canonical standards rather than general local workflow notes
 
@@ -181,11 +186,12 @@ Behavior by command:
 - `install` also writes the managed auto-update workflow and helper script when auto-update resolves to `enabled`
 - rerunning `install` on an already installed repo refreshes the managed block and does not duplicate it
 - `install --force` first backs up blocked managed files into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/` before replacing them, and repairs only the top README badge region when `README.md` is blocked
-- `update` refreshes the managed AGENTS block, sidecar, managed files, managed README badge block, audit manifest, and any enabled auto-update files, but only for the new marker-based installs
+- `update` refreshes the managed AGENTS block, sidecar, managed files, managed README badge block, audit manifest, and any enabled auto-update files, but only when the installed managed files are either exact current renders or exact legacy unmarked renders
 - `status` uses the managed AGENTS marker block plus `AGENTS.bright-builds.md` as the install signal
 - `status` also reports explicit README badge state plus the resolved auto-update mode and reason
+- `status` blocks when a whole-file managed output has downstream edits, but still accepts exact-match legacy installs without the new marker headers
 - installed `status` also reports the pinned exact commit from the audit trail when present
-- `uninstall` removes the managed AGENTS block, managed README badge block, `AGENTS.bright-builds.md`, `CONTRIBUTING.md`, the PR template, the managed auto-update files, and the audit manifest, while preserving `standards-overrides.md`
+- `uninstall` removes clean managed whole-file outputs, preserves drifted whole-file managed files with a skip message, removes the managed AGENTS block and managed README badge block, and preserves `standards-overrides.md`
 
 ## Repository layout
 
@@ -229,7 +235,7 @@ Behavior by command:
 
 If the repository already had substantial code before adoption, you can also use the Codex skill to run a read-only `audit` baseline or an `audit-and-fix` cleanup wave after install. The default audit mode is whole-repo and findings-first; the default audit-and-fix mode audits first, then applies one bounded remediation wave rather than attempting a whole-repo rewrite.
 
-The intended downstream footprint is still small: a local `AGENTS.md` that stays the entrypoint for repo-local guidance plus a managed Bright Builds block, a local `AGENTS.bright-builds.md` sidecar, a local `CONTRIBUTING.md`, an optional managed README badge block, an overrides file, a PR template, and the audit trail file. The canonical standards remain here.
+The intended downstream footprint is still small: a local `AGENTS.md` that stays the entrypoint for repo-local guidance plus a managed Bright Builds block, a local `AGENTS.bright-builds.md` sidecar, a local `CONTRIBUTING.md`, an optional managed README badge block, an overrides file, a PR template, and the audit trail file. The canonical standards remain here, and the fully managed files now carry explicit whole-file markers so drift is visible instead of implicit.
 
 ## Uninstall
 

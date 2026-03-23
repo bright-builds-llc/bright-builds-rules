@@ -1,5 +1,7 @@
 # CONTRIBUTING.md
 
+REPLACE_WITH_MANAGED_FILE_MARKER
+
 Use this file as the starting point for a downstream repository's contribution guide.
 
 ## Default contribution expectations
