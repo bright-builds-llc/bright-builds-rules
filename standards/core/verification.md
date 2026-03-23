@@ -6,13 +6,15 @@ This page defines the baseline expectations for pre-commit verification without 
 
 - Level: `must`
 - Intent: Catch regressions before they land while keeping the verification burden proportional to the actual change.
-- Rule: Before committing, run the repository's relevant verification steps for the changed paths and do not commit if those checks fail. Determine the verification surface in this order: repo-local guidance first, then a repo-owned aggregate command such as `verify`, `check`, `validate`, or `ci`, then framework-native commands, then individual tool commands only when needed. Scope the run to the affected files, packages, workspaces, or services when the repository supports that. If a change spans multiple language or runtime surfaces, run the relevant verification for each affected surface.
-- Rationale: Requiring passed verification before commit catches common regressions early, but a durable standard also has to respect monorepos, mixed-language repositories, and ecosystems with different default tooling. Using the repository's own verification entrypoints preserves local intent and avoids turning policy into guesswork.
+- Rule: Before committing, run the repository's relevant verification steps for the changed paths and do not commit if those checks fail. Determine the verification surface in this order: repo-local guidance first, then a repo-owned aggregate command such as `verify`, `check`, `validate`, or `ci`, then framework-native commands, then individual tool commands only when needed. Scope the run to the affected files, packages, workspaces, or services when the repository supports that. If a change spans multiple language or runtime surfaces, run the relevant verification for each affected surface. For changed Markdown or shell-script paths, treat a locally available formatter check as part of the relevant surface when the repository does not already define a clearer formatter workflow. Only use tools that are already available on `PATH` or through the repository's normal runner or dependencies, scope them to the changed Markdown or shell paths, and use check, diff, or list modes instead of write-in-place modes.
+- Rationale: Requiring passed verification before commit catches common regressions early, but a durable standard also has to respect monorepos, mixed-language repositories, and ecosystems with different default tooling. Using the repository's own verification entrypoints preserves local intent and avoids turning policy into guesswork, while conditional formatter checks cover common documentation and script surfaces without turning the standard into a hidden install requirement.
 - Good example:
 
 ```text
-Change: docs plus one Rust crate
+Change: docs, one shell script, and one Rust crate
 - run the repo's docs check for the changed Markdown
+- run `mdformat --check` or `prettier --check` for the changed Markdown when that formatter is already available and local docs do not define a clearer path
+- run `shfmt -l -d` or `beautysh --check` for the changed shell script when that formatter is already available and local docs do not define a clearer path
 - run the crate-scoped Rust verify/check command used by the repo
 - skip unrelated frontend or end-to-end suites
 ```
@@ -20,13 +22,14 @@ Change: docs plus one Rust crate
 - Bad example:
 
 ```text
-Change: one package in a monorepo
+Change: one package in a monorepo plus one Markdown file
 - invent a hand-rolled command list even though the repo already has `pnpm verify --filter ...`
+- install a new formatter locally just to satisfy the policy
 - skip the available package-scoped checks and commit anyway after a failing typecheck
 ```
 
-- Exceptions or escape hatches: Do not invent missing verification categories. A repository that has tests but no linter, or a build step but no typecheck, should run what it actually has. Heavy integration, browser, end-to-end, or external-service suites may remain pre-push or CI-only when the repo's local guidance says so. If local verification is blocked by missing secrets, required services, containers, browsers, network access, or similar prerequisites, stop and ask or document a local exception instead of silently skipping the check.
-- Review questions: What are the repo's documented verification entrypoints for these changed paths? Is there an affected-package or changed-path mode that avoids whole-repo work? Does the change touch more than one verification surface?
+- Exceptions or escape hatches: Do not invent missing verification categories. A repository that has tests but no linter, or a build step but no typecheck, should run what it actually has. Do not install new tooling just to satisfy this rule, and do not treat adjacent rewrite or hardening tools as mandatory formatters. Acceptable targeted formatter checks include `mdformat --check`, `prettier --check`, and `dprint check` for Markdown, plus `shfmt -l -d`, `beautysh --check`, and `prettier --check` when `prettier-plugin-sh` is already part of the available setup for shell paths. If Markdown formatting already relies on `mdformat`, `mdformat-shfmt` is also a valid example for shell code fences embedded in Markdown. `shellharden` is not part of this core formatter rule because it is a transforming hardening tool, not a plain formatting check. Heavy integration, browser, end-to-end, or external-service suites may remain pre-push or CI-only when the repo's local guidance says so. If local verification is blocked by missing secrets, required services, containers, browsers, network access, or similar prerequisites, stop and ask or document a local exception instead of silently skipping the check.
+- Review questions: What are the repo's documented verification entrypoints for these changed paths? Is there an affected-package or changed-path mode that avoids whole-repo work? For changed Markdown or shell paths, is there already a repo-defined formatter workflow or a locally available check-mode formatter that should be used? Does the change touch more than one verification surface?
 - Automation potential: Scripts and CI can enforce parts of this rule, but judging what is relevant still depends on changed-path and repository context.
 
 ## Prefer Repo-Owned Verification Entry Points

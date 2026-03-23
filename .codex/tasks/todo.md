@@ -2,14 +2,15 @@
 
 ## Current task
 
-- [x] Extend the `personal-coding-standards` skill with explicit `audit` and `audit-and-fix` modes
-- [x] Define audit as a whole-repo read-only baseline by default and audit-and-fix as audit plus one bounded remediation wave
-- [x] Update the skill metadata and canonical docs hooks so the new audit modes are discoverable after adoption
-- [x] Keep the installer and managed downstream templates unchanged while documenting post-install audit options for pre-existing repos
+- [x] Update the canonical verification standard with conditional Markdown and shell formatter-check guidance
+- [x] Mirror the condensed verification wording into the managed downstream templates
+- [x] Refresh the downstream installer assertions that verify the managed template wording
+- [x] Record the policy change in `CHANGELOG.md`
 
 ## Current verification
 
 - [x] `./scripts/verify-docs.sh` passes
+- [x] `bash scripts/test-manage-downstream.sh` passes
 - [x] Diff reviewed for unintended side effects
 
 ## Current completion review
@@ -18,8 +19,8 @@ Completed on 2026-03-22.
 
 Residual risks:
 
-- Whole-repo audit baselines can still surface a large volume of findings in mature repos, so users may need to narrow scope or work through multiple remediation waves over time.
-- `audit-and-fix` stays intentionally conservative, so repos with larger architectural drift will still need follow-up planning instead of expecting one-pass cleanup.
+- Downstream summaries can drift from the canonical rule if the installer assertions are not kept aligned with the exact template wording.
+- Formatter availability language must stay clearly conditional so agents do not infer they should install new tools.
 
 ## Previous work
 

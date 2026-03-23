@@ -21,7 +21,7 @@ Record repo-specific changes in `AGENTS.md` or `standards-overrides.md`, not in 
 - Treat functions over roughly 200 lines as refactor triggers.
 - Keep workflow config thin and move non-trivial inline scripts into repo-owned script files that are rerunnable when sensible and leave breadcrumb-heavy logs and summaries in a repo-defined gitignored location.
 - Treat files over roughly 628 lines as refactor triggers.
-- Before committing, run the relevant repo-native verification steps for the changed paths and do not commit if they fail.
+- Before committing, run the relevant repo-native verification steps for the changed paths, including Markdown or shell formatter checks when supported tools are already available and local guidance does not define a clearer workflow, and do not commit if they fail.
 - Prefer the repo's own verify/check/validate entrypoint when it exists, and use affected-path or affected-package modes when the repo supports them.
 - Heavy integration, end-to-end, or external-service suites may stay CI-only when local guidance says so.
 - If hook-managed verification is detected and local docs are silent, ask before duplicating it manually.
