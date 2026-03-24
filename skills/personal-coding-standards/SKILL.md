@@ -43,6 +43,10 @@ Use this skill when the user wants to:
    - use `update` when status reports `Repo state: installed`
    - stop and explain blocking files when status reports `Repo state: blocked`
    - never choose `install --force` automatically
+   - if the user explicitly opts into replacement, treat `install --force` as a backup-first merge-assisted path: inspect `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`, compare the backups with the fresh managed outputs, and reapply only clearly portable downstream-specific logic or content into safe local extension points
+   - safe merge destinations include repo-local `AGENTS.md` content outside the managed block, `standards-overrides.md`, existing non-managed project docs, and `README.md` content outside the managed badge block
+   - if carrying prior behavior forward would require re-drifting a fully managed file, inventing a new contract, or making a non-obvious semantic choice, stop and ask the user instead of guessing
+   - if `README.md` is the blocking path, keep the managed badge block immediately after the first H1 and only restore prior top-of-file badges or content below it when that does not recreate ambiguity
 10. Use `../../templates/` as source material only when editing the managed downstream assets in this repository. Do not bypass the manager flow by manually copying template files into a downstream repo unless the user explicitly wants that lower-level maintenance work.
 11. For review, audit, and audit-and-fix work, read local `AGENTS.md` first, including any `## Repo-Local Guidance` section when present.
 12. Read `standards-overrides.md` for deliberate local deviations when it is present.
@@ -71,6 +75,7 @@ Use this skill when the user wants to:
 ## Output expectations
 
 - When handling Bright Builds adoption, status, or refresh work, state which helper or manager command you used and why.
+- When using the blocked merge-assisted path, state that explicit user approval was required for `install --force`, then summarize what was safely folded back in and what still needs user judgment.
 - When no clear context is available, offer the short action menu instead of failing or inventing intent.
 - When reviewing, focus findings on standards violations and note any documented exception.
 - When auditing, produce findings-first output. Treat `must` violations as findings unless a local override exists, `should` deviations as strong refactor recommendations, and `may` guidance as optional improvements.

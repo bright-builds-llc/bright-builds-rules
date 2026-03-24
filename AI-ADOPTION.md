@@ -19,12 +19,14 @@ Use this decision rule:
 3. If `status` reports `Repo state: installable`, run `install`.
 4. If `status` reports `Repo state: installed`, run `update`.
 5. If `status` reports `Repo state: blocked`, stop and explain the blocking files instead of forcing an overwrite automatically. Treat downstream edits inside marked whole-file managed outputs as blocking drift, not as content to overwrite silently.
-6. Use `install --force` only when the user explicitly wants to replace blocked managed files. That command first backs them up into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`.
-7. Treat `README.md` as part of the managed surface only when the installer can verify badges from the downstream repo. If `status` reports a blocked README badge state, stop unless the user explicitly wants `install --force`.
-8. Let the installer resolve downstream auto-update to `disabled` unless the downstream GitHub repo owner or current GitHub user is trusted. Trusted identities are `pRizz` and `bright-builds-llc`. Respect `--auto-update enabled|disabled` when the user asks for an override.
-9. When the downstream GitHub repo owner normalizes to `pRizz` or `peterryszkiewicz` (Peter Ryszkiewicz), let the managed sidecar require the `openlinks-identity-presence` skill for README/docs, UI chrome, profile/about/footer, and metadata/discovery surfaces. Keep the placement subtle and keep the host brand primary.
-10. After install or update, report the files written and point the user to `coding-and-architecture-requirements.audit.md` as the paper trail, including the source URL, requested ref, exact resolved commit when available, whether a managed README badge block was installed or refreshed, whether owner-specific OpenLinks guidance was included, and whether auto-update ended up enabled or disabled.
-11. When the downstream repo is pre-existing rather than greenfield, mention that the optional `personal-coding-standards` skill can run a read-only `audit` baseline or an `audit-and-fix` cleanup wave after adoption to surface or start remediating standards drift.
+6. Use `install --force` only when the user explicitly wants to replace blocked managed files. Frame that choice as a backup-first, merge-assisted path rather than a blind overwrite.
+7. After `install --force`, inspect `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`, diff each backed-up file against the fresh managed output, and reapply only clearly portable downstream-specific logic or content into safe local extension points such as repo-local `AGENTS.md` content outside the managed block, `standards-overrides.md`, existing non-managed project docs, and `README.md` content outside the managed badge block.
+8. If preserving prior behavior would require re-drifting a fully managed file, inventing a new contract, or making a non-obvious semantic choice, stop and ask the user instead of guessing.
+9. Treat `README.md` as part of the managed surface only when the installer can verify badges from the downstream repo. If `status` reports a blocked README badge state, stop unless the user explicitly wants `install --force`; after repair, keep the managed badge block immediately after the first H1 and only reinsert prior top-of-file badges or content below it when that does not recreate badge ambiguity.
+10. Let the installer resolve downstream auto-update to `disabled` unless the downstream GitHub repo owner or current GitHub user is trusted. Trusted identities are `pRizz` and `bright-builds-llc`. Respect `--auto-update enabled|disabled` when the user asks for an override.
+11. When the downstream GitHub repo owner normalizes to `pRizz` or `peterryszkiewicz` (Peter Ryszkiewicz), let the managed sidecar require the `openlinks-identity-presence` skill for README/docs, UI chrome, profile/about/footer, and metadata/discovery surfaces. Keep the placement subtle and keep the host brand primary.
+12. After install or update, report the files written and point the user to `coding-and-architecture-requirements.audit.md` as the paper trail, including the source URL, requested ref, exact resolved commit when available, whether a managed README badge block was installed or refreshed, whether owner-specific OpenLinks guidance was included, and whether auto-update ended up enabled or disabled.
+13. When the downstream repo is pre-existing rather than greenfield, mention that the optional `personal-coding-standards` skill can run a read-only `audit` baseline or an `audit-and-fix` cleanup wave after adoption to surface or start remediating standards drift.
 
 ## Commands
 
@@ -53,7 +55,7 @@ Whole-file managed downstream outputs now carry visible headers such as:
 - `<!-- coding-and-architecture-requirements-managed-file: AGENTS.bright-builds.md -->`
 - `# coding-and-architecture-requirements-managed-file: scripts/bright-builds-auto-update.sh`
 
-Edits to those files block `status`/`update` until the user either restores the expected content or explicitly runs `install --force`.
+Edits to those files block `status`/`update` until the user either restores the expected content or explicitly runs `install --force` and then performs the merge review described below.
 
 Status / confirmation:
 
@@ -61,7 +63,7 @@ Status / confirmation:
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- status
 ```
 
-Explicit replacement with backup first:
+Explicit replacement with backup first, followed by the agent's merge review:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- install --force --ref main
@@ -131,7 +133,7 @@ The installer manages README badges conservatively:
 - it derives those badges from the downstream `origin` GitHub remote, root workflows, root manifests, and root toolchain files only
 - if the relevant version source is missing, conflicting, or ambiguous, it skips that badge instead of guessing
 
-If the repo reports `blocked`, inspect the listed paths and do not use `--force` automatically.
+If the repo reports `blocked`, inspect the listed paths and do not use `--force` automatically. If the user explicitly opts into replacement, explain that `install --force` is only the first step: the script backs up the blocked files, then the agent compares those backups with the fresh managed outputs and folds back only clearly portable downstream-specific logic or content.
 
 ## Failure handling
 
@@ -155,8 +157,10 @@ If the downstream repository already contains conflicting managed files:
 - if a blocking file is one of the marked whole-file managed surfaces, explain that the downstream copy drifted from the pinned managed render instead of being a safe local extension point
 - use `update` only when `status` reports `installed`
 - otherwise stop and ask how the user wants to reconcile the conflict
-- if the user explicitly chooses replacement, tell them `install --force` will back up the blocked files into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/` before writing the managed files
-- if `README.md` is the blocking path, explain whether the conflict is a partial managed badge block or existing unmanaged badge-like content near the top insertion zone, because `install --force` will repair only that badge region and preserve the rest of the README body
+- if the user explicitly chooses replacement, tell them `install --force` will back up the blocked files into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/` before writing the managed files, then review the backup against the fresh managed outputs and reapply only clearly portable downstream-specific logic or content
+- safe destinations for that follow-on merge work include repo-local `AGENTS.md` content outside the managed block, `standards-overrides.md`, existing non-managed project docs, and `README.md` content outside the managed badge block
+- if carrying prior behavior forward would require re-drifting a fully managed file, inventing a new contract, or making a non-obvious semantic choice, stop and ask the user instead of guessing
+- if `README.md` is the blocking path, explain whether the conflict is a partial managed badge block or existing unmanaged badge-like content near the top insertion zone; after `install --force`, keep the managed badge block immediately after the first H1 and only restore prior top-of-file badges or content below it when that does not recreate ambiguity, otherwise ask the user
 
 ## Success confirmation
 

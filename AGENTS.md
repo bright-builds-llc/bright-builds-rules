@@ -12,10 +12,12 @@ Use the status-first decision rule from `AI-ADOPTION.md`:
 - use `install` when `Repo state: installable`
 - use `update` when `Repo state: installed`
 - do not overwrite blocked managed files automatically when `Repo state: blocked`
+- if the user explicitly opts into replacing blocked managed files, treat `install --force` as a backup-first merge-assisted path: review the timestamped backup against the fresh managed outputs and fold back only clearly portable downstream-specific logic or content into safe local extension points
+- if that merge review would require re-drifting a fully managed file or making a non-obvious semantic choice, stop and ask the user
 - remember that `install` may append the managed Bright Builds block to an existing unmarked downstream `AGENTS.md`
 - remember that install/update may also manage a bounded README badge block when the downstream repo has verified badge inputs
 - remember that install/update may also tailor `AGENTS.bright-builds.md` with an `openlinks-identity-presence` rule when the downstream GitHub repo owner normalizes to `pRizz` or `peterryszkiewicz` (Peter Ryszkiewicz)
-- use `install --force` only as an explicit replacement path, which first creates `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`
+- use `install --force` only as an explicit replacement path, which first creates `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`; for blocked `README.md`, keep the managed badge block after the first H1 and only restore prior top-of-file badges or content below it when that does not recreate ambiguity
 
 ## Canonical sources
 

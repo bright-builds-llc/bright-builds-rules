@@ -31,13 +31,13 @@ The intended AI behavior is:
 - run `status` first
 - run `install` when `status` reports `Repo state: installable`
 - run `update` when `status` reports `Repo state: installed`
-- stop for review when `status` reports `Repo state: blocked`, unless the user explicitly wants `install --force`
+- stop for review when `status` reports `Repo state: blocked`, unless the user explicitly opts into a backup-first `install --force` plus merge-assisted follow-up
 - preserve a pre-existing unmarked `AGENTS.md` by appending the managed Bright Builds block to the end during `install`
 - treat downstream edits to marked whole-file managed files as blocking drift instead of silently overwriting them on `update`
 - manage a bounded `README.md` badge block when the downstream repo has verified badge inputs and the top badge zone is unambiguous
 - tailor `AGENTS.bright-builds.md` with an `openlinks-identity-presence` rule when the downstream GitHub repo owner normalizes to `pRizz` or `peterryszkiewicz` (Peter Ryszkiewicz)
 - let the installer resolve downstream auto-update to `disabled` by default unless the downstream GitHub repo owner or current GitHub user is trusted
-- use `install --force` only as an opt-in replacement path for blocked managed files, which first backs them up into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`
+- use `install --force` only as an opt-in replacement path for blocked managed files, which first backs them up into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/` and then drives a careful agent merge review of the backup against the fresh managed output
 - report `coding-and-architecture-requirements.audit.md` as the downstream paper trail after completion
 - report the pinned source URL, requested ref, and exact resolved commit when available
 
@@ -87,6 +87,14 @@ If `Repo state: blocked`, stop and review the blocking managed files before repl
 curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- install --force --ref main
 ```
 
+When the user explicitly opts into that replacement path, the AI should treat it as a merge-assisted recovery flow instead of a blind overwrite:
+
+- run `install --force` first so the installer creates the timestamped backup and repairs the managed surfaces
+- compare the backed-up files with the fresh managed outputs and reapply only clearly portable downstream-specific logic or content
+- use safe destinations for that follow-on merge work such as repo-local `AGENTS.md` content outside the managed block, `standards-overrides.md`, existing non-managed project docs, and `README.md` content outside the managed badge block
+- if carrying old behavior forward would require re-drifting a fully managed file, inventing a new contract, or making a non-obvious semantic choice, stop and ask the user instead of guessing
+- if `README.md` was blocked, keep the managed badge block immediately after the first H1 and only reinsert prior top-of-file badges or content below it when that does not recreate badge ambiguity
+
 New repo vs existing repo:
 
 - A new repo normally reports `installable`.
@@ -134,6 +142,7 @@ When the downstream repository has verifiable inputs, the installer manages a bo
 - if `README.md` is missing and at least one verified badge is available, it creates a minimal README skeleton using the repo directory name as the H1
 - it blocks conservatively when the top insertion zone already contains unmanaged badge-like content or a partial managed badge block
 - `install --force` backs up `README.md`, repairs only that badge region, and preserves the rest of the README body
+- after a blocked README repair, the agent may reinsert prior top-of-file badges or content below the managed badge block only when that does not recreate an ambiguous badge zone; otherwise it should ask the user
 
 Supported default detectors are intentionally conservative and root-only:
 
@@ -156,7 +165,7 @@ The downstream install is anchored by two AGENTS files:
 - The repo-local parts of `AGENTS.md` remain the place for concise local workflow facts; use `## Repo-Local Guidance` for recurring commands, conventions, prerequisites, and links.
 - `AGENTS.bright-builds.md` contains the managed Bright Builds guidance and a visible warning that the file is installed from this repository and should not be edited directly.
 - Fully managed downstream files use visible whole-file markers such as `<!-- coding-and-architecture-requirements-managed-file: AGENTS.bright-builds.md -->` or `# coding-and-architecture-requirements-managed-file: scripts/bright-builds-auto-update.sh`.
-- If one of those whole-file managed outputs drifts downstream, `status` reports `blocked` and `update` stops until the repo is repaired or the user explicitly chooses `install --force`.
+- If one of those whole-file managed outputs drifts downstream, `status` reports `blocked` and `update` stops until the repo is repaired or the user explicitly chooses the `install --force` plus merge-review path.
 - when the downstream GitHub owner matches Peter Ryszkiewicz or `pRizz` after normalization, `AGENTS.bright-builds.md` also includes an owner-specific `openlinks-identity-presence` rule for discoverability surfaces
 - `standards-overrides.md` remains the place for deliberate deviations from canonical standards rather than general local workflow notes
 
@@ -185,7 +194,8 @@ Behavior by command:
 - `install` writes or refreshes the managed AGENTS block, writes `AGENTS.bright-builds.md`, refreshes the managed files, writes or repairs the managed README badge block when verified badges are available, writes the audit manifest, and creates `standards-overrides.md` if it is missing
 - `install` also writes the managed auto-update workflow and helper script when auto-update resolves to `enabled`
 - rerunning `install` on an already installed repo refreshes the managed block and does not duplicate it
-- `install --force` first backs up blocked managed files into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/` before replacing them, and repairs only the top README badge region when `README.md` is blocked
+- `install --force` first backs up blocked managed files into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/` before replacing them, then the agent should compare the backup with the fresh managed outputs and fold back only clearly portable downstream-specific logic or content into safe local extension points
+- if that merge review would require re-drifting a fully managed file or making a non-obvious semantic choice, the agent should stop and ask the user
 - `update` refreshes the managed AGENTS block, sidecar, managed files, managed README badge block, audit manifest, and any enabled auto-update files, but only when the installed managed files are either exact current renders or exact legacy unmarked renders
 - `status` uses the managed AGENTS marker block plus `AGENTS.bright-builds.md` as the install signal
 - `status` also reports explicit README badge state plus the resolved auto-update mode and reason
