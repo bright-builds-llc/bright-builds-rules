@@ -65,6 +65,7 @@ Use this skill when the user wants to:
 - Standards index: `../../standards/index.md`
 - Core architecture: `../../standards/core/architecture.md`
 - Code shape: `../../standards/core/code-shape.md`
+- Operability: `../../standards/core/operability.md`
 - Local guidance: `../../standards/core/local-guidance.md`
 - Verification: `../../standards/core/verification.md`
 - Testing: `../../standards/core/testing.md`

@@ -283,6 +283,7 @@ test_fresh_install_and_reinstall() {
   assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "$(managed_file_marker "AGENTS.bright-builds.md")" "sidecar should include the whole-file managed marker"
   assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Record recurring repo-specific workflow facts in \`AGENTS.md\` under \`## Repo-Local Guidance\`" "sidecar should distinguish local guidance from standards overrides"
   assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "internal nullable or optional names with \`maybe\`" "sidecar should include the expanded maybe-prefix naming guidance"
+  assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "copyable summary with the exact commit when available" "sidecar should include the UI provenance guidance"
   assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "foreign-language logic inside strings" "sidecar should include the no-foreign-code-in-strings guidance"
   assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "rerunnable when sensible" "sidecar should include the rerunnable script guidance"
   assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "repo-defined gitignored location" "sidecar should point scripts at a repo-defined gitignored log location"
@@ -524,6 +525,7 @@ test_update_preserves_local_agents_and_overrides() {
   assert_exact_line_count "${repo_path}/AGENTS.md" "$agents_block_begin" "1"
   assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Version pin: \`integration-test-ref\`" "update should refresh managed files"
   assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Exact commit: \`${repo_exact_commit}\`" "update should preserve exact local provenance"
+  assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "copyable summary with the exact commit when available" "update should keep the UI provenance guidance"
   assert_file_contains "${repo_path}/standards-overrides.md" "| \`custom\` | \`keep it\` | \`local\` | \`owner\` | \`2026-03-13\` |" "update should preserve local overrides"
 }
 
