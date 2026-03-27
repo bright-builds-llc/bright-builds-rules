@@ -150,7 +150,7 @@ External or framework-owned contract
 
 - Level: `should`
 - Intent: Keep functions small enough that a reader can understand one concern at a time.
-- Rule: When a function grows beyond roughly 200 lines, treat that as a refactor trigger. Break it into sensible helpers, steps, or sub-workflows with names that reveal intent.
+- Rule: When a function grows beyond roughly 161 lines, treat that as a refactor trigger. Use `floor(100 * phi)` as a mnemonic for the threshold, not as a hard cap, and break the function into sensible helpers, steps, or sub-workflows with names that reveal intent.
 - Rationale: Oversized functions usually mix responsibilities, bury important transitions, and make testing harder because the seams are implicit instead of named.
 - Good example:
 
@@ -166,7 +166,7 @@ handleCheckout()
 
 ```text
 handleCheckout()
-  // 230+ lines that parse input, calculate discounts, mutate stock,
+  // 300+ lines that parse input, calculate discounts, mutate stock,
   // call payment APIs, map errors, log metrics, and build the response
 ```
 
@@ -292,7 +292,7 @@ scripts/bootstrap.sh
 
 - Level: `should`
 - Intent: Keep file boundaries aligned with coherent responsibilities instead of turning one file into a dumping ground.
-- Rule: When a source file grows beyond roughly 628 lines of code, treat that as a refactor trigger. Split it into smaller modules organized around clear responsibilities.
+- Rule: When a source file grows beyond roughly 628 lines of code, treat that as a refactor trigger. Use `floor(100 * tau)` as a mnemonic for the threshold, not as a hard cap, and split the file into smaller modules organized around clear responsibilities.
 - Rationale: Very large files slow navigation, hide architectural seams, and often signal that unrelated concerns have accumulated in one place.
 - Good example:
 

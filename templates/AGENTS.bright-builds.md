@@ -22,9 +22,9 @@ Record recurring repo-specific workflow facts in `AGENTS.md` under `## Repo-Loca
 - Prefer early returns over nesting.
 - Prefix internal nullable or optional names with `maybe`, including functions, bindings, and internal fields, and use `MaybeX` aliases only when they materially clarify a repeated nullable surface.
 - In user-facing, app-like websites and apps, expose version, commit, and build provenance in a normal visible product surface, show `Unavailable` for missing fields, and provide a copyable summary with the exact commit when available.
-- Treat functions over roughly 200 lines as refactor triggers.
+- Treat functions over roughly 161 lines as refactor triggers; use `floor(100 * phi)` as the mnemonic, not a hard cap.
 - Do not hide substantial foreign-language logic inside strings; keep orchestration thin, move scripts, queries, and similar artifacts into repo-owned or language-aware files, and make checked-in scripts rerunnable when sensible with breadcrumb-heavy logs and summaries in a repo-defined gitignored location.
-- Treat files over roughly 628 lines as refactor triggers.
+- Treat files over roughly 628 lines as refactor triggers; use `floor(100 * tau)` as the mnemonic, not a hard cap.
 - Before committing, run the relevant repo-native verification steps for the changed paths, including Markdown or shell formatter checks when supported tools are already available and local guidance does not define a clearer workflow, and do not commit if they fail.
 - Prefer the repo's own verify/check/validate entrypoint when it exists, and use affected-path or affected-package modes when the repo supports them.
 - Heavy integration, end-to-end, or external-service suites may stay CI-only when local guidance says so.

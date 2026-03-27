@@ -57,3 +57,15 @@ Residual risks:
 
 - The installer intentionally no longer recognizes the previous standalone downstream layout, so any repo that adopted an earlier contract now requires an explicit `install --force` replacement.
 - A repo with a local `AGENTS.md` receives the managed block at the end, so agents still rely on the documented rule that repo-local instructions outside the managed block take precedence on conflicts.
+
+## task-mnemonic-threshold-provenance | 2026-03-26 18:58 CDT | Refresh threshold provenance hints
+
+- [x] Audit authored numeric rules and limit this pass to the line-count thresholds.
+- [x] Change the function refactor trigger from `200` to `161` and document `floor(100 * phi)` as the mnemonic, not a hard cap.
+- [x] Keep the file refactor trigger at `628` and document `floor(100 * tau)` as the mnemonic, not a hard cap.
+- [x] Mirror the threshold wording in the managed `AGENTS.bright-builds.md` template and update the oversized-function example so it still exceeds the threshold.
+- [x] Verify the docs and confirm the managed rule surfaces carry the new `161` and `628` wording without stale `200` references.
+- Verification: `./scripts/verify-docs.sh`
+- Verification: `rg -n --no-heading '200 lines|161 lines|628 lines|floor\\(100 \\* phi\\)|floor\\(100 \\* tau\\)' standards/core/code-shape.md templates/AGENTS.bright-builds.md README.md AGENTS.md AI-ADOPTION.md`
+- Completion review: The provenance hints stay inline with the threshold sentences, so the rules remain scannable and do not introduce a separate glossary or appendix.
+- Residual risk: Downstream repositories will not pick up the revised threshold wording until they next run Bright Builds install or update.
