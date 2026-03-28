@@ -19,13 +19,13 @@ Use this decision rule:
 3. If `status` reports `Repo state: installable`, run `install`.
 4. If `status` reports `Repo state: installed`, run `update`.
 5. If `status` reports `Repo state: blocked`, stop and explain the blocking files instead of forcing an overwrite automatically. Treat downstream edits inside marked whole-file managed outputs as blocking drift, not as content to overwrite silently.
-6. Use `install --force` only when the user explicitly wants to replace blocked managed files. Frame that choice as a backup-first, merge-assisted path rather than a blind overwrite.
-7. After `install --force`, inspect `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`, diff each backed-up file against the fresh managed output, and reapply only clearly portable downstream-specific logic or content into safe local extension points such as repo-local `AGENTS.md` content outside the managed block, `standards-overrides.md`, existing non-managed project docs, and `README.md` content outside the managed badge block.
+6. Use `install --force` only when the user explicitly wants to replace blocked managed files. Frame that choice as a backup-first, merge-assisted path rather than a blind overwrite; the command first writes `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`.
+7. After `install --force`, inspect the timestamped backup, diff each backed-up file against the fresh managed output, and reapply only clearly portable downstream-specific logic or content into safe local extension points such as repo-local `AGENTS.md` content outside the managed block, `standards-overrides.md`, existing non-managed project docs, and `README.md` content outside the managed badge block.
 8. If preserving prior behavior would require re-drifting a fully managed file, inventing a new contract, or making a non-obvious semantic choice, stop and ask the user instead of guessing.
-9. Treat `README.md` as part of the managed surface only when the installer can verify badges from the downstream repo. If `status` reports a blocked README badge state, stop unless the user explicitly wants `install --force`; after repair, keep the managed badge block immediately after the first H1 and only reinsert prior top-of-file badges or content below it when that does not recreate badge ambiguity.
+9. Treat `README.md` as part of the managed surface when the installer can verify default badges from the downstream repo or when a Peter-owned GitHub repo qualifies for the owner-specific OpenLinks badge. If `status` reports a blocked README badge state, stop unless the user explicitly wants `install --force`; after repair, keep the managed badge block immediately after the first H1 and only reinsert prior top-of-file badges or content below it when that does not recreate badge ambiguity.
 10. Let the installer resolve downstream auto-update to `disabled` unless the downstream GitHub repo owner or current GitHub user is trusted. Trusted identities are `pRizz` and `bright-builds-llc`. Respect `--auto-update enabled|disabled` when the user asks for an override.
-11. When the downstream GitHub repo owner normalizes to `pRizz` or `peterryszkiewicz` (Peter Ryszkiewicz), let the managed sidecar require the `openlinks-identity-presence` skill for README/docs, UI chrome, profile/about/footer, and metadata/discovery surfaces. Keep the placement subtle and keep the host brand primary.
-12. After install or update, report the files written and point the user to `coding-and-architecture-requirements.audit.md` as the paper trail, including the source URL, requested ref, exact resolved commit when available, whether a managed README badge block was installed or refreshed, whether owner-specific OpenLinks guidance was included, and whether auto-update ended up enabled or disabled.
+11. When the downstream GitHub repo owner normalizes to `pRizz` or `peterryszkiewicz` (Peter Ryszkiewicz), let the managed sidecar require the `openlinks-identity-presence` skill for README/docs, UI chrome, profile/about/footer, and metadata/discovery surfaces, and let the managed README badge block append a subtle `OpenLinks profile` badge linked to `https://openlinks.us/` after any project badges. Keep the placement subtle and keep the host brand primary.
+12. After install or update, report the files written and point the user to `coding-and-architecture-requirements.audit.md` as the paper trail, including the source URL, requested ref, exact resolved commit when available, whether a managed README badge block was installed or refreshed, whether owner-specific OpenLinks guidance was included, whether the owner-specific OpenLinks README badge applied, and whether auto-update ended up enabled or disabled.
 13. When the downstream repo is pre-existing rather than greenfield, mention that the optional `personal-coding-standards` skill can run a read-only `audit` baseline or an `audit-and-fix` cleanup wave after adoption to surface or start remediating standards drift.
 
 ## Commands
@@ -83,7 +83,7 @@ Expected downstream files after a successful install or update:
 - `CONTRIBUTING.md`
 - `.github/pull_request_template.md`
 - `coding-and-architecture-requirements.audit.md`
-- `README.md` when the downstream repo has at least one verified default badge and the installer adds or refreshes the managed badge block
+- `README.md` when the downstream repo has at least one verified default badge or the owner-specific OpenLinks badge applies and the installer adds or refreshes the managed badge block
 - `standards-overrides.md` when it did not already exist
 - `scripts/bright-builds-auto-update.sh` and `.github/workflows/bright-builds-auto-update.yml` when auto-update resolves to `enabled`
 
@@ -123,15 +123,19 @@ The installer also tailors the managed sidecar when the downstream GitHub owner 
 
 - it adds an owner-specific rule that tells agents to use `openlinks-identity-presence`
 - it scopes that rule to README/docs, website or app chrome, profile/about/footer surfaces, and metadata/discovery fields
+- it also appends an `OpenLinks profile` badge linked to `https://openlinks.us/` at the end of the managed README badge block
 - it keeps the placement subtle by default and explicitly avoids displacing the host project's main brand or CTA
 
 The installer manages README badges conservatively:
 
 - it inserts the managed badge block after the first `# ...` H1 in `README.md`, or at the top when no H1 exists
-- if `README.md` is missing and at least one verified badge is available, it creates a minimal README skeleton with the repo directory name as the H1
-- it only emits badges it can verify from the downstream repo, in this order: stars, CI, deploy-pages, license, Node.js, TypeScript, one framework badge from `solid-js|react|next|vue|svelte`, Vite, Rust, Python, and Go
+- if `README.md` is missing and at least one managed README badge applies, it creates a minimal README skeleton with the repo directory name as the H1
+- for Peter-owned repos, it appends an `OpenLinks profile` badge linked to `https://openlinks.us/` after any verified project badges
+- it emits verified project badges in this order when it can prove them from the downstream repo: stars, CI, deploy-pages, license, Node.js, TypeScript, one framework badge from `solid-js|react|next|vue|svelte`, Vite, Rust, Python, and Go
 - it derives those badges from the downstream `origin` GitHub remote, root workflows, root manifests, and root toolchain files only
 - if the relevant version source is missing, conflicting, or ambiguous, it skips that badge instead of guessing
+
+The owner-specific OpenLinks badge is separate from those verified default detectors and only applies when the downstream GitHub owner normalizes to `pRizz` or `peterryszkiewicz`.
 
 If the repo reports `blocked`, inspect the listed paths and do not use `--force` automatically. If the user explicitly opts into replacement, explain that `install --force` is only the first step: the script backs up the blocked files, then the agent compares those backups with the fresh managed outputs and folds back only clearly portable downstream-specific logic or content.
 
@@ -169,7 +173,7 @@ After a successful install or update, mention:
 - which command you ran
 - which files were written or refreshed
 - whether `AGENTS.md` was created or had the managed Bright Builds block appended to it
-- whether `README.md` received a managed badge block, was left unchanged because no verified badges applied, or had its managed badge block removed on update
+- whether `README.md` received a managed badge block, was left unchanged because no managed README badges applied, or had its managed badge block removed on update
 - whether `AGENTS.bright-builds.md` included the owner-specific `openlinks-identity-presence` rule for a Peter-owned repo
 - whether auto-update was enabled or disabled, and whether that came from an explicit override or a trust-based default
 - that `coding-and-architecture-requirements.audit.md` records the source URL, pinned ref, exact commit when resolved, auto-update state, and managed files

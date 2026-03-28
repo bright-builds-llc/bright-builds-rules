@@ -26,6 +26,7 @@ readme_badges_end="<!-- coding-and-architecture-requirements-readme-badges:end -
 auto_update_branch="bright-builds/auto-update"
 auto_update_commit_message="chore: update Bright Builds requirements"
 auto_update_cron="0 14 * * *"
+openlinks_identity_url="https://openlinks.us/"
 trusted_auto_update_identities=(
   "prizz"
   "bright-builds-llc"
@@ -90,7 +91,7 @@ agents_block_state="absent"
 readme_badge_state="absent"
 readme_badge_blocking_reason=""
 readme_badges_markdown=""
-readme_has_verified_badges=0
+readme_has_managed_badges=0
 auto_update_request="auto"
 auto_update_mode=""
 auto_update_reason=""
@@ -120,7 +121,7 @@ Run `status` first to classify the repo as `installable`, `installed`, or
 Commands:
   install     Install the managed AGENTS block, AGENTS.bright-builds.md,
               CONTRIBUTING.md, PR template, audit trail, and default README
-              badge block when verified badges are available, plus the managed
+              badge block when managed README badges apply, plus the managed
               auto-update workflow and helper script when auto-update resolves
               to enabled. A pre-existing unmarked AGENTS.md is preserved and
               receives the managed block at the end. Blocked repos stop unless
@@ -302,17 +303,26 @@ is_openlinks_identity_owner() {
 }
 
 build_owner_specific_guidance_markdown() {
-  if ! is_openlinks_identity_owner "$downstream_repo_owner"; then
+  local maybe_owner="${1:-$downstream_repo_owner}"
+
+  if ! is_openlinks_identity_owner "$maybe_owner"; then
     return 0
   fi
 
   cat <<EOF
 ## Owner-specific skill default
 
-- Because the downstream GitHub repo owner resolves to \`${downstream_repo_owner}\`, use the \`openlinks-identity-presence\` skill whenever the task touches README/docs, website or app chrome, profile/about/footer/settings surfaces, or metadata and discovery fields.
+- Because the downstream GitHub repo owner resolves to \`${maybe_owner}\`, use the \`openlinks-identity-presence\` skill whenever the task touches README/docs, website or app chrome, profile/about/footer/settings surfaces, or metadata and discovery fields.
 - Follow the skill's low-intrusion placement bias: prefer footer, about, profile, or README "Find me" placement, keep the visible link primary, and add metadata hints only when the surface already supports them cleanly.
+- If the installer already manages an OpenLinks README badge for this repo, do not add a second near-duplicate README placement unless the user explicitly asks for more prominence.
 - Keep the host project's main brand and CTA primary. Do not add repetitive or aggressive OpenLinks promotion unless the user explicitly asks for it.
 EOF
+}
+
+extract_sidecar_owner_specific_guidance_owner() {
+  local file_path="$1"
+
+  sed -n 's/^- Because the downstream GitHub repo owner resolves to `\([^`]*\)`,.*$/\1/p' "$file_path" | head -n 1
 }
 
 download_file() {
@@ -337,11 +347,19 @@ render_template_file() {
   local managed_files_markdown="${3:-}"
   local relative_destination="${4:-}"
   local include_managed_file_marker="${5:-enabled}"
+  local owner_specific_guidance_override="${6-__CURRENT__}"
   local managed_file_marker_line=""
+  local owner_specific_guidance_content=""
   local line=""
 
   if [[ "$include_managed_file_marker" == "enabled" && -n "$relative_destination" ]]; then
     managed_file_marker_line="$(build_managed_file_marker_line "$relative_destination")"
+  fi
+
+  if [[ "$owner_specific_guidance_override" == "__CURRENT__" ]]; then
+    owner_specific_guidance_content="$owner_specific_guidance_markdown"
+  else
+    owner_specific_guidance_content="$owner_specific_guidance_override"
   fi
 
   {
@@ -359,8 +377,8 @@ render_template_file() {
       fi
 
       if [[ "$line" == "REPLACE_WITH_OWNER_SPECIFIC_GUIDANCE" ]]; then
-        if [[ -n "$owner_specific_guidance_markdown" ]]; then
-          printf '%s\n' "$owner_specific_guidance_markdown"
+        if [[ -n "$owner_specific_guidance_content" ]]; then
+          printf '%s\n' "$owner_specific_guidance_content"
         fi
         continue
       fi
@@ -461,6 +479,7 @@ render_template_to_tmp_path_for_install_state() {
   local relative_destination="$3"
   local managed_files_markdown="${4:-}"
   local include_managed_file_marker="${5:-enabled}"
+  local compare_downstream_owner="${6-__CURRENT__}"
   local compare_repo_url="${current_source:-$repo_url}"
   local compare_requested_ref="${current_ref:-$ref}"
   local compare_fetch_ref="${current_exact_commit:-$compare_requested_ref}"
@@ -468,6 +487,7 @@ render_template_to_tmp_path_for_install_state() {
   local compare_entrypoint="${current_entrypoint:-}"
   local compare_auto_update_mode="${current_auto_update:-$auto_update_mode}"
   local compare_auto_update_reason="${current_auto_update_reason:-$auto_update_reason}"
+  local compare_owner_specific_guidance_markdown=""
   local compare_last_operation="${current_last_operation:-}"
   local compare_last_updated_utc="${current_last_updated_utc:-}"
   local compare_repo_slug=""
@@ -497,6 +517,12 @@ render_template_to_tmp_path_for_install_state() {
   last_updated_utc="$compare_last_updated_utc"
   compare_repo_slug="$(extract_repo_slug_from_url "$repo_url")"
 
+  if [[ "$compare_downstream_owner" == "__CURRENT__" ]]; then
+    compare_owner_specific_guidance_markdown="$owner_specific_guidance_markdown"
+  else
+    compare_owner_specific_guidance_markdown="$(build_owner_specific_guidance_markdown "$compare_downstream_owner")"
+  fi
+
   if [[ -n "$compare_repo_slug" ]]; then
     raw_base="https://raw.githubusercontent.com/${compare_repo_slug}/${compare_fetch_ref}"
   fi
@@ -505,7 +531,7 @@ render_template_to_tmp_path_for_install_state() {
   downloaded_path="${tmp_dir}/${tmp_stem}.source"
   rendered_path="${tmp_dir}/${tmp_stem}.rendered"
   download_file "$source_path" "$downloaded_path"
-  render_template_file "$downloaded_path" "$rendered_path" "$managed_files_markdown" "$relative_destination" "$include_managed_file_marker"
+  render_template_file "$downloaded_path" "$rendered_path" "$managed_files_markdown" "$relative_destination" "$include_managed_file_marker" "$compare_owner_specific_guidance_markdown"
   printf '%s\n' "$rendered_path"
 }
 
@@ -619,7 +645,15 @@ append_readme_badge() {
   fi
 
   readme_badges_markdown="${readme_badges_markdown}${badge_markdown}"
-  readme_has_verified_badges=1
+  readme_has_managed_badges=1
+}
+
+append_owner_specific_readme_badge() {
+  if ! is_openlinks_identity_owner "$downstream_repo_owner"; then
+    return 0
+  fi
+
+  append_readme_badge "$(build_static_badge_markdown "OpenLinks" "profile" "0F172A" "" "" "$openlinks_identity_url")"
 }
 
 normalize_badge_version() {
@@ -1056,7 +1090,7 @@ resolve_downstream_badges() {
   local maybe_go_version=""
 
   readme_badges_markdown=""
-  readme_has_verified_badges=0
+  readme_has_managed_badges=0
   downstream_ci_workflow_path="$(detect_existing_path ".github/workflows/ci.yml" ".github/workflows/ci.yaml" || true)"
   downstream_deploy_workflow_path="$(detect_existing_path ".github/workflows/deploy-pages.yml" ".github/workflows/deploy-pages.yaml" || true)"
   downstream_license_file="$(detect_license_file || true)"
@@ -1115,6 +1149,8 @@ resolve_downstream_badges() {
   if [[ -n "$maybe_go_version" ]]; then
     append_readme_badge "$(build_static_badge_markdown "Go" "$maybe_go_version" "00ADD8" "go" "white" "https://go.dev/")"
   fi
+
+  append_owner_specific_readme_badge
 }
 
 resolve_owner_specific_guidance() {
@@ -1274,7 +1310,7 @@ resolve_readme_badge_state() {
   readme_badge_blocking_reason=""
 
   if [[ ! -f "$destination_path" ]]; then
-    if [[ "$readme_has_verified_badges" -eq 1 ]]; then
+    if [[ "$readme_has_managed_badges" -eq 1 ]]; then
       printf 'absent\n'
     else
       printf 'not applicable\n'
@@ -1290,7 +1326,7 @@ resolve_readme_badge_state() {
     return
   fi
 
-  if { [[ "$readme_has_verified_badges" -eq 1 ]] || [[ "$block_state" == "present" ]]; } && readme_insertion_zone_has_unmanaged_badges "$destination_path"; then
+  if { [[ "$readme_has_managed_badges" -eq 1 ]] || [[ "$block_state" == "present" ]]; } && readme_insertion_zone_has_unmanaged_badges "$destination_path"; then
     readme_badge_blocking_reason="existing badge-like content in the managed README insertion zone"
     printf 'ambiguous\n'
     return
@@ -1301,7 +1337,7 @@ resolve_readme_badge_state() {
     return
   fi
 
-  if [[ "$readme_has_verified_badges" -eq 1 ]]; then
+  if [[ "$readme_has_managed_badges" -eq 1 ]]; then
     printf 'absent\n'
     return
   fi
@@ -1745,6 +1781,9 @@ resolve_whole_file_managed_state() {
   local destination_path="${repo_root}/${relative_destination}"
   local marked_path=""
   local legacy_path=""
+  local actual_owner_specific_guidance_owner=""
+  local alternate_marked_path=""
+  local alternate_legacy_path=""
 
   if [[ ! -f "$destination_path" ]]; then
     printf 'missing\n'
@@ -1761,6 +1800,37 @@ resolve_whole_file_managed_state() {
   if cmp -s "$destination_path" "$legacy_path"; then
     printf 'legacy\n'
     return
+  fi
+
+  if [[ "$relative_destination" == "$sidecar_destination" ]]; then
+    if [[ -n "$owner_specific_guidance_markdown" ]]; then
+      alternate_marked_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").marked.no-owner-guidance" "$relative_destination" "$managed_files_markdown" "enabled" "")"
+      if cmp -s "$destination_path" "$alternate_marked_path"; then
+        printf 'marked\n'
+        return
+      fi
+
+      alternate_legacy_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").legacy.no-owner-guidance" "$relative_destination" "$managed_files_markdown" "disabled" "")"
+      if cmp -s "$destination_path" "$alternate_legacy_path"; then
+        printf 'legacy\n'
+        return
+      fi
+    fi
+
+    actual_owner_specific_guidance_owner="$(extract_sidecar_owner_specific_guidance_owner "$destination_path")"
+    if [[ -n "$actual_owner_specific_guidance_owner" && "$actual_owner_specific_guidance_owner" != "$downstream_repo_owner" ]]; then
+      alternate_marked_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").marked.owner-guidance-compat" "$relative_destination" "$managed_files_markdown" "enabled" "$actual_owner_specific_guidance_owner")"
+      if cmp -s "$destination_path" "$alternate_marked_path"; then
+        printf 'marked\n'
+        return
+      fi
+
+      alternate_legacy_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").legacy.owner-guidance-compat" "$relative_destination" "$managed_files_markdown" "disabled" "$actual_owner_specific_guidance_owner")"
+      if cmp -s "$destination_path" "$alternate_legacy_path"; then
+        printf 'legacy\n'
+        return
+      fi
+    fi
   fi
 
   printf 'drifted\n'
@@ -1826,7 +1896,7 @@ write_or_update_readme_file() {
 
   current_state="$(resolve_readme_badge_state)"
 
-  if [[ "$readme_has_verified_badges" -ne 1 ]]; then
+  if [[ "$readme_has_managed_badges" -ne 1 ]]; then
     if [[ "$current_state" == "present" ]]; then
       ensure_tmp_dir
       updated_path="${tmp_dir}/README.unmanaged"

@@ -372,6 +372,7 @@ test_trusted_repo_owner_enables_auto_update_by_default() {
   assert_line_equals "${repo_path}/scripts/bright-builds-auto-update.sh" "1" "#!/usr/bin/env bash" "auto-update helper should keep the shebang on line 1"
   assert_line_equals "${repo_path}/scripts/bright-builds-auto-update.sh" "2" "$(managed_file_marker "scripts/bright-builds-auto-update.sh")" "auto-update helper should put the whole-file marker on line 2"
   assert_line_equals "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "1" "$(managed_file_marker ".github/workflows/bright-builds-auto-update.yml")" "auto-update workflow should start with the whole-file managed marker"
+  assert_file_contains "${repo_path}/README.md" "OpenLinks profile" "matching owners should receive the owner-specific OpenLinks README badge"
   assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "cron: '0 14 * * *'" "workflow should use the fixed UTC schedule"
   assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "bash ./scripts/bright-builds-auto-update.sh" "workflow should invoke the managed helper script"
 }
@@ -402,6 +403,7 @@ test_peter_ryszkiewicz_owner_gets_openlinks_identity_guidance() {
 
   run_manage "$repo_path" status
   assert_eq "$run_status" "0" "Peter-owned repo status should succeed"
+  assert_contains "$run_output" "README badge block: absent" "Peter-owned GitHub repos should treat the README badge block as applicable"
   assert_contains "$run_output" "Auto-update: disabled" "the OpenLinks owner rule should not change unrelated auto-update defaults"
   assert_contains "$run_output" "Auto-update reason: default disabled" "non-trusted auto-update owners should keep the default explanation"
 
@@ -409,7 +411,27 @@ test_peter_ryszkiewicz_owner_gets_openlinks_identity_guidance() {
   assert_eq "$run_status" "0" "Peter-owned repo install should succeed"
   assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "repo owner resolves to \`Peter-Ryszkiewicz\`" "owner-specific guidance should include the detected owner"
   assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "openlinks-identity-presence" "Peter-owned repos should receive the OpenLinks identity guidance"
+  assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "do not add a second near-duplicate README placement" "guidance should avoid duplicate README promotion"
   assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Keep the host project's main brand and CTA primary." "guidance should preserve the host brand"
+  assert_file_contains "${repo_path}/README.md" "GitHub Stars" "Peter-owned GitHub repos should still include project badges"
+  assert_file_contains "${repo_path}/README.md" "OpenLinks profile" "Peter-owned repos should receive the owner-specific OpenLinks README badge"
+  assert_line_order "${repo_path}/README.md" "GitHub Stars" "OpenLinks profile"
+}
+
+test_owner_specific_openlinks_badge_appends_after_detected_badges() {
+  local repo_path=""
+
+  repo_path="$(create_repo peter-owner-readme-order)"
+  init_git_repo_with_origin "$repo_path" "git@github.com:Peter-Ryszkiewicz/peter-owner-readme-order.git"
+  write_file "${repo_path}/README.md" $'# Peter App\n\nBody text.\n'
+  write_file "${repo_path}/package.json" $'{\n  "devDependencies": {\n    "typescript": "5.9.2",\n    "vite": "7.3.1"\n  }\n}\n'
+
+  run_manage "$repo_path" install
+  assert_eq "$run_status" "0" "Peter-owned repo install should succeed when detected project badges exist"
+  assert_file_contains "${repo_path}/README.md" "TypeScript 5.9.2" "Peter-owned repos should still render detected project badges"
+  assert_file_contains "${repo_path}/README.md" "Vite 7.3.1" "Peter-owned repos should still render detected project badges"
+  assert_file_contains "${repo_path}/README.md" "OpenLinks profile" "Peter-owned repos should append the OpenLinks badge"
+  assert_line_order "${repo_path}/README.md" "Vite 7.3.1" "OpenLinks profile"
 }
 
 test_untracked_auto_update_files_are_ignored_when_disabled() {
@@ -686,7 +708,7 @@ test_partial_readme_badge_block_requires_force_repair() {
   assert_file_contains "${repo_path}/README.md" "Body text remains." "force repair should preserve non-badge README content"
 }
 
-test_readme_badges_are_removed_when_no_verified_badges_remain() {
+test_readme_badges_are_removed_when_no_managed_badges_remain() {
   local repo_path=""
 
   repo_path="$(create_repo readme-remove)"
@@ -700,10 +722,31 @@ test_readme_badges_are_removed_when_no_verified_badges_remain() {
   rm -f "${repo_path}/package.json"
 
   run_manage "$repo_path" update
-  assert_eq "$run_status" "0" "update should remove the managed README badge block when no verified badges remain"
+  assert_eq "$run_status" "0" "update should remove the managed README badge block when no managed badges remain"
   assert_file_not_contains "${repo_path}/README.md" "$readme_badges_begin" "update should remove the README badge begin marker when badges are no longer applicable"
   assert_file_contains "${repo_path}/README.md" "Body text remains." "update should keep the README body after removing managed badges"
   assert_file_not_contains "${repo_path}/coding-and-architecture-requirements.audit.md" "README.md (managed badges block)" "audit should stop tracking the README badge block once it is removed"
+}
+
+test_update_removes_owner_specific_openlinks_badge_when_owner_changes() {
+  local repo_path=""
+
+  repo_path="$(create_repo peter-owner-openlinks-removed)"
+  init_git_repo_with_origin "$repo_path" "git@github.com:Peter-Ryszkiewicz/peter-owner-openlinks-removed.git"
+  write_file "${repo_path}/README.md" $'# Owner Change\n\nBody text remains.\n'
+
+  run_manage "$repo_path" install
+  assert_eq "$run_status" "0" "install should add the owner-specific OpenLinks badge before the owner changes"
+  assert_file_contains "${repo_path}/README.md" "OpenLinks profile" "Peter-owned repos should initially receive the OpenLinks badge"
+
+  git -C "$repo_path" remote set-url origin "git@github.com:someone-else/peter-owner-openlinks-removed.git"
+
+  run_manage "$repo_path" update
+  assert_eq "$run_status" "0" "update should succeed after the repo owner changes"
+  assert_file_not_contains "${repo_path}/README.md" "OpenLinks profile" "update should remove the owner-specific OpenLinks badge when the owner no longer matches"
+  assert_file_not_contains "${repo_path}/AGENTS.bright-builds.md" "openlinks-identity-presence" "update should remove owner-specific sidecar guidance when the owner no longer matches"
+  assert_file_contains "${repo_path}/README.md" "GitHub Stars" "update should preserve other still-applicable managed README badges"
+  assert_file_contains "${repo_path}/README.md" "Body text remains." "update should preserve the rest of the README body"
 }
 
 test_rich_readme_badge_detection() {
@@ -865,6 +908,7 @@ test_existing_agents_is_installable
 test_trusted_repo_owner_enables_auto_update_by_default
 test_trusted_github_user_enables_auto_update_by_default
 test_peter_ryszkiewicz_owner_gets_openlinks_identity_guidance
+test_owner_specific_openlinks_badge_appends_after_detected_badges
 test_untracked_auto_update_files_are_ignored_when_disabled
 test_auto_update_conflicts_block_when_enabled
 test_blocked_conflicts_and_force_install
@@ -877,7 +921,8 @@ test_readme_badges_insert_after_h1_and_refresh
 test_readme_badges_create_skeleton_and_uninstall_removes_it
 test_readme_badges_block_existing_top_badges_and_force_repair
 test_partial_readme_badge_block_requires_force_repair
-test_readme_badges_are_removed_when_no_verified_badges_remain
+test_readme_badges_are_removed_when_no_managed_badges_remain
+test_update_removes_owner_specific_openlinks_badge_when_owner_changes
 test_rich_readme_badge_detection
 test_old_standalone_install_is_blocked
 test_uninstall_preserves_local_agents_and_overrides
