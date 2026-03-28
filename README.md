@@ -282,6 +282,12 @@ Run the docs hygiene checks with:
 ./scripts/verify-docs.sh
 ```
 
+Run the managed shell template checks with:
+
+```bash
+./scripts/verify-managed-shells.sh
+```
+
 Run the downstream manager integration checks with:
 
 ```bash
@@ -289,7 +295,7 @@ bash ./scripts/test-manage-downstream.sh
 bash ./scripts/test-bright-builds-auto-update.sh
 ```
 
-The scripts run Markdown linting, internal link checks, and installer integration coverage for the repository.
+The scripts run Markdown linting, internal link checks, managed shell template syntax and formatting checks, and installer integration coverage for the repository.
 
 ## Initial source material
 

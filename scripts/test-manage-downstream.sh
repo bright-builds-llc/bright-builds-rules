@@ -98,6 +98,13 @@ assert_file_not_contains() {
   fi
 }
 
+assert_command_succeeds() {
+  local message="$1"
+  shift
+
+  "$@" >/dev/null 2>&1 || fail "${message}: $*"
+}
+
 assert_line_equals() {
   local file_path="$1"
   local line_number="$2"
@@ -371,6 +378,8 @@ test_trusted_repo_owner_enables_auto_update_by_default() {
   assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "repo owner resolves to \`pRizz\`" "sidecar should explain why the OpenLinks guidance applies"
   assert_line_equals "${repo_path}/scripts/bright-builds-auto-update.sh" "1" "#!/usr/bin/env bash" "auto-update helper should keep the shebang on line 1"
   assert_line_equals "${repo_path}/scripts/bright-builds-auto-update.sh" "2" "$(managed_file_marker "scripts/bright-builds-auto-update.sh")" "auto-update helper should put the whole-file marker on line 2"
+  assert_command_succeeds "installed auto-update helper should pass bash -n" bash -n "${repo_path}/scripts/bright-builds-auto-update.sh"
+  assert_command_succeeds "installed auto-update helper should be shfmt-clean" shfmt -d "${repo_path}/scripts/bright-builds-auto-update.sh"
   assert_line_equals "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "1" "$(managed_file_marker ".github/workflows/bright-builds-auto-update.yml")" "auto-update workflow should start with the whole-file managed marker"
   assert_file_contains "${repo_path}/README.md" "OpenLinks profile" "matching owners should receive the owner-specific OpenLinks README badge"
   assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "cron: '0 14 * * *'" "workflow should use the fixed UTC schedule"

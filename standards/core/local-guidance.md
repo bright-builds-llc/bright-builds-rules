@@ -49,7 +49,7 @@ This page defines how repositories should capture recurring local knowledge with
 
 ## Completion Review
 
-- Verification: `./scripts/verify-docs.sh`, `bash scripts/test-manage-downstream.sh`
+- Verification: `./scripts/verify-docs.sh`, `./scripts/verify-managed-shells.sh`, `bash scripts/test-manage-downstream.sh`
 - Residual risk: Legacy exact-match installs still need migration coverage
 ```
 
