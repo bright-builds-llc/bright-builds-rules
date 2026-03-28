@@ -17,3 +17,9 @@
 - What went wrong: I changed a line-count threshold to fit a mnemonic constant without confirming which constant the user actually wanted.
 - Preventive rule: When a provenance or mnemonic discussion would change a policy threshold, confirm the intended constant before baking that value into the standard.
 - Trigger signal: A threshold proposal justified by `floor(100 * <constant>)` or similar mnemonic math rather than by existing documented provenance.
+
+## lesson-confirm-default-sync-strategy-before-freezing-workflow-rule | 2026-03-27 12:21 CDT
+
+- What went wrong: I locked the new pre-work checkout rule to fast-forward-only sync and explicitly avoided rebasing before confirming the user's preferred default sync strategy.
+- Preventive rule: When adding a repository workflow standard around branch syncing, confirm whether the default should be rebase, merge, or fast-forward-only before finalizing the rule text and managed downstream wording.
+- Trigger signal: A proposed workflow rule that mentions fetch, pull, sync, merge conflicts, or stale worktrees without an explicit default branch-update strategy.

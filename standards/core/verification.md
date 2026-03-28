@@ -1,6 +1,55 @@
 # Verification
 
-This page defines the baseline expectations for pre-commit verification without forcing every repository into the same toolchain shape.
+This page defines the baseline expectations for workflow preparation and pre-commit verification without forcing every repository into the same toolchain shape.
+
+## Sync Repository State and Prepare Dependencies Before Substantive Work
+
+- Level: `should`
+- Intent: Reduce avoidable merge conflicts, stale-checkout mistakes, and local environment drift before substantive implementation begins.
+- Rule: Before substantive implementation or other repo-changing work, refresh local repository state and prepare the local environment using the repository's documented workflow. Check repo-local guidance first, then prefer a repo-owned sync or bootstrap command when one exists. If the repository has a remote, fetch remote refs first. If the current branch tracks an upstream and the worktree is clean, prefer rebasing the local branch onto the latest upstream or use the repo's equivalent documented sync path. If the checkout is a detached-HEAD worktree, treat the repo's default branch as the assumed sync base unless repo-local guidance or the remote default branch indicates another target; in many repositories that means `main`. Resolve any rebase or merge conflicts before starting substantive work. Do not start implementation on an outdated branch or with unresolved conflicts. After sync, run the repository's normal install, bootstrap, or dependency-sync step when the repo expects a prepared local environment, and rerun it when the synced revision, changed lockfiles or manifests, toolchain files, generated dependency metadata, or command failures show that dependencies or tools are stale or missing.
+- Rationale: Agents and humans often start from a fresh worktree, an old local clone, or a branch that fell behind upstream. Fetching first and rebasing onto the latest upstream by default reduces stale-base work and lowers merge-conflict risk later by surfacing branch drift before new changes pile on top. Detached worktrees also need a practical default sync base, and the repo's default branch is usually the least surprising assumption when no stronger local guidance exists. Resolving sync conflicts before substantive work keeps the branch coherent while the change context is still small. Following the repository's own bootstrap or dependency-sync path keeps the local environment aligned with the checked-out revision and avoids guessing the wrong cross-language install commands.
+- Good example:
+
+```text
+Current branch tracks origin/main and the worktree is clean
+- fetch remote refs
+- rebase onto the latest upstream with the repo's documented sync command or equivalent rebase workflow
+- run the repo's normal bootstrap step because the synced revision changed the lockfile
+- start implementation on the refreshed checkout
+```
+
+- Good example:
+
+```text
+Current worktree starts detached and the repo uses a documented bootstrap command
+- fetch first
+- infer the sync base from the repo's default branch and use `main` here because that is the actual default
+- rebase or otherwise align the detached worktree against that default branch before implementation
+- run the documented bootstrap command because local guidance says the repo expects prepared tools before implementation
+- proceed without guessing language-specific install commands by hand
+```
+
+- Bad example:
+
+```text
+Fresh worktree created from an old commit
+- skip fetch and start editing immediately
+- discover later that upstream moved and the branch now conflicts
+- rebuild context and rework the branch after the fact
+```
+
+- Bad example:
+
+```text
+Dirty worktree with local commits and no documented sync command
+- start implementation without first rebasing onto the latest upstream
+- defer the resulting conflict resolution until after substantive code changes have already been made
+- start debugging install failures without running the repo's normal bootstrap step
+```
+
+- Exceptions or escape hatches: If there is no remote, no upstream, no clear default branch for a detached-HEAD worktree, a dirty worktree, offline or credential constraints, or a deliberate pinned-commit workflow, stop and ask or follow documented local guidance instead of forcing a sync. If rebasing or merging raises conflicts, resolve them before substantive work when the resolution is mechanically clear; if resolution would require non-obvious semantic choices or local workflow judgment, stop and ask. Do not invent a bootstrap step for repositories that do not need one, and do not guess language-specific commands when the repository already documents a preferred entrypoint. Commands such as `bun install`, `pnpm install`, `npm install`, `cargo fetch`, `cargo check`, or `uv sync` are examples only; use the repo's normal path when it exists.
+- Review questions: Was remote state fetched before substantive work when a remote exists? Was the local branch rebased onto the latest upstream or synced through the repo's documented equivalent before implementation began? If the checkout was a detached-HEAD worktree, was the repo's default branch inferred correctly? Were sync conflicts resolved before new work started? Does the repository expect a bootstrap or dependency-sync step before implementation? Did the synced revision or a command failure indicate stale dependencies or tools?
+- Automation potential: Tooling can detect clean worktrees, upstream tracking, and some stale dependency signals, but deciding whether a sync is safe and which bootstrap path is canonical still depends on repository context.
 
 ## Run Relevant Repo-Native Verification Before Commit
 
