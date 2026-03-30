@@ -69,3 +69,17 @@ Residual risks:
 - Verification: `rg -n --no-heading '200 lines|161 lines|628 lines|floor\\(100 \\* phi\\)|floor\\(100 \\* tau\\)' standards/core/code-shape.md templates/AGENTS.bright-builds.md README.md AGENTS.md AI-ADOPTION.md`
 - Completion review: The provenance hints stay inline with the threshold sentences, so the rules remain scannable and do not introduce a separate glossary or appendix.
 - Residual risk: Downstream repositories will not pick up the revised threshold wording until they next run Bright Builds install or update.
+
+## task-harden-downstream-prompt-compliance | 2026-03-30 04:18 CDT | Harden downstream prompt compliance
+
+- [x] Replace the soft downstream `AGENTS.md` wording with a required reading order and explicit stop-before-continuing language.
+- [x] Add a compact required-workflow section to `templates/AGENTS.bright-builds.md` that states `AGENTS.md` is the entrypoint rather than the full spec.
+- [x] Require brief source acknowledgment for plan, review, and audit outputs in the managed sidecar and reinforcing downstream surfaces.
+- [x] Mirror the layered contract in `AI-ADOPTION.md`, `README.md`, and `skills/personal-coding-standards/SKILL.md`.
+- [x] Add regression checks for the new contract in `scripts/verify-docs.sh` and `scripts/test-manage-downstream.sh`.
+- Verification: `bash -n scripts/manage-downstream.sh`
+- Verification: `./scripts/verify-docs.sh`
+- Verification: `bash scripts/test-manage-downstream.sh`
+- Verification: `bash scripts/test-bright-builds-auto-update.sh`
+- Completion review: The install, update, and status flows stay unchanged; this pass only hardens the downstream reading-order contract, the reinforcing docs, and the regression checks around that wording.
+- Residual risk: The new contract still cannot prove that a downstream agent truly loaded every required source at runtime; it only makes the required sequence explicit and harder to regress accidentally.

@@ -26,7 +26,9 @@ Use this decision rule:
 10. Let the installer resolve downstream auto-update to `disabled` unless the downstream GitHub repo owner or current GitHub user is trusted. Trusted identities are `pRizz` and `bright-builds-llc`. Respect `--auto-update enabled|disabled` when the user asks for an override.
 11. When the downstream GitHub repo owner normalizes to `pRizz` or `peterryszkiewicz` (Peter Ryszkiewicz), let the managed sidecar require the `openlinks-identity-presence` skill for README/docs, UI chrome, profile/about/footer, and metadata/discovery surfaces, and let the managed README badge block append a subtle `OpenLinks profile` badge linked to `https://openlinks.us/` after any project badges. Keep the placement subtle and keep the host brand primary.
 12. After install or update, report the files written and point the user to `coding-and-architecture-requirements.audit.md` as the paper trail, including the source URL, requested ref, exact resolved commit when available, whether a managed README badge block was installed or refreshed, whether owner-specific OpenLinks guidance was included, whether the owner-specific OpenLinks README badge applied, and whether auto-update ended up enabled or disabled.
-13. When the downstream repo is pre-existing rather than greenfield, mention that the optional `personal-coding-standards` skill can run a read-only `audit` baseline or an `audit-and-fix` cleanup wave after adoption to surface or start remediating standards drift.
+13. After install or update, treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds spec. Before plan, review, implementation, or audit work, load `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md` when present, and the pinned canonical standards pages relevant to the task; if that has not happened yet, stop and do it first.
+14. For plan, review, and audit work in the downstream repo, briefly acknowledge which of those sources materially informed the answer.
+15. When the downstream repo is pre-existing rather than greenfield, mention that the optional `personal-coding-standards` skill can run a read-only `audit` baseline or an `audit-and-fix` cleanup wave after adoption to surface or start remediating standards drift.
 
 ## Commands
 
@@ -86,6 +88,15 @@ Expected downstream files after a successful install or update:
 - `README.md` when the downstream repo has at least one verified default badge or the owner-specific OpenLinks badge applies and the installer adds or refreshes the managed badge block
 - `standards-overrides.md` when it did not already exist
 - `scripts/bright-builds-auto-update.sh` and `.github/workflows/bright-builds-auto-update.yml` when auto-update resolves to `enabled`
+
+After install or update, the downstream instruction contract is layered:
+
+1. `AGENTS.md` is the local entrypoint, not the full Bright Builds spec.
+2. `AGENTS.bright-builds.md` carries the managed Bright Builds workflow and high-signal rules.
+3. `standards-overrides.md` records deliberate repo-specific exceptions when it exists.
+4. The pinned canonical standards pages remain the source of truth for task-relevant rules.
+
+Before plan, review, implementation, or audit work, load those sources in that order. If that has not happened yet, stop and do it first. For plan, review, and audit outputs, briefly acknowledge which of those sources materially informed the answer.
 
 ## Inspection hints
 

@@ -38,6 +38,8 @@ The intended AI behavior is:
 - tailor `AGENTS.bright-builds.md` with an `openlinks-identity-presence` rule when the downstream GitHub repo owner normalizes to `pRizz` or `peterryszkiewicz` (Peter Ryszkiewicz)
 - let the installer resolve downstream auto-update to `disabled` by default unless the downstream GitHub repo owner or current GitHub user is trusted
 - use `install --force` only as an opt-in replacement path for blocked managed files, which first backs them up into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/` and then drives a careful agent merge review of the backup against the fresh managed output
+- treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds spec, and load the sidecar, overrides, and relevant canonical standards pages before plan, review, implementation, or audit work
+- briefly acknowledge the material Bright Builds sources consulted in plan, review, and audit outputs
 - report `coding-and-architecture-requirements.audit.md` as the downstream paper trail after completion
 - report the pinned source URL, requested ref, and exact resolved commit when available
 
@@ -70,6 +72,8 @@ curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-archit
 If the repository already has an unmarked local `AGENTS.md`, `install` keeps that file and appends the managed Bright Builds block to the end. The same command also writes `AGENTS.bright-builds.md`, `CONTRIBUTING.md`, `.github/pull_request_template.md`, `coding-and-architecture-requirements.audit.md`, creates `standards-overrides.md` when the overrides file does not already exist, manages a bounded `README.md` badge block when verified default badges or the owner-specific OpenLinks badge apply, and tailors the managed sidecar with owner-specific `openlinks-identity-presence` guidance when the downstream GitHub owner normalizes to Peter Ryszkiewicz or `pRizz`. Those fully managed files now carry visible whole-file markers so downstream drift becomes a `blocked` state instead of being overwritten silently.
 
 Downstream `AGENTS.md` stays the entrypoint for concise repo-local workflow facts. Use a `## Repo-Local Guidance` section there for recurring local commands, conventions, and links. Reserve `standards-overrides.md` for deliberate deviations from the canonical standards.
+
+Treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds spec. Before plan, review, implementation, or audit work, read local `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md` when present, and the pinned canonical standards pages relevant to the task. If that has not happened yet, stop and load them before continuing. For plan, review, and audit outputs, briefly name the sources that materially informed the work.
 
 Fresh installs resolve auto-update to `disabled` unless the downstream GitHub repo owner or the current GitHub user is trusted. Trusted identities are `pRizz` and `bright-builds-llc`, compared case-insensitively. Override the default with `--auto-update enabled` or `--auto-update disabled` when needed.
 
@@ -243,9 +247,11 @@ Behavior by command:
 1. Read [standards/index.md](standards/index.md) and any language-specific guidance relevant to the repository.
 2. Run the downstream manager or copy the files in `templates/` into the downstream repository.
 3. Pin the downstream repo to a tagged release or commit from this repository.
-4. Capture recurring repo-local workflow facts in downstream `AGENTS.md` under `## Repo-Local Guidance`.
-5. Record any repo-specific deviations in the downstream `standards-overrides.md`.
-6. Optionally use the Codex skill to bootstrap adoption or review work against the standards.
+4. Treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds spec. Before plan, review, implementation, or audit work, read `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md` when present, and the relevant canonical standards pages.
+5. Capture recurring repo-local workflow facts in downstream `AGENTS.md` under `## Repo-Local Guidance`.
+6. Record any repo-specific deviations in the downstream `standards-overrides.md`.
+7. For plan, review, or audit outputs, briefly name the local guidance, sidecar, overrides, or canonical standards pages that materially informed the result.
+8. Optionally use the Codex skill to bootstrap adoption or review work against the standards.
 
 If the repository already had substantial code before adoption, you can also use the Codex skill to run a read-only `audit` baseline or an `audit-and-fix` cleanup wave after install. The default audit mode is whole-repo and findings-first; the default audit-and-fix mode audits first, then applies one bounded remediation wave rather than attempting a whole-repo rewrite.
 

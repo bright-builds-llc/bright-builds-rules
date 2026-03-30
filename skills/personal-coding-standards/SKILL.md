@@ -16,40 +16,46 @@ Use this skill when the user wants to:
 
 ## Workflow
 
-1. Read `../../standards/index.md`.
-2. Load the standards pages that match the task, including language-specific guidance when it is relevant.
-3. Treat `../../standards/` as canonical. Do not duplicate or invent rules that are not present there.
-4. Resolve intent before choosing a mode:
-   - `adopt`: install the Bright Builds requirements into a repository
-   - `status`: inspect the current Bright Builds adoption state
-   - `refresh`: update an existing Bright Builds install or sync managed rules
-   - `review`: evaluate a current diff, code sample, or plan
-   - `audit`: run a read-only repository baseline review, whole-repo by default
-   - `audit-and-fix`: run the audit first, then execute one bounded remediation wave
-5. If the skill is invoked with no arguments, infer the mode from the current thread and repo state when that intent is clear.
-6. If the skill is invoked with no arguments and intent is still ambiguous, return a short action menu instead of erroring. Offer:
-   - check Bright Builds status
-   - adopt or update Bright Builds requirements
-   - run `bash ./scripts/bright-builds-auto-update.sh` when the managed helper exists
-   - run an `audit`
-   - run an `audit-and-fix` wave
-   - review a current diff or plan
-7. For `adopt`, `status`, and `refresh` work, follow `../../AI-ADOPTION.md` and keep the status-first Bright Builds flow intact.
-8. For Bright Builds refresh intent, prefer the managed helper when the repo already has `./scripts/bright-builds-auto-update.sh` and the user sounds like they want to refresh or sync the installed Bright Builds rules. Run `bash ./scripts/bright-builds-auto-update.sh` from the repo root in that case.
-9. If the helper is missing, or the repo is not clearly an already-installed downstream repo, fall back to the status-first manager flow:
-   - run `scripts/manage-downstream.sh status` first when working inside this canonical repository or another repo that already has that script locally
-   - otherwise use the `manage-downstream.sh` commands documented in `../../AI-ADOPTION.md`
-   - use `install` when status reports `Repo state: installable`
-   - use `update` when status reports `Repo state: installed`
-   - stop and explain blocking files when status reports `Repo state: blocked`
-   - never choose `install --force` automatically
-   - if the user explicitly opts into replacement, treat `install --force` as a backup-first merge-assisted path: inspect `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`, compare the backups with the fresh managed outputs, and reapply only clearly portable downstream-specific logic or content into safe local extension points
-   - safe merge destinations include repo-local `AGENTS.md` content outside the managed block, `standards-overrides.md`, existing non-managed project docs, and `README.md` content outside the managed badge block
-   - if carrying prior behavior forward would require re-drifting a fully managed file, inventing a new contract, or making a non-obvious semantic choice, stop and ask the user instead of guessing
-   - if `README.md` is the blocking path, keep the managed badge block immediately after the first H1 and only restore prior top-of-file badges or content below it when that does not recreate ambiguity
-10. Use `../../templates/` as source material only when editing the managed downstream assets in this repository. Do not bypass the manager flow by manually copying template files into a downstream repo unless the user explicitly wants that lower-level maintenance work.
-11. For review, audit, and audit-and-fix work, read local `AGENTS.md` first, including any `## Repo-Local Guidance` section when present.
-12. Read `standards-overrides.md` for deliberate local deviations when it is present.
+1. For downstream repos with Bright Builds installed, the required reading order is: local `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md` when present, then the pinned canonical standards pages relevant to the task. Treat `AGENTS.md` as the local entrypoint, not the complete Bright Builds spec, and stop to load the missing sources before continuing if that has not happened yet.
+2. Read `../../standards/index.md` when working in this canonical repository, or otherwise load the pinned canonical standards entrypoint referenced by the downstream Bright Builds files.
+3. Load the standards pages that match the task, including language-specific guidance when it is relevant.
+4. Treat `../../standards/` as canonical when working in this repository. Do not duplicate or invent rules that are not present there.
+5. Resolve intent before choosing a mode:
+
+    - `adopt`: install the Bright Builds requirements into a repository
+    - `status`: inspect the current Bright Builds adoption state
+    - `refresh`: update an existing Bright Builds install or sync managed rules
+    - `review`: evaluate a current diff, code sample, or plan
+    - `audit`: run a read-only repository baseline review, whole-repo by default
+    - `audit-and-fix`: run the audit first, then execute one bounded remediation wave
+
+6. If the skill is invoked with no arguments, infer the mode from the current thread and repo state when that intent is clear.
+7. If the skill is invoked with no arguments and intent is still ambiguous, return a short action menu instead of erroring. Offer:
+
+    - check Bright Builds status
+    - adopt or update Bright Builds requirements
+    - run `bash ./scripts/bright-builds-auto-update.sh` when the managed helper exists
+    - run an `audit`
+    - run an `audit-and-fix` wave
+    - review a current diff or plan
+
+8. For `adopt`, `status`, and `refresh` work, follow `../../AI-ADOPTION.md` and keep the status-first Bright Builds flow intact.
+9. For Bright Builds refresh intent, prefer the managed helper when the repo already has `./scripts/bright-builds-auto-update.sh` and the user sounds like they want to refresh or sync the installed Bright Builds rules. Run `bash ./scripts/bright-builds-auto-update.sh` from the repo root in that case.
+10. If the helper is missing, or the repo is not clearly an already-installed downstream repo, fall back to the status-first manager flow:
+
+    - run `scripts/manage-downstream.sh status` first when working inside this canonical repository or another repo that already has that script locally
+    - otherwise use the `manage-downstream.sh` commands documented in `../../AI-ADOPTION.md`
+    - use `install` when status reports `Repo state: installable`
+    - use `update` when status reports `Repo state: installed`
+    - stop and explain blocking files when status reports `Repo state: blocked`
+    - never choose `install --force` automatically
+    - if the user explicitly opts into replacement, treat `install --force` as a backup-first merge-assisted path: inspect `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`, compare the backups with the fresh managed outputs, and reapply only clearly portable downstream-specific logic or content into safe local extension points
+    - safe merge destinations include repo-local `AGENTS.md` content outside the managed block, `standards-overrides.md`, existing non-managed project docs, and `README.md` content outside the managed badge block
+    - if carrying prior behavior forward would require re-drifting a fully managed file, inventing a new contract, or making a non-obvious semantic choice, stop and ask the user instead of guessing
+    - if `README.md` is the blocking path, keep the managed badge block immediately after the first H1 and only restore prior top-of-file badges or content below it when that does not recreate ambiguity
+
+11. Use `../../templates/` as source material only when editing the managed downstream assets in this repository. Do not bypass the manager flow by manually copying template files into a downstream repo unless the user explicitly wants that lower-level maintenance work.
+12. For review, audit, and audit-and-fix work, apply the downstream reading order before evaluating the work: local `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md` when present, then the relevant canonical pages.
 13. For review and audit work, classify deviations according to the standards' `must`, `should`, and `may` levels.
 14. Apply documented local guidance and overrides before reporting a deviation.
 15. For `audit`, default to a whole-repo baseline unless the user asks for a narrower scope. If the audit is narrowed, state the audited scope explicitly.
@@ -79,6 +85,7 @@ Use this skill when the user wants to:
 - When using the blocked merge-assisted path, state that explicit user approval was required for `install --force`, then summarize what was safely folded back in and what still needs user judgment.
 - When no clear context is available, offer the short action menu instead of failing or inventing intent.
 - When reviewing, focus findings on standards violations and note any documented exception.
+- For plan, review, and audit outputs, briefly name the local guidance, sidecar, overrides, or canonical standards pages that materially informed the result.
 - When auditing, produce findings-first output. Treat `must` violations as findings unless a local override exists, `should` deviations as strong refactor recommendations, and `may` guidance as optional improvements.
 - When auditing, treat missing repo-local guidance as a `should` recommendation only when there is concrete evidence of recurring undocumented local workflow knowledge or a repeated local confusion point.
 - When audit scope is partial, say so explicitly and avoid implying whole-repo coverage.
