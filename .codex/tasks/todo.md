@@ -83,3 +83,14 @@ Residual risks:
 - Verification: `bash scripts/test-bright-builds-auto-update.sh`
 - Completion review: The install, update, and status flows stay unchanged; this pass only hardens the downstream reading-order contract, the reinforcing docs, and the regression checks around that wording.
 - Residual risk: The new contract still cannot prove that a downstream agent truly loaded every required source at runtime; it only makes the required sequence explicit and harder to regress accidentally.
+
+## task-add-downstream-routing-hints | 2026-04-04 19:03 CDT | Add downstream instruction routing hints
+
+- [x] Add a compact routing section to `templates/AGENTS.md` so downstream `AGENTS.md` can route partial readers toward the right local or canonical companion files.
+- [x] Mirror the routing hints in `templates/AGENTS.bright-builds.md` so the sidecar also works as a discoverability surface.
+- [x] Extend `scripts/verify-docs.sh` and `scripts/test-manage-downstream.sh` to assert the new routing contract.
+- [x] Run the targeted verification scripts and record the results here.
+- Verification: `./scripts/verify-docs.sh`
+- Verification: `bash scripts/test-manage-downstream.sh`
+- Completion review: The install and update behavior stays unchanged; this pass only makes the downstream managed instruction pair more discoverable for partial readers and adds regression checks around that routing language.
+- Residual risk: The routing hints improve discoverability but still cannot guarantee that an agent runtime actually loads every hinted file or canonical page before acting.
