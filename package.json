@@ -5,13 +5,15 @@
   "packageManager": "bun@1.3.9",
   "scripts": {
     "badge:site": "bun scripts/generate-site-badge.ts",
-    "branding:assets": "bun run badge:site && bun scripts/generate-readme-badge-assets.ts",
-    "branding:assets:check": "bun scripts/generate-site-badge.ts --check && bun scripts/generate-readme-badge-assets.ts --check",
+    "badge:site:flat": "bun scripts/generate-flat-site-badge.ts",
+    "branding:assets": "bun run badge:site && bun run badge:site:flat && bun scripts/generate-readme-badge-assets.ts",
+    "branding:assets:check": "bun scripts/generate-site-badge.ts --check && bun scripts/generate-flat-site-badge.ts --check && bun scripts/generate-readme-badge-assets.ts --check",
     "typecheck": "tsc --noEmit",
-    "test:badges": "bun test scripts/site-badge.test.ts scripts/readme-badge-assets.test.ts"
+    "test:badges": "bun test scripts/site-badge.test.ts scripts/flat-site-badge.test.ts scripts/readme-badge-assets.test.ts"
   },
   "devDependencies": {
     "@types/node": "^24.9.1",
+    "badge-maker": "^5.0.2",
     "typescript": "^5.9.3"
   }
 }

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" role="img" aria-labelledby="title desc">
+  <title id="title">Bright Builds favicon mark</title>
+  <desc id="desc">Bright Builds logo mark for badge and icon embedding.</desc>
+  <rect x="0" y="0" width="300" height="300" rx="72" fill="#1c0a38" />
+  <path
+    d="m 178.4183,224.00886 18.8976,-18.8976 a 37.795276,37.795276 0 0 0 -13.4705,-62.1201 l 13.4705,-13.47053 A 37.795276,37.795276 0 0 0 170.5906,65 H 113.8977 L 95,83.8977 v 151.18116 h 56.693 a 37.795276,37.795276 0 0 0 26.7253,-11.07 z"
+    fill="#7f2aff"
+  />
+  <path
+    d="m 170.5906,216.18116 a 37.795276,37.795276 0 0 0 15.5504,-3.3472 37.795276,37.795276 0 0 0 -34.448,-53.3457 37.79528,37.79528 0 0 0 0,-75.59056 h -37.7953 v 132.28346 z"
+    fill="#1c0a38"
+    stroke="#000000"
+  />
+</svg>

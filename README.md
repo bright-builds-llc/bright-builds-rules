@@ -175,6 +175,10 @@ Canonical published badge:
 
 - `https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/public/badges/bright-builds.svg`
 
+OpenLinks-style flat badge:
+
+- `https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/public/badges/bright-builds-flat.svg`
+
 Alternate manual badge assets:
 
 - `https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/assets/badges/bright-builds-requirements-dark.svg`
@@ -185,6 +189,10 @@ Copy-paste Markdown snippets:
 
 ```md
 [![Bright Builds Requirements](https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/public/badges/bright-builds.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
+```
+
+```md
+[![Bright Builds: Coding requirements](https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/public/badges/bright-builds-flat.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
 ```
 
 ```md
