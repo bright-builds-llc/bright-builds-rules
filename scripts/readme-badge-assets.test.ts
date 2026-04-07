@@ -25,6 +25,10 @@ test("buildReadmeBadgeAssetSpecs returns the retained alternate badge family", (
   assert.match(specs[0]?.svg ?? "", /width="225" height="40" viewBox="0 0 225 40"/u);
   assert.match(specs[1]?.svg ?? "", /width="218" height="40" viewBox="0 0 218 40"/u);
   assert.match(specs[2]?.svg ?? "", /width="175" height="36" viewBox="0 0 175 36"/u);
+  assert.match(specs[0]?.svg ?? "", /<text x="40" y="19"[^>]*>Bright Builds<\/text>/u);
+  assert.match(specs[0]?.svg ?? "", /<text x="40" y="31\.5"[^>]*>REQUIREMENTS<\/text>/u);
+  assert.match(specs[1]?.svg ?? "", /<text x="40" y="19"[^>]*>Bright Builds<\/text>/u);
+  assert.match(specs[1]?.svg ?? "", /<text x="40" y="31\.5"[^>]*>REQUIREMENTS<\/text>/u);
   assert.equal(specs[0]?.svg, buildReadmeDarkBadgeSvg());
   assert.equal(specs[1]?.svg, buildReadmeLightBadgeSvg());
   assert.equal(specs[2]?.svg, buildReadmeCompactBadgeSvg());

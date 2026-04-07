@@ -7,6 +7,8 @@ export const LOGO_SOURCE_URL =
 export const GENERATOR_SITE_BADGE_PATH = "scripts/generate-site-badge.ts";
 export const GENERATOR_README_BADGE_ASSETS_PATH = "scripts/generate-readme-badge-assets.ts";
 export const FONT_STACK = "Avenir Next, Inter, Segoe UI, Arial, sans-serif";
+export const PRIMARY_TEXT_Y = "19";
+export const SECONDARY_TEXT_Y = "31.5";
 
 const TEMPLATE_DIR = path.join(ROOT, "scripts/badge-templates");
 const PLACEHOLDER_PATTERN = /\{\{[A-Z0-9_]+\}\}/u;
@@ -40,6 +42,8 @@ const buildTemplateValues = (
   LOGO_SOURCE_URL,
   LOGO_SYMBOL: renderLogoSymbol(),
   OUTER_WIDTH: outerWidth,
+  PRIMARY_TEXT_Y,
+  SECONDARY_TEXT_Y,
   SVG_HEIGHT: svgHeight,
   SVG_WIDTH: svgWidth,
 });
