@@ -145,6 +145,7 @@ When the downstream repository has at least one verified default badge, or when 
 - it inserts the block after the first `# ...` H1, or at the top when no H1 exists
 - if `README.md` is missing and at least one managed README badge applies, it creates a minimal README skeleton using the repo directory name as the H1
 - it blocks conservatively when the top insertion zone already contains unmanaged badge-like content or a partial managed badge block
+- when the managed README badge block already applies, it inserts the canonical `Bright Builds Requirements` badge after any verified project badges and before any owner-specific `OpenLinks profile` badge; the image is served from this repository's published `public/badges/bright-builds.svg` asset and links back here
 - when the downstream GitHub owner normalizes to `pRizz` or `peterryszkiewicz`, it appends an `OpenLinks profile` badge linked to `https://openlinks.us/` after any project badges
 - `install --force` backs up `README.md`, repairs only that badge region, and preserves the rest of the README body
 - after a blocked README repair, the agent may reinsert prior top-of-file badges or content below the managed badge block only when that does not recreate an ambiguous badge zone; otherwise it should ask the user
@@ -161,6 +162,40 @@ Verified default detectors are intentionally conservative and root-only:
 If the relevant version source is missing, conflicting, or ambiguous, the installer skips that badge instead of guessing.
 
 The owner-specific OpenLinks badge is separate from those verified default detectors and only applies when the downstream GitHub owner normalizes to `pRizz` or `peterryszkiewicz`.
+
+## Bright Builds Badge
+
+This repository publishes a canonical generated badge plus a small alternate badge family so downstream READMEs can show that they use the Bright Builds coding and architecture requirements. Managed downstream README badge blocks use the canonical published badge automatically when the block already applies for verified project badges or owner-specific badges. The Bright Builds badge itself does not make the managed README badge block applicable and does not cause the installer to create a README on its own.
+
+Default badge link target:
+
+- `https://github.com/bright-builds-llc/coding-and-architecture-requirements`
+
+Canonical published badge:
+
+- `https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/public/badges/bright-builds.svg`
+
+Alternate manual badge assets:
+
+- `https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/assets/badges/bright-builds-requirements-dark.svg`
+- `https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/assets/badges/bright-builds-requirements-light.svg`
+- `https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/assets/badges/bright-builds-requirements-compact.svg`
+
+Copy-paste Markdown snippets:
+
+```md
+[![Bright Builds Requirements](https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/public/badges/bright-builds.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
+```
+
+```md
+[![Bright Builds Requirements](https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/assets/badges/bright-builds-requirements-light.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
+```
+
+```md
+[![Uses Bright Builds](https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/assets/badges/bright-builds-requirements-compact.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
+```
+
+Regenerate or verify the canonical and alternate badge assets with `bun run branding:assets` and `bun run branding:assets:check`.
 
 ## AGENTS Marker And Audit Trail
 

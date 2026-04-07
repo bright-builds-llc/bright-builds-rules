@@ -222,9 +222,9 @@ queries/find_stale_accounts.sql
     done
 
     if [[ "$changed" -eq 1 ]]; then
-      python3 scripts/check-links.py --strict
+      bun scripts/check-links.ts --strict
     else
-      python3 scripts/check-links.py
+      bun scripts/check-links.ts
     fi
 ```
 

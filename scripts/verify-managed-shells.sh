@@ -9,11 +9,11 @@ command -v shfmt >/dev/null 2>&1 || {
 	exit 1
 }
 
-managed_shell_templates=(
+shell_scripts_to_verify=(
 	"templates/bright-builds-auto-update.sh"
 )
 
-for template_path in "${managed_shell_templates[@]}"; do
-	bash -n "$template_path"
-	shfmt -d "$template_path"
+for script_path in "${shell_scripts_to_verify[@]}"; do
+	bash -n "$script_path"
+	shfmt -d "$script_path"
 done

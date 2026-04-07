@@ -98,6 +98,14 @@ assert_file_not_contains() {
   fi
 }
 
+assert_file_contains_regex() {
+  local file_path="$1"
+  local pattern="$2"
+  local message="$3"
+
+  grep -Eq "$pattern" "$file_path" || fail "${message}: missing pattern '${pattern}' in ${file_path}"
+}
+
 assert_command_succeeds() {
   local message="$1"
   shift
@@ -441,7 +449,10 @@ test_peter_ryszkiewicz_owner_gets_openlinks_identity_guidance() {
   assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "do not add a second near-duplicate README placement" "guidance should avoid duplicate README promotion"
   assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Keep the host project's main brand and CTA primary." "guidance should preserve the host brand"
   assert_file_contains "${repo_path}/README.md" "GitHub Stars" "Peter-owned GitHub repos should still include project badges"
+  assert_file_contains "${repo_path}/README.md" "Bright Builds Requirements" "Peter-owned repos should include the Bright Builds requirements badge"
   assert_file_contains "${repo_path}/README.md" "OpenLinks profile" "Peter-owned repos should receive the owner-specific OpenLinks README badge"
+  assert_line_order "${repo_path}/README.md" "GitHub Stars" "Bright Builds Requirements"
+  assert_line_order "${repo_path}/README.md" "Bright Builds Requirements" "OpenLinks profile"
   assert_line_order "${repo_path}/README.md" "GitHub Stars" "OpenLinks profile"
 }
 
@@ -457,7 +468,11 @@ test_owner_specific_openlinks_badge_appends_after_detected_badges() {
   assert_eq "$run_status" "0" "Peter-owned repo install should succeed when detected project badges exist"
   assert_file_contains "${repo_path}/README.md" "TypeScript 5.9.2" "Peter-owned repos should still render detected project badges"
   assert_file_contains "${repo_path}/README.md" "Vite 7.3.1" "Peter-owned repos should still render detected project badges"
+  assert_file_contains "${repo_path}/README.md" "Bright Builds Requirements" "Peter-owned repos should include the Bright Builds requirements badge"
+  assert_file_contains "${repo_path}/README.md" "public/badges/bright-builds.svg" "Peter-owned repos should use the canonical published Bright Builds badge path"
   assert_file_contains "${repo_path}/README.md" "OpenLinks profile" "Peter-owned repos should append the OpenLinks badge"
+  assert_line_order "${repo_path}/README.md" "Vite 7.3.1" "Bright Builds Requirements"
+  assert_line_order "${repo_path}/README.md" "Bright Builds Requirements" "OpenLinks profile"
   assert_line_order "${repo_path}/README.md" "Vite 7.3.1" "OpenLinks profile"
 }
 
@@ -657,6 +672,9 @@ test_readme_badges_insert_after_h1_and_refresh() {
   assert_file_contains "${repo_path}/README.md" "TypeScript 5.8.4" "README should include the detected TypeScript version"
   assert_file_contains "${repo_path}/README.md" "SolidJS 1.8.19" "README should include the detected framework badge"
   assert_file_contains "${repo_path}/README.md" "Vite 7.2.1" "README should include the detected Vite badge"
+  assert_file_contains "${repo_path}/README.md" "Bright Builds Requirements" "README should include the Bright Builds requirements badge once the block applies"
+  assert_file_contains "${repo_path}/README.md" "public/badges/bright-builds.svg" "README should point at the canonical published Bright Builds badge"
+  assert_line_order "${repo_path}/README.md" "Vite 7.2.1" "Bright Builds Requirements"
 
   write_file "${repo_path}/package.json" $'{\n  "engines": {\n    "node": "22"\n  },\n  "devDependencies": {\n    "typescript": "5.9.2",\n    "vite": "7.3.1",\n    "solid-js": "1.9.0"\n  }\n}\n'
 
@@ -666,6 +684,8 @@ test_readme_badges_insert_after_h1_and_refresh() {
   assert_file_contains "${repo_path}/README.md" "TypeScript 5.9.2" "update should refresh the TypeScript badge version"
   assert_file_contains "${repo_path}/README.md" "SolidJS 1.9.0" "update should refresh the framework badge version"
   assert_file_contains "${repo_path}/README.md" "Vite 7.3.1" "update should refresh the Vite badge version"
+  assert_file_contains "${repo_path}/README.md" "Bright Builds Requirements" "update should preserve the Bright Builds requirements badge"
+  assert_line_order "${repo_path}/README.md" "Vite 7.3.1" "Bright Builds Requirements"
   assert_file_contains "${repo_path}/README.md" "This line should stay after the badges." "update should preserve existing README content"
 }
 
@@ -803,6 +823,8 @@ test_rich_readme_badge_detection() {
   assert_file_contains "${repo_path}/README.md" "Rust 1.84.1" "README should include the Rust badge"
   assert_file_contains "${repo_path}/README.md" "Python >=3.11" "README should include the Python badge"
   assert_file_contains "${repo_path}/README.md" "Go 1.23.0" "README should include the Go badge"
+  assert_file_contains "${repo_path}/README.md" "Bright Builds Requirements" "README should include the Bright Builds requirements badge"
+  assert_line_order "${repo_path}/README.md" "Go 1.23.0" "Bright Builds Requirements"
   assert_file_contains "${repo_path}/coding-and-architecture-requirements.audit.md" "README.md (managed badges block)" "audit should track the managed README badge block when present"
 }
 

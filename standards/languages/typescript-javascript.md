@@ -31,6 +31,34 @@ Existing pnpm monorepo
 - Review questions: Is this actually a new standalone JS/TS project, or an existing repo that already standardized on another package manager? Can Bun own the routine install and script surface cleanly here, or is there a clear compatibility reason not to use it?
 - Automation potential: Project scaffolds and templates can default to Bun, but compatibility decisions still need repo-level judgment.
 
+## Do Not Add Python Scripts To Bun-Friendly JS/TS Repositories
+
+- Level: `must`
+- Intent: Keep repo-owned scripting in one language/runtime surface so scripts are easier to run, typecheck, review, and maintain.
+- Rule: In JavaScript or TypeScript repositories where Bun can reasonably own the repo's script/runtime surface, do not add new Python scripts for repo-owned automation, build helpers, code generation, validation, or maintenance tasks. Prefer TypeScript or JavaScript run by Bun. Rare exceptions require a concrete compatibility reason, such as an external dependency or platform contract that is only practical in Python, and that reason should be documented in repo-local guidance when it matters.
+- Rationale: Mixing Bun/TS with ad hoc Python helpers creates avoidable toolchain sprawl, duplicated verification surfaces, and onboarding friction. If the repo already depends on Bun/TS for script execution, keeping repo-owned automation there is the simpler long-term default.
+- Good example:
+
+```text
+Bun-friendly TypeScript repository
+- adds `scripts/generate-site-badge.ts`
+- runs it with `bun run badge:site`
+- typechecks the script with the rest of the repo-owned tooling
+```
+
+- Bad example:
+
+```text
+Bun-friendly TypeScript repository
+- introduces `scripts/measure-badge-text.py` for one helper task
+- requires both Bun and Python for routine local verification
+- duplicates the script toolchain without a documented compatibility reason
+```
+
+- Exceptions or escape hatches: Existing repositories may keep already-established Python tooling until they intentionally migrate it. Repositories whose real compatibility surface is Python-first should keep Python. Narrow Python exceptions inside a Bun/TS-friendly repo are acceptable only when the underlying dependency or runtime contract genuinely requires it.
+- Review questions: Could this script live as TypeScript/JavaScript run by Bun instead? Is Python being added for convenience rather than a real compatibility constraint? If Python remains, is the reason explicit and durable?
+- Automation potential: Repo linting and file globs can flag new `.py` files in Bun-friendly repos, but exception handling still needs review judgment.
+
 ## Prefer Composition Over Class Inheritance
 
 - Level: `must`

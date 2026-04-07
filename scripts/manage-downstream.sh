@@ -27,6 +27,8 @@ auto_update_branch="bright-builds/auto-update"
 auto_update_commit_message="chore: update Bright Builds requirements"
 auto_update_cron="0 14 * * *"
 openlinks_identity_url="https://openlinks.us/"
+bright_builds_requirements_url="https://github.com/${default_repo_slug}"
+bright_builds_badges_base_url="https://raw.githubusercontent.com/${default_repo_slug}/${default_ref}/public/badges"
 trusted_auto_update_identities=(
   "prizz"
   "bright-builds-llc"
@@ -648,6 +650,14 @@ append_readme_badge() {
   readme_has_managed_badges=1
 }
 
+append_bright_builds_readme_badge() {
+  if [[ "$readme_has_managed_badges" -ne 1 ]]; then
+    return 0
+  fi
+
+  append_readme_badge "[![Bright Builds Requirements](${bright_builds_badges_base_url}/bright-builds.svg)](${bright_builds_requirements_url})"
+}
+
 append_owner_specific_readme_badge() {
   if ! is_openlinks_identity_owner "$downstream_repo_owner"; then
     return 0
@@ -1150,6 +1160,7 @@ resolve_downstream_badges() {
     append_readme_badge "$(build_static_badge_markdown "Go" "$maybe_go_version" "00ADD8" "go" "white" "https://go.dev/")"
   fi
 
+  append_bright_builds_readme_badge
   append_owner_specific_readme_badge
 }
 

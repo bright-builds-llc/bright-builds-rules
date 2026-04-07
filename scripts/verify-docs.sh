@@ -4,7 +4,15 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
-npx --yes markdownlint-cli2@0.18.1 "**/*.md"
+npx --yes markdownlint-cli2@0.18.1 \
+  "AGENTS.md" \
+  "AI-ADOPTION.md" \
+  "CHANGELOG.md" \
+  "README.md" \
+  ".codex/tasks/**/*.md" \
+  "skills/**/*.md" \
+  "standards/**/*.md" \
+  "templates/**/*.md"
 # Run one recursive link-check pass instead of spawning a fresh npx process per file.
 npx --yes markdown-link-check@3.14.1 --ignore .git,node_modules .
 
@@ -16,4 +24,7 @@ rg -Fq '## Routing hints' templates/AGENTS.bright-builds.md
 rg -Fq 'Use the canonical page `standards/core/testing.md` for unit-test expectations.' templates/AGENTS.bright-builds.md
 rg -Fq 'After install or update, treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds spec.' AI-ADOPTION.md
 rg -Fq 'Treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds spec.' README.md
+rg -Fq 'Do Not Add Python Scripts To Bun-Friendly JS/TS Repositories' standards/languages/typescript-javascript.md
+rg -Fq 'do not add new Python scripts for repo-owned automation' standards/languages/typescript-javascript.md
+rg -Fq 'This repository uses Bun and TypeScript for repo-owned scripting.' AGENTS.md
 rg -Fq 'For downstream repos with Bright Builds installed, the required reading order is:' skills/personal-coding-standards/SKILL.md

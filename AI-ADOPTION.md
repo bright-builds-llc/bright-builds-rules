@@ -141,6 +141,7 @@ The installer manages README badges conservatively:
 
 - it inserts the managed badge block after the first `# ...` H1 in `README.md`, or at the top when no H1 exists
 - if `README.md` is missing and at least one managed README badge applies, it creates a minimal README skeleton with the repo directory name as the H1
+- when the managed README badge block already applies, it inserts the canonical `Bright Builds Requirements` badge after any verified project badges and before any owner-specific `OpenLinks profile` badge; the badge image comes from this repository's published `public/badges/bright-builds.svg` asset and links back to this repo README
 - for Peter-owned repos, it appends an `OpenLinks profile` badge linked to `https://openlinks.us/` after any verified project badges
 - it emits verified project badges in this order when it can prove them from the downstream repo: stars, CI, deploy-pages, license, Node.js, TypeScript, one framework badge from `solid-js|react|next|vue|svelte`, Vite, Rust, Python, and Go
 - it derives those badges from the downstream `origin` GitHub remote, root workflows, root manifests, and root toolchain files only

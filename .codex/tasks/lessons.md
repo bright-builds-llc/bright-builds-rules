@@ -23,3 +23,9 @@
 - What went wrong: I locked the new pre-work checkout rule to fast-forward-only sync and explicitly avoided rebasing before confirming the user's preferred default sync strategy.
 - Preventive rule: When adding a repository workflow standard around branch syncing, confirm whether the default should be rebase, merge, or fast-forward-only before finalizing the rule text and managed downstream wording.
 - Trigger signal: A proposed workflow rule that mentions fetch, pull, sync, merge conflicts, or stale worktrees without an explicit default branch-update strategy.
+
+## lesson-confirm-script-runtime-policy-before-adding-helper | 2026-04-07 02:59 CDT
+
+- What went wrong: I added a new Python helper for badge generation in a repo where the user wanted Bun/TypeScript as the scripting default.
+- Preventive rule: Before introducing a new repo-owned scripting language, confirm the repository's preferred script runtime and follow that default unless there is a rare documented compatibility exception.
+- Trigger signal: A proposed helper script, generator, verifier, or automation entrypoint in a repository that already has a clear preferred scripting/tooling surface.
