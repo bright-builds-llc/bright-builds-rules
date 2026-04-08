@@ -1,5 +1,5 @@
 {
-  "name": "coding-and-architecture-requirements",
+  "name": "bright-builds-rules",
   "private": true,
   "type": "module",
   "packageManager": "bun@1.3.9",

@@ -17,18 +17,18 @@ test("buildReadmeBadgeAssetSpecs returns the retained alternate badge family", (
   assert.deepEqual(
     specs.map((spec: { outputPath: string }) => spec.outputPath),
     [
-      "assets/badges/bright-builds-requirements-dark.svg",
-      "assets/badges/bright-builds-requirements-light.svg",
-      "assets/badges/bright-builds-requirements-compact.svg",
+      "assets/badges/bright-builds-rules-dark.svg",
+      "assets/badges/bright-builds-rules-light.svg",
+      "assets/badges/bright-builds-rules-compact.svg",
     ],
   );
   assert.match(specs[0]?.svg ?? "", /width="225" height="40" viewBox="0 0 225 40"/u);
   assert.match(specs[1]?.svg ?? "", /width="218" height="40" viewBox="0 0 218 40"/u);
-  assert.match(specs[2]?.svg ?? "", /width="175" height="36" viewBox="0 0 175 36"/u);
+  assert.match(specs[2]?.svg ?? "", /width="190" height="36" viewBox="0 0 190 36"/u);
   assert.match(specs[0]?.svg ?? "", /<text x="40" y="19"[^>]*>Bright Builds<\/text>/u);
-  assert.match(specs[0]?.svg ?? "", /<text x="40" y="31\.5"[^>]*>REQUIREMENTS<\/text>/u);
+  assert.match(specs[0]?.svg ?? "", /<text x="40" y="31\.5"[^>]*>RULES<\/text>/u);
   assert.match(specs[1]?.svg ?? "", /<text x="40" y="19"[^>]*>Bright Builds<\/text>/u);
-  assert.match(specs[1]?.svg ?? "", /<text x="40" y="31\.5"[^>]*>REQUIREMENTS<\/text>/u);
+  assert.match(specs[1]?.svg ?? "", /<text x="40" y="31\.5"[^>]*>RULES<\/text>/u);
   assert.equal(specs[0]?.svg, buildReadmeDarkBadgeSvg());
   assert.equal(specs[1]?.svg, buildReadmeLightBadgeSvg());
   assert.equal(specs[2]?.svg, buildReadmeCompactBadgeSvg());
@@ -49,7 +49,7 @@ test("generateReadmeBadgeAssets writes the assets and then reports unchanged", (
     ["unchanged", "unchanged", "unchanged"],
   );
   assert.equal(
-    fs.existsSync(path.join(rootDir, "assets/badges/bright-builds-requirements-compact.svg")),
+    fs.existsSync(path.join(rootDir, "assets/badges/bright-builds-rules-compact.svg")),
     true,
   );
 });
@@ -59,6 +59,6 @@ test("generateReadmeBadgeAssets check mode fails when an alternate badge is miss
 
   assert.throws(
     () => generateReadmeBadgeAssets({ check: true, rootDir }),
-    /generated artifact is out of date: assets\/badges\/bright-builds-requirements-dark\.svg/u,
+    /generated artifact is out of date: assets\/badges\/bright-builds-rules-dark\.svg/u,
   );
 });

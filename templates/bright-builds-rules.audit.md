@@ -1,8 +1,8 @@
-# Coding and Architecture Requirements Audit Trail
+# Bright Builds Rules Audit Trail
 
 REPLACE_WITH_MANAGED_FILE_MARKER
 
-This file records that this repository is using the Bright Builds coding and architecture requirements and shows where the managed adoption files came from.
+This file records that this repository is using the Bright Builds Rules and shows where the managed adoption files came from.
 
 ## Current installation
 

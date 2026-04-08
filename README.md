@@ -1,8 +1,8 @@
-# Personal Coding and Architecture Requirements
+# Bright Builds Rules
 
-[![GitHub Stars](https://img.shields.io/github/stars/bright-builds-llc/coding-and-architecture-requirements)](https://github.com/bright-builds-llc/coding-and-architecture-requirements) [![Bright Builds Requirements](public/badges/bright-builds.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
+[![GitHub Stars](https://img.shields.io/github/stars/bright-builds-llc/bright-builds-rules)](https://github.com/bright-builds-llc/bright-builds-rules) [![Bright Builds Rules](public/badges/bright-builds-rules.svg)](https://github.com/bright-builds-llc/bright-builds-rules)
 
-This repository is a versioned policy and adoption kit for a personal, opinionated coding style. It is designed to work for both humans and AI agents:
+This repository is the canonical source and adoption kit for Bright Builds Rules. It is designed to work for both humans and AI agents:
 
 - Humans can read a small set of canonical standards documents.
 - Teams can copy thin local templates into their own repositories.
@@ -12,19 +12,19 @@ The core corpus currently covers architecture, code shape, operability, local gu
 
 ## For AI Agents
 
-If an AI is given only this repository URL and asked to adopt these requirements into another repository, the AI should start with [AI-ADOPTION.md](AI-ADOPTION.md).
+If an AI is given only this repository URL and asked to adopt Bright Builds Rules into another repository, the AI should start with [AI-ADOPTION.md](AI-ADOPTION.md).
 
 Direct fetch targets for AI tooling:
 
-- Repository URL: `https://github.com/bright-builds-llc/coding-and-architecture-requirements`
-- Raw README URL: `https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/README.md`
-- Raw AI adoption guide URL: `https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/AI-ADOPTION.md`
-- Raw install script URL: `https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh`
-- Standards index URL: `https://github.com/bright-builds-llc/coding-and-architecture-requirements/blob/main/standards/index.md`
+- Repository URL: `https://github.com/bright-builds-llc/bright-builds-rules`
+- Raw README URL: `https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/README.md`
+- Raw AI adoption guide URL: `https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/AI-ADOPTION.md`
+- Raw install script URL: `https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/scripts/manage-downstream.sh`
+- Standards index URL: `https://github.com/bright-builds-llc/bright-builds-rules/blob/main/standards/index.md`
 
 Suggested user phrase for an AI:
 
-`Adopt the requirements from https://github.com/bright-builds-llc/coding-and-architecture-requirements into this repo.`
+`Adopt Bright Builds Rules from https://github.com/bright-builds-llc/bright-builds-rules into this repo.`
 
 The intended AI behavior is:
 
@@ -32,15 +32,15 @@ The intended AI behavior is:
 - run `install` when `status` reports `Repo state: installable`
 - run `update` when `status` reports `Repo state: installed`
 - stop for review when `status` reports `Repo state: blocked`, unless the user explicitly opts into a backup-first `install --force` plus merge-assisted follow-up
-- preserve a pre-existing unmarked `AGENTS.md` by appending the managed Bright Builds block to the end during `install`
+- preserve a pre-existing unmarked `AGENTS.md` by appending the managed Bright Builds Rules block to the end during `install`
 - treat downstream edits to marked whole-file managed files as blocking drift instead of silently overwriting them on `update`
 - manage a bounded `README.md` badge block when the downstream repo has verified default badge inputs or the owner-specific OpenLinks badge applies and the top badge zone is unambiguous
 - tailor `AGENTS.bright-builds.md` with an `openlinks-identity-presence` rule when the downstream GitHub repo owner normalizes to `pRizz` or `peterryszkiewicz` (Peter Ryszkiewicz)
 - let the installer resolve downstream auto-update to `disabled` by default unless the downstream GitHub repo owner or current GitHub user is trusted
-- use `install --force` only as an opt-in replacement path for blocked managed files, which first backs them up into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/` and then drives a careful agent merge review of the backup against the fresh managed output
-- treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds spec, and load the sidecar, overrides, and relevant canonical standards pages before plan, review, implementation, or audit work
-- briefly acknowledge the material Bright Builds sources consulted in plan, review, and audit outputs
-- report `coding-and-architecture-requirements.audit.md` as the downstream paper trail after completion
+- use `install --force` only as an opt-in replacement path for blocked managed files, which first backs them up into `.bright-builds-rules-backups/<UTC-timestamp>/` and then drives a careful agent merge review of the backup against the fresh managed output
+- treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds Rules spec, and load the sidecar, overrides, and relevant canonical standards pages before plan, review, implementation, or audit work
+- briefly acknowledge the material Bright Builds Rules sources consulted in plan, review, and audit outputs
+- report `bright-builds-rules.audit.md` as the downstream paper trail after completion
 - report the pinned source URL, requested ref, and exact resolved commit when available
 
 ## Quick install
@@ -50,7 +50,7 @@ Run these from the root of the downstream repository that should adopt the stand
 Start with `status` for both new repos and existing codebases:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- status
+curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/scripts/manage-downstream.sh | bash -s -- status
 ```
 
 The status output classifies the repo with stable lines:
@@ -66,29 +66,29 @@ The status output classifies the repo with stable lines:
 If `Repo state: installable`, install the downstream adoption layer:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- install --ref main
+curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/scripts/manage-downstream.sh | bash -s -- install --ref main
 ```
 
-If the repository already has an unmarked local `AGENTS.md`, `install` keeps that file and appends the managed Bright Builds block to the end. The same command also writes `AGENTS.bright-builds.md`, `CONTRIBUTING.md`, `.github/pull_request_template.md`, `coding-and-architecture-requirements.audit.md`, creates `standards-overrides.md` when the overrides file does not already exist, manages a bounded `README.md` badge block when verified default badges or the owner-specific OpenLinks badge apply, and tailors the managed sidecar with owner-specific `openlinks-identity-presence` guidance when the downstream GitHub owner normalizes to Peter Ryszkiewicz or `pRizz`. Those fully managed files now carry visible whole-file markers so downstream drift becomes a `blocked` state instead of being overwritten silently.
+If the repository already has an unmarked local `AGENTS.md`, `install` keeps that file and appends the managed Bright Builds Rules block to the end. The same command also writes `AGENTS.bright-builds.md`, `CONTRIBUTING.md`, `.github/pull_request_template.md`, `bright-builds-rules.audit.md`, creates `standards-overrides.md` when the overrides file does not already exist, manages a bounded `README.md` badge block when verified default badges or the owner-specific OpenLinks badge apply, and tailors the managed sidecar with owner-specific `openlinks-identity-presence` guidance when the downstream GitHub owner normalizes to Peter Ryszkiewicz or `pRizz`. Those fully managed files now carry visible whole-file markers so downstream drift becomes a `blocked` state instead of being overwritten silently.
 
 Downstream `AGENTS.md` stays the entrypoint for concise repo-local workflow facts. Use a `## Repo-Local Guidance` section there for recurring local commands, conventions, and links. Reserve `standards-overrides.md` for deliberate deviations from the canonical standards.
 
-Treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds spec. Before plan, review, implementation, or audit work, read local `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md` when present, and the pinned canonical standards pages relevant to the task. If that has not happened yet, stop and load them before continuing. For plan, review, and audit outputs, briefly name the sources that materially informed the work.
+Treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds Rules spec. Before plan, review, implementation, or audit work, read local `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md` when present, and the pinned canonical standards pages relevant to the task. If that has not happened yet, stop and load them before continuing. For plan, review, and audit outputs, briefly name the sources that materially informed the work.
 
 Fresh installs resolve auto-update to `disabled` unless the downstream GitHub repo owner or the current GitHub user is trusted. Trusted identities are `pRizz` and `bright-builds-llc`, compared case-insensitively. Override the default with `--auto-update enabled` or `--auto-update disabled` when needed.
 
 When the downstream GitHub owner normalizes to `pRizz` or `peterryszkiewicz`, the managed sidecar also tells agents to use the `openlinks-identity-presence` skill on README/docs, footer/about/profile, app chrome, and metadata/discovery surfaces, while the managed README badge block appends a subtle `OpenLinks profile` badge linked to `https://openlinks.us/`. That rule follows the same bias as the OpenLinks skill it references: prefer the smallest sufficient placement, avoid duplicating nearby README placements, and keep the host project's primary brand visually primary.
 
-If `Repo state: installed`, refresh the existing marker-based Bright Builds adoption:
+If `Repo state: installed`, refresh the existing marker-based Bright Builds Rules adoption:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- update --ref main
+curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/scripts/manage-downstream.sh | bash -s -- update --ref main
 ```
 
-If `Repo state: blocked`, stop and review the blocking managed files before replacing them. If you intentionally want to replace those files, use `install --force`, which first backs them up into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`:
+If `Repo state: blocked`, stop and review the blocking managed files before replacing them. If you intentionally want to replace those files, use `install --force`, which first backs them up into `.bright-builds-rules-backups/<UTC-timestamp>/`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- install --force --ref main
+curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/scripts/manage-downstream.sh | bash -s -- install --force --ref main
 ```
 
 When the user explicitly opts into that replacement path, the AI should treat it as a merge-assisted recovery flow instead of a blind overwrite:
@@ -104,13 +104,13 @@ New repo vs existing repo:
 - A new repo normally reports `installable`.
 - A repo with an existing local `AGENTS.md` and no other managed-file conflicts also reports `installable`.
 - A repo with the managed AGENTS marker block plus an exact-match legacy copy of the fully managed files but without the new whole-file marker headers still reports `installed`; `update` migrates those files to the marked format.
-- A repo with existing managed conflicts such as `CONTRIBUTING.md`, `.github/pull_request_template.md`, `AGENTS.bright-builds.md`, or `coding-and-architecture-requirements.audit.md` reports `blocked`.
+- A repo with existing managed conflicts such as `CONTRIBUTING.md`, `.github/pull_request_template.md`, `AGENTS.bright-builds.md`, or `bright-builds-rules.audit.md` reports `blocked`.
 - A repo whose marked whole-file managed outputs have downstream edits also reports `blocked` and lists the drifted paths.
 - A repo whose README insertion zone already contains unmanaged badge-like content, or whose managed README badge block is partial, also reports `blocked`.
 - A repo with the managed AGENTS marker block plus `AGENTS.bright-builds.md` reports `installed`.
 - A repo using the previous standalone downstream layout from this repository reports `blocked` until you explicitly replace it.
 
-The manager installs a managed block inside `AGENTS.md`, writes `AGENTS.bright-builds.md`, writes `CONTRIBUTING.md`, writes `.github/pull_request_template.md`, writes `coding-and-architecture-requirements.audit.md`, creates `standards-overrides.md` if it is missing, and inserts or refreshes a managed README badge block when managed README badges apply. The fully managed files carry visible whole-file markers, while `AGENTS.md` and `README.md` keep their bounded-region marker model. The installer keeps the requested `Version pin` breadcrumb and also records the exact resolved commit when that provenance can be determined. Prefer replacing `main` with a tag or commit SHA once you start cutting releases.
+The manager installs a managed block inside `AGENTS.md`, writes `AGENTS.bright-builds.md`, writes `CONTRIBUTING.md`, writes `.github/pull_request_template.md`, writes `bright-builds-rules.audit.md`, creates `standards-overrides.md` if it is missing, and inserts or refreshes a managed README badge block when managed README badges apply. The fully managed files carry visible whole-file markers, while `AGENTS.md` and `README.md` keep their bounded-region marker model. The installer keeps the requested `Version pin` breadcrumb and also records the exact resolved commit when that provenance can be determined. Prefer replacing `main` with a tag or commit SHA once you start cutting releases.
 
 When auto-update resolves to `enabled`, the manager also writes:
 
@@ -120,11 +120,11 @@ When auto-update resolves to `enabled`, the manager also writes:
 Check or refresh an existing install at any time:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- status
-curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- update --ref main
+curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/scripts/manage-downstream.sh | bash -s -- status
+curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/scripts/manage-downstream.sh | bash -s -- update --ref main
 ```
 
-Updates reuse the persisted auto-update setting from `coding-and-architecture-requirements.audit.md` unless you explicitly override it with `--auto-update`.
+Updates reuse the persisted auto-update setting from `bright-builds-rules.audit.md` unless you explicitly override it with `--auto-update`.
 
 ## Default Auto-Update
 
@@ -145,7 +145,7 @@ When the downstream repository has at least one verified default badge, or when 
 - it inserts the block after the first `# ...` H1, or at the top when no H1 exists
 - if `README.md` is missing and at least one managed README badge applies, it creates a minimal README skeleton using the repo directory name as the H1
 - it blocks conservatively when the top insertion zone already contains unmanaged badge-like content or a partial managed badge block
-- when the managed README badge block already applies, it inserts the canonical `Bright Builds Requirements` badge after any verified project badges and before any owner-specific `OpenLinks profile` badge; the image is served from this repository's published `public/badges/bright-builds.svg` asset and links back here
+- when the managed README badge block already applies, it inserts the canonical `Bright Builds Rules` badge after any verified project badges and before any owner-specific `OpenLinks profile` badge; the image is served from this repository's published `public/badges/bright-builds-rules.svg` asset and links back here
 - when the downstream GitHub owner normalizes to `pRizz` or `peterryszkiewicz`, it appends an `OpenLinks profile` badge linked to `https://openlinks.us/` after any project badges
 - `install --force` backs up `README.md`, repairs only that badge region, and preserves the rest of the README body
 - after a blocked README repair, the agent may reinsert prior top-of-file badges or content below the managed badge block only when that does not recreate an ambiguous badge zone; otherwise it should ask the user
@@ -163,70 +163,70 @@ If the relevant version source is missing, conflicting, or ambiguous, the instal
 
 The owner-specific OpenLinks badge is separate from those verified default detectors and only applies when the downstream GitHub owner normalizes to `pRizz` or `peterryszkiewicz`.
 
-## Bright Builds Badge
+## Bright Builds Rules Badge
 
-This repository publishes a canonical generated badge plus a small alternate badge family so downstream READMEs can show that they use the Bright Builds coding and architecture requirements. Managed downstream README badge blocks use the canonical published badge automatically when the block already applies for verified project badges or owner-specific badges. The Bright Builds badge itself does not make the managed README badge block applicable and does not cause the installer to create a README on its own.
+This repository publishes a canonical generated badge plus a small alternate badge family so downstream READMEs can show that they use Bright Builds Rules. Managed downstream README badge blocks use the canonical published badge automatically when the block already applies for verified project badges or owner-specific badges. The Bright Builds Rules badge itself does not make the managed README badge block applicable and does not cause the installer to create a README on its own.
 
 Default badge link target:
 
-- `https://github.com/bright-builds-llc/coding-and-architecture-requirements`
+- `https://github.com/bright-builds-llc/bright-builds-rules`
 
 Canonical published badge:
 
-- `https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/public/badges/bright-builds.svg`
+- `https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/public/badges/bright-builds-rules.svg`
 
 OpenLinks-style flat badge:
 
-- `https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/public/badges/bright-builds-flat.svg`
+- `https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/public/badges/bright-builds-rules-flat.svg`
 
 Alternate manual badge assets:
 
-- `https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/assets/badges/bright-builds-requirements-dark.svg`
-- `https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/assets/badges/bright-builds-requirements-light.svg`
-- `https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/assets/badges/bright-builds-requirements-compact.svg`
+- `https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/assets/badges/bright-builds-rules-dark.svg`
+- `https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/assets/badges/bright-builds-rules-light.svg`
+- `https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/assets/badges/bright-builds-rules-compact.svg`
 
 Rendered previews:
 
 Canonical published badge:
 
-[![Bright Builds Requirements](public/badges/bright-builds.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
+[![Bright Builds Rules](public/badges/bright-builds-rules.svg)](https://github.com/bright-builds-llc/bright-builds-rules)
 
 OpenLinks-style flat badge:
 
-[![Bright Builds: Coding requirements](public/badges/bright-builds-flat.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
+[![Bright Builds: Rules](public/badges/bright-builds-rules-flat.svg)](https://github.com/bright-builds-llc/bright-builds-rules)
 
 Alternate dark badge:
 
-[![Bright Builds Requirements](assets/badges/bright-builds-requirements-dark.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
+[![Bright Builds Rules](assets/badges/bright-builds-rules-dark.svg)](https://github.com/bright-builds-llc/bright-builds-rules)
 
 Alternate light badge:
 
-[![Bright Builds Requirements](assets/badges/bright-builds-requirements-light.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
+[![Bright Builds Rules](assets/badges/bright-builds-rules-light.svg)](https://github.com/bright-builds-llc/bright-builds-rules)
 
 Alternate compact badge:
 
-[![Uses Bright Builds](assets/badges/bright-builds-requirements-compact.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
+[![Bright Builds Rules](assets/badges/bright-builds-rules-compact.svg)](https://github.com/bright-builds-llc/bright-builds-rules)
 
 Copy-paste Markdown snippets:
 
 ```md
-[![Bright Builds Requirements](https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/public/badges/bright-builds.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
+[![Bright Builds Rules](https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/public/badges/bright-builds-rules.svg)](https://github.com/bright-builds-llc/bright-builds-rules)
 ```
 
 ```md
-[![Bright Builds: Coding requirements](https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/public/badges/bright-builds-flat.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
+[![Bright Builds: Rules](https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/public/badges/bright-builds-rules-flat.svg)](https://github.com/bright-builds-llc/bright-builds-rules)
 ```
 
 ```md
-[![Bright Builds Requirements](https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/assets/badges/bright-builds-requirements-dark.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
+[![Bright Builds Rules](https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/assets/badges/bright-builds-rules-dark.svg)](https://github.com/bright-builds-llc/bright-builds-rules)
 ```
 
 ```md
-[![Bright Builds Requirements](https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/assets/badges/bright-builds-requirements-light.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
+[![Bright Builds Rules](https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/assets/badges/bright-builds-rules-light.svg)](https://github.com/bright-builds-llc/bright-builds-rules)
 ```
 
 ```md
-[![Uses Bright Builds](https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/assets/badges/bright-builds-requirements-compact.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
+[![Bright Builds Rules](https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/assets/badges/bright-builds-rules-compact.svg)](https://github.com/bright-builds-llc/bright-builds-rules)
 ```
 
 Regenerate or verify the canonical and alternate badge assets with `bun run branding:assets` and `bun run branding:assets:check`.
@@ -235,19 +235,19 @@ Regenerate or verify the canonical and alternate badge assets with `bun run bran
 
 The downstream install is anchored by two AGENTS files:
 
-- `AGENTS.md` contains a bounded managed Bright Builds block marked by:
-  - `<!-- coding-and-architecture-requirements-managed:begin -->`
-  - `<!-- coding-and-architecture-requirements-managed:end -->`
+- `AGENTS.md` contains a bounded managed Bright Builds Rules block marked by:
+  - `<!-- bright-builds-rules-managed:begin -->`
+  - `<!-- bright-builds-rules-managed:end -->`
 - The repo-local parts of `AGENTS.md` remain the place for concise local workflow facts; use `## Repo-Local Guidance` for recurring commands, conventions, prerequisites, and links.
-- `AGENTS.bright-builds.md` contains the managed Bright Builds guidance and a visible warning that the file is installed from this repository and should not be edited directly.
-- Fully managed downstream files use visible whole-file markers such as `<!-- coding-and-architecture-requirements-managed-file: AGENTS.bright-builds.md -->` or `# coding-and-architecture-requirements-managed-file: scripts/bright-builds-auto-update.sh`.
+- `AGENTS.bright-builds.md` contains the managed Bright Builds Rules guidance and a visible warning that the file is installed from this repository and should not be edited directly.
+- Fully managed downstream files use visible whole-file markers such as `<!-- bright-builds-rules-managed-file: AGENTS.bright-builds.md -->` or `# bright-builds-rules-managed-file: scripts/bright-builds-auto-update.sh`.
 - If one of those whole-file managed outputs drifts downstream, `status` reports `blocked` and `update` stops until the repo is repaired or the user explicitly chooses the `install --force` plus merge-review path.
 - when the downstream GitHub owner matches Peter Ryszkiewicz or `pRizz` after normalization, `AGENTS.bright-builds.md` also includes an owner-specific `openlinks-identity-presence` rule for discoverability surfaces, and the managed README badge block appends the subtle `OpenLinks profile` badge
 - `standards-overrides.md` remains the place for deliberate deviations from canonical standards rather than general local workflow notes
 
-The visible `coding-and-architecture-requirements.audit.md` file is the paper trail. It records:
+The visible `bright-builds-rules.audit.md` file is the paper trail. It records:
 
-- which repository these requirements came from
+- which repository these rules came from
 - which revision is pinned
 - which exact commit was installed when it could be resolved
 - whether downstream auto-update is currently enabled or disabled, and why
@@ -258,7 +258,7 @@ The visible `coding-and-architecture-requirements.audit.md` file is the paper tr
 
 These files exist to make downstream debugging and auditing more intuitive for both humans and tools. They make it easy to answer:
 
-- where did these requirements come from?
+- where did these rules come from?
 - which revision is this repo pinned to?
 - which exact commit was actually installed?
 - is auto-update enabled here, and why?
@@ -270,7 +270,7 @@ Behavior by command:
 - `install` writes or refreshes the managed AGENTS block, writes `AGENTS.bright-builds.md`, refreshes the managed files, writes or repairs the managed README badge block when managed README badges apply, writes the audit manifest, and creates `standards-overrides.md` if it is missing
 - `install` also writes the managed auto-update workflow and helper script when auto-update resolves to `enabled`
 - rerunning `install` on an already installed repo refreshes the managed block and does not duplicate it
-- `install --force` first backs up blocked managed files into `.coding-and-architecture-requirements-backups/<UTC-timestamp>/` before replacing them, then the agent should compare the backup with the fresh managed outputs and fold back only clearly portable downstream-specific logic or content into safe local extension points
+- `install --force` first backs up blocked managed files into `.bright-builds-rules-backups/<UTC-timestamp>/` before replacing them, then the agent should compare the backup with the fresh managed outputs and fold back only clearly portable downstream-specific logic or content into safe local extension points
 - if that merge review would require re-drifting a fully managed file or making a non-obvious semantic choice, the agent should stop and ask the user
 - `update` refreshes the managed AGENTS block, sidecar, managed files, managed README badge block, audit manifest, and any enabled auto-update files, but only when the installed managed files are either exact current renders or exact legacy unmarked renders
 - `status` uses the managed AGENTS marker block plus `AGENTS.bright-builds.md` as the install signal
@@ -316,7 +316,7 @@ Behavior by command:
 1. Read [standards/index.md](standards/index.md) and any language-specific guidance relevant to the repository.
 2. Run the downstream manager or copy the files in `templates/` into the downstream repository.
 3. Pin the downstream repo to a tagged release or commit from this repository.
-4. Treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds spec. Before plan, review, implementation, or audit work, read `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md` when present, and the relevant canonical standards pages.
+4. Treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds Rules spec. Before plan, review, implementation, or audit work, read `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md` when present, and the relevant canonical standards pages.
 5. Capture recurring repo-local workflow facts in downstream `AGENTS.md` under `## Repo-Local Guidance`.
 6. Record any repo-specific deviations in the downstream `standards-overrides.md`.
 7. For plan, review, or audit outputs, briefly name the local guidance, sidecar, overrides, or canonical standards pages that materially informed the result.
@@ -324,14 +324,14 @@ Behavior by command:
 
 If the repository already had substantial code before adoption, you can also use the Codex skill to run a read-only `audit` baseline or an `audit-and-fix` cleanup wave after install. The default audit mode is whole-repo and findings-first; the default audit-and-fix mode audits first, then applies one bounded remediation wave rather than attempting a whole-repo rewrite.
 
-The intended downstream footprint is still small: a local `AGENTS.md` that stays the entrypoint for repo-local guidance plus a managed Bright Builds block, a local `AGENTS.bright-builds.md` sidecar, a local `CONTRIBUTING.md`, an optional managed README badge block, an overrides file, a PR template, and the audit trail file. The canonical standards remain here, and the fully managed files now carry explicit whole-file markers so drift is visible instead of implicit.
+The intended downstream footprint is still small: a local `AGENTS.md` that stays the entrypoint for repo-local guidance plus a managed Bright Builds Rules block, a local `AGENTS.bright-builds.md` sidecar, a local `CONTRIBUTING.md`, an optional managed README badge block, an overrides file, a PR template, and the audit trail file. The canonical standards remain here, and the fully managed files now carry explicit whole-file markers so drift is visible instead of implicit.
 
 ## Uninstall
 
-Remove the managed AGENTS block and the managed Bright Builds files from a downstream repository while preserving the local override history:
+Remove the managed AGENTS block and the managed Bright Builds Rules files from a downstream repository while preserving the local override history:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh | bash -s -- uninstall
+curl -fsSL https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/scripts/manage-downstream.sh | bash -s -- uninstall
 ```
 
 ## Versioning and releases

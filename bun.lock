@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "coding-and-architecture-requirements",
+      "name": "bright-builds-rules",
       "devDependencies": {
         "@types/node": "^24.9.1",
         "badge-maker": "^5.0.2",

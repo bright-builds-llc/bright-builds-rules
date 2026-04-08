@@ -69,5 +69,5 @@ export const buildReadmeLightBadgeSvg = (): string =>
 export const buildReadmeCompactBadgeSvg = (): string =>
   renderTemplate(
     "readme-compact.svg.tmpl",
-    buildTemplateValues(GENERATOR_README_BADGE_ASSETS_PATH, "175", "36", "173.5"),
+    buildTemplateValues(GENERATOR_README_BADGE_ASSETS_PATH, "190", "36", "188.5"),
   );

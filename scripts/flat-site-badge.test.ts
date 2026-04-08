@@ -18,11 +18,11 @@ test("resolveFlatSiteBadgeSpec returns the fixed OpenLinks-style Bright Builds b
 
   assert.deepEqual(spec, {
     label: "Bright Builds",
-    message: "Coding requirements",
+    message: "Rules",
     labelColor: "#1c0a38",
     color: "#7f2aff",
-    outputPath: "public/badges/bright-builds-flat.svg",
-    publicPath: "/badges/bright-builds-flat.svg",
+    outputPath: "public/badges/bright-builds-rules-flat.svg",
+    publicPath: "/badges/bright-builds-rules-flat.svg",
     style: "flat",
   });
 });
@@ -33,7 +33,7 @@ test("buildFlatSiteBadgeSvg renders a stable flat badge svg", () => {
     spec: resolveFlatSiteBadgeSpec(),
   });
 
-  assert.match(svg, /aria-label="Bright Builds: Coding requirements"/u);
+  assert.match(svg, /aria-label="Bright Builds: Rules"/u);
   assert.match(svg, /data:image\/svg\+xml;base64,PHN2Zz48L3N2Zz4=/u);
   assert.match(svg, /#1c0a38/u);
   assert.match(svg, /#7f2aff/u);
@@ -62,7 +62,7 @@ test("generateFlatSiteBadgeArtifact writes once and then reports unchanged", () 
   assert.equal(fs.existsSync(absoluteOutputPath), true);
   const svg = fs.readFileSync(absoluteOutputPath, "utf8");
   assert.match(svg, /Bright Builds/u);
-  assert.match(svg, /Coding requirements/u);
+  assert.match(svg, /Rules/u);
   assert.match(svg, /#1c0a38/u);
   assert.match(svg, /#7f2aff/u);
 });
@@ -77,6 +77,6 @@ test("generateFlatSiteBadgeArtifact check mode fails when the flat badge is miss
 
   assert.throws(
     () => generateFlatSiteBadgeArtifact({ check: true, rootDir }),
-    /generated artifact is out of date: public\/badges\/bright-builds-flat\.svg/u,
+    /generated artifact is out of date: public\/badges\/bright-builds-rules-flat\.svg/u,
   );
 });

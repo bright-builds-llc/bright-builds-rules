@@ -98,7 +98,7 @@ stage_managed_paths() {
 		AGENTS.bright-builds.md \
 		CONTRIBUTING.md \
 		README.md \
-		coding-and-architecture-requirements.audit.md \
+		bright-builds-rules.audit.md \
 		.github/pull_request_template.md \
 		.github/workflows/bright-builds-auto-update.yml \
 		scripts/bright-builds-auto-update.sh; do
@@ -162,7 +162,7 @@ create_or_reuse_pr() {
 		--base "$default_branch" \
 		--head "$update_branch" \
 		--title "$commit_message" \
-		--body "Automated Bright Builds requirements update." >/dev/null
+		--body "Automated Bright Builds Rules update." >/dev/null
 
 	note "Opened pull request from ${update_branch} to ${default_branch}"
 }

@@ -16,22 +16,22 @@ test("resolveSiteBadgeSpec returns the canonical Bright Builds badge spec", () =
   const spec = resolveSiteBadgeSpec();
 
   assert.deepEqual(spec, {
-    label: "Bright Builds Requirements",
-    outputPath: "public/badges/bright-builds.svg",
-    publicPath: "/badges/bright-builds.svg",
+    label: "Bright Builds Rules",
+    outputPath: "public/badges/bright-builds-rules.svg",
+    publicPath: "/badges/bright-builds-rules.svg",
   });
 });
 
 test("buildSiteBadgeSvg renders a stable canonical badge svg", () => {
   const svg = buildSiteBadgeSvg();
 
-  assert.match(svg, /aria-label="Bright Builds Requirements"/u);
+  assert.match(svg, /aria-label="Bright Builds Rules"/u);
   assert.match(svg, /Bright Builds/u);
-  assert.match(svg, /REQUIREMENTS/u);
+  assert.match(svg, /RULES/u);
   assert.match(svg, /ACTIVE/u);
   assert.match(svg, /width="225" height="40" viewBox="0 0 225 40"/u);
   assert.match(svg, /<text x="40" y="19"[^>]*>Bright Builds<\/text>/u);
-  assert.match(svg, /<text x="40" y="31\.5"[^>]*>REQUIREMENTS<\/text>/u);
+  assert.match(svg, /<text x="40" y="31\.5"[^>]*>RULES<\/text>/u);
 });
 
 test("buildSiteBadgeSvg matches the template-backed canonical renderer", () => {
@@ -56,7 +56,7 @@ test("generateSiteBadgeArtifact check mode fails when the canonical badge is mis
 
   assert.throws(
     () => generateSiteBadgeArtifact({ check: true, rootDir }),
-    /generated artifact is out of date: public\/badges\/bright-builds\.svg/u,
+    /generated artifact is out of date: public\/badges\/bright-builds-rules\.svg/u,
   );
 });
 

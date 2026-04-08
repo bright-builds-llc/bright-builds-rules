@@ -1,7 +1,7 @@
-<!-- coding-and-architecture-requirements-managed:begin -->
-# Bright Builds Standards
+<!-- bright-builds-rules-managed:begin -->
+# Bright Builds Rules
 
-`AGENTS.md` is the entrypoint for repo-local instructions, not the complete Bright Builds specification.
+`AGENTS.md` is the entrypoint for repo-local instructions, not the complete Bright Builds Rules specification.
 
 Before plan, review, implementation, or audit work:
 
@@ -26,4 +26,4 @@ Use this routing map when deciding what to load next:
 - Keep recurring repo-specific workflow facts, commands, and links in a `## Repo-Local Guidance` section elsewhere in this file.
 - Record deliberate repo-specific exceptions and override decisions in `standards-overrides.md`.
 - If instructions elsewhere in `AGENTS.md` conflict with `AGENTS.bright-builds.md`, follow the repo-local instructions and treat them as an explicit local exception.
-<!-- coding-and-architecture-requirements-managed:end -->
+<!-- bright-builds-rules-managed:end -->

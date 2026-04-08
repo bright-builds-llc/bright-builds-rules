@@ -6,7 +6,7 @@ Use this file as the starting point for a downstream repository's contribution g
 
 ## Default contribution expectations
 
-- Treat `AGENTS.md` as the entrypoint for repo-local instructions, not the complete Bright Builds spec.
+- Treat `AGENTS.md` as the entrypoint for repo-local instructions, not the complete Bright Builds Rules spec.
 - Before plan, review, implementation, or audit work, read local `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md` when present, and the pinned canonical standards pages relevant to the task; if that has not happened yet, stop and load them before continuing.
 - Follow the local `AGENTS.md`.
 - Use the pinned version of the central standards repository as the canonical reference.

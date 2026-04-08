@@ -19,18 +19,18 @@ export interface GenerateReadmeBadgeAssetsInput {
 
 export const buildReadmeBadgeAssetSpecs = (): ReadmeBadgeAssetSpec[] => [
   {
-    filename: "bright-builds-requirements-dark.svg",
-    outputPath: "assets/badges/bright-builds-requirements-dark.svg",
+    filename: "bright-builds-rules-dark.svg",
+    outputPath: "assets/badges/bright-builds-rules-dark.svg",
     svg: buildReadmeDarkBadgeSvg(),
   },
   {
-    filename: "bright-builds-requirements-light.svg",
-    outputPath: "assets/badges/bright-builds-requirements-light.svg",
+    filename: "bright-builds-rules-light.svg",
+    outputPath: "assets/badges/bright-builds-rules-light.svg",
     svg: buildReadmeLightBadgeSvg(),
   },
   {
-    filename: "bright-builds-requirements-compact.svg",
-    outputPath: "assets/badges/bright-builds-requirements-compact.svg",
+    filename: "bright-builds-rules-compact.svg",
+    outputPath: "assets/badges/bright-builds-rules-compact.svg",
     svg: buildReadmeCompactBadgeSvg(),
   },
 ];

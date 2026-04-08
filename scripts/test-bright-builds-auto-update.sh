@@ -138,7 +138,7 @@ create_fake_curl_bin() {
   mkdir -p "$bin_dir"
   write_file "${bin_dir}/curl" $'#!/usr/bin/env bash\nset -euo pipefail\noutput=""\nurl=""\nwhile [[ $# -gt 0 ]]; do\n  case "$1" in\n    -o)\n      output="$2"\n      shift 2\n      ;;\n    -f|-s|-S|-L|-fsSL)\n      shift\n      ;;\n    *)\n      url="$1"\n      shift\n      ;;\n  esac\ndone\n[[ -n "$output" ]] || exit 1\nrequested_ref="$(printf "%s" "$url" | sed -n "s#^https://raw\\.githubusercontent\\.com/[^/]*/[^/]*/\\([^/]*\\)/.*#\\1#p")"\nrelative_path="$(printf "%s" "$url" | sed -n "s#^https://raw\\.githubusercontent\\.com/[^/]*/[^/]*/[^/]*/##p")"\n[[ -n "$relative_path" ]] || exit 1\nif [[ -n "$requested_ref" ]] && "${REAL_GIT_PATH}" -C "${FAKE_CURL_SOURCE_ROOT}" rev-parse --verify "${requested_ref}^{commit}" >/dev/null 2>&1; then\n  "${REAL_GIT_PATH}" -C "${FAKE_CURL_SOURCE_ROOT}" show "${requested_ref}:${relative_path}" > "$output"\n  exit 0\nfi\ncp "${FAKE_CURL_SOURCE_ROOT}/${relative_path}" "$output"\n'
   chmod +x "${bin_dir}/curl"
-  write_file "${bin_dir}/git" $'#!/usr/bin/env bash\nset -euo pipefail\nif [[ "${1:-}" == "ls-remote" && "${2:-}" == "https://github.com/bright-builds-llc/coding-and-architecture-requirements.git" ]]; then\n  ref="${3:-}"\n  [[ -n "$ref" ]] || exit 1\n  commit="$("${REAL_GIT_PATH}" -C "${FAKE_GIT_SOURCE_ROOT}" rev-parse "${ref}^{commit}")"\n  printf "%s\\t%s\\n" "$commit" "$ref"\n  exit 0\nfi\nexec "${REAL_GIT_PATH}" "$@"\n'
+  write_file "${bin_dir}/git" $'#!/usr/bin/env bash\nset -euo pipefail\nif [[ "${1:-}" == "ls-remote" && "${2:-}" == "https://github.com/bright-builds-llc/bright-builds-rules.git" ]]; then\n  ref="${3:-}"\n  [[ -n "$ref" ]] || exit 1\n  commit="$("${REAL_GIT_PATH}" -C "${FAKE_GIT_SOURCE_ROOT}" rev-parse "${ref}^{commit}")"\n  printf "%s\\t%s\\n" "$commit" "$ref"\n  exit 0\nfi\nexec "${REAL_GIT_PATH}" "$@"\n'
   chmod +x "${bin_dir}/git"
   FAKE_CURL_SOURCE_ROOT="$source_root"
   FAKE_GIT_SOURCE_ROOT="$source_root"
@@ -153,7 +153,7 @@ create_fake_git_bin() {
   local log_path="$2"
 
   mkdir -p "$bin_dir"
-  write_file "${bin_dir}/git" $'#!/usr/bin/env bash\nset -euo pipefail\nif [[ "${1:-}" == "ls-remote" && "${2:-}" == "https://github.com/bright-builds-llc/coding-and-architecture-requirements.git" ]]; then\n  ref="${3:-}"\n  [[ -n "$ref" ]] || exit 1\n  commit="$("${REAL_GIT_PATH}" -C "${FAKE_GIT_SOURCE_ROOT}" rev-parse "${ref}^{commit}")"\n  printf "%s\\t%s\\n" "$commit" "$ref"\n  exit 0\nfi\nif [[ "${1:-}" == "push" && "${2:-}" == "origin" && "${3:-}" == "HEAD:main" ]]; then\n  printf "rejected direct push\\n" >> "${FAKE_GIT_LOG}"\n  exit 1\nfi\nexec "${REAL_GIT_PATH}" "$@"\n'
+  write_file "${bin_dir}/git" $'#!/usr/bin/env bash\nset -euo pipefail\nif [[ "${1:-}" == "ls-remote" && "${2:-}" == "https://github.com/bright-builds-llc/bright-builds-rules.git" ]]; then\n  ref="${3:-}"\n  [[ -n "$ref" ]] || exit 1\n  commit="$("${REAL_GIT_PATH}" -C "${FAKE_GIT_SOURCE_ROOT}" rev-parse "${ref}^{commit}")"\n  printf "%s\\t%s\\n" "$commit" "$ref"\n  exit 0\nfi\nif [[ "${1:-}" == "push" && "${2:-}" == "origin" && "${3:-}" == "HEAD:main" ]]; then\n  printf "rejected direct push\\n" >> "${FAKE_GIT_LOG}"\n  exit 1\nfi\nexec "${REAL_GIT_PATH}" "$@"\n'
   chmod +x "${bin_dir}/git"
   REAL_GIT_PATH="$real_git_path"
   FAKE_GIT_LOG="$log_path"
@@ -220,7 +220,7 @@ test_pushes_directly_when_push_succeeds() {
   assert_eq "$run_status" "0" "direct-push auto-update should succeed"
   assert_contains "$run_output" "Pushed managed updates directly to main" "auto-update should report the direct push path"
   latest_subject="$(git --git-dir="$remote_path" log --format=%s -1 refs/heads/main)"
-  assert_eq "$latest_subject" "chore: update Bright Builds requirements" "direct push should update the remote default branch"
+  assert_eq "$latest_subject" "chore: update Bright Builds Rules" "direct push should update the remote default branch"
 }
 
 test_falls_back_to_pull_request_when_direct_push_fails() {

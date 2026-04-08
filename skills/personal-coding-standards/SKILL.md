@@ -1,14 +1,14 @@
 ---
 name: personal-coding-standards
-description: Use when adopting, checking, refreshing, reviewing, auditing, or audit-and-fixing code against this repository's Bright Builds coding and architecture standards.
+description: Use when adopting, checking, refreshing, reviewing, auditing, or audit-and-fixing code against Bright Builds Rules.
 ---
 
 # Personal Coding Standards
 
 Use this skill when the user wants to:
 
-- adopt the Bright Builds requirements into a repository
-- check Bright Builds adoption status in a repository
+- adopt the Bright Builds Rules into a repository
+- check Bright Builds Rules adoption status in a repository
 - refresh or sync Bright Builds managed rules in a repository
 - review code or a plan against these standards
 - audit a repository against these standards
@@ -16,15 +16,15 @@ Use this skill when the user wants to:
 
 ## Workflow
 
-1. For downstream repos with Bright Builds installed, the required reading order is: local `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md` when present, then the pinned canonical standards pages relevant to the task. Treat `AGENTS.md` as the local entrypoint, not the complete Bright Builds spec, and stop to load the missing sources before continuing if that has not happened yet.
-2. Read `../../standards/index.md` when working in this canonical repository, or otherwise load the pinned canonical standards entrypoint referenced by the downstream Bright Builds files.
+1. For downstream repos with Bright Builds Rules installed, the required reading order is: local `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md` when present, then the pinned canonical standards pages relevant to the task. Treat `AGENTS.md` as the local entrypoint, not the complete Bright Builds Rules spec, and stop to load the missing sources before continuing if that has not happened yet.
+2. Read `../../standards/index.md` when working in this canonical repository, or otherwise load the pinned canonical standards entrypoint referenced by the downstream Bright Builds Rules files.
 3. Load the standards pages that match the task, including language-specific guidance when it is relevant.
 4. Treat `../../standards/` as canonical when working in this repository. Do not duplicate or invent rules that are not present there.
 5. Resolve intent before choosing a mode:
 
-    - `adopt`: install the Bright Builds requirements into a repository
-    - `status`: inspect the current Bright Builds adoption state
-    - `refresh`: update an existing Bright Builds install or sync managed rules
+    - `adopt`: install the Bright Builds Rules into a repository
+    - `status`: inspect the current Bright Builds Rules adoption state
+    - `refresh`: update an existing Bright Builds Rules install or sync managed rules
     - `review`: evaluate a current diff, code sample, or plan
     - `audit`: run a read-only repository baseline review, whole-repo by default
     - `audit-and-fix`: run the audit first, then execute one bounded remediation wave
@@ -32,15 +32,15 @@ Use this skill when the user wants to:
 6. If the skill is invoked with no arguments, infer the mode from the current thread and repo state when that intent is clear.
 7. If the skill is invoked with no arguments and intent is still ambiguous, return a short action menu instead of erroring. Offer:
 
-    - check Bright Builds status
-    - adopt or update Bright Builds requirements
+    - check Bright Builds Rules status
+    - adopt or update Bright Builds Rules
     - run `bash ./scripts/bright-builds-auto-update.sh` when the managed helper exists
     - run an `audit`
     - run an `audit-and-fix` wave
     - review a current diff or plan
 
-8. For `adopt`, `status`, and `refresh` work, follow `../../AI-ADOPTION.md` and keep the status-first Bright Builds flow intact.
-9. For Bright Builds refresh intent, prefer the managed helper when the repo already has `./scripts/bright-builds-auto-update.sh` and the user sounds like they want to refresh or sync the installed Bright Builds rules. Run `bash ./scripts/bright-builds-auto-update.sh` from the repo root in that case.
+8. For `adopt`, `status`, and `refresh` work, follow `../../AI-ADOPTION.md` and keep the status-first Bright Builds Rules flow intact.
+9. For Bright Builds Rules refresh intent, prefer the managed helper when the repo already has `./scripts/bright-builds-auto-update.sh` and the user sounds like they want to refresh or sync the installed Bright Builds Rules. Run `bash ./scripts/bright-builds-auto-update.sh` from the repo root in that case.
 10. If the helper is missing, or the repo is not clearly an already-installed downstream repo, fall back to the status-first manager flow:
 
     - run `scripts/manage-downstream.sh status` first when working inside this canonical repository or another repo that already has that script locally
@@ -49,7 +49,7 @@ Use this skill when the user wants to:
     - use `update` when status reports `Repo state: installed`
     - stop and explain blocking files when status reports `Repo state: blocked`
     - never choose `install --force` automatically
-    - if the user explicitly opts into replacement, treat `install --force` as a backup-first merge-assisted path: inspect `.coding-and-architecture-requirements-backups/<UTC-timestamp>/`, compare the backups with the fresh managed outputs, and reapply only clearly portable downstream-specific logic or content into safe local extension points
+    - if the user explicitly opts into replacement, treat `install --force` as a backup-first merge-assisted path: inspect `.bright-builds-rules-backups/<UTC-timestamp>/`, compare the backups with the fresh managed outputs, and reapply only clearly portable downstream-specific logic or content into safe local extension points
     - safe merge destinations include repo-local `AGENTS.md` content outside the managed block, `standards-overrides.md`, existing non-managed project docs, and `README.md` content outside the managed badge block
     - if carrying prior behavior forward would require re-drifting a fully managed file, inventing a new contract, or making a non-obvious semantic choice, stop and ask the user instead of guessing
     - if `README.md` is the blocking path, keep the managed badge block immediately after the first H1 and only restore prior top-of-file badges or content below it when that does not recreate ambiguity
@@ -66,8 +66,8 @@ Use this skill when the user wants to:
 
 ## References
 
-- Bright Builds AI adoption guide: `../../AI-ADOPTION.md`
-- Raw Bright Builds installer: `https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/scripts/manage-downstream.sh`
+- Bright Builds Rules AI adoption guide: `../../AI-ADOPTION.md`
+- Raw Bright Builds Rules installer: `https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/scripts/manage-downstream.sh`
 - Standards index: `../../standards/index.md`
 - Core architecture: `../../standards/core/architecture.md`
 - Code shape: `../../standards/core/code-shape.md`
@@ -81,7 +81,7 @@ Use this skill when the user wants to:
 
 ## Output expectations
 
-- When handling Bright Builds adoption, status, or refresh work, state which helper or manager command you used and why.
+- When handling Bright Builds Rules adoption, status, or refresh work, state which helper or manager command you used and why.
 - When using the blocked merge-assisted path, state that explicit user approval was required for `install --force`, then summarize what was safely folded back in and what still needs user judgment.
 - When no clear context is available, offer the short action menu instead of failing or inventing intent.
 - When reviewing, focus findings on standards violations and note any documented exception.

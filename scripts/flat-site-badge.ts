@@ -3,10 +3,10 @@ import path from "node:path";
 import { makeBadge } from "badge-maker";
 import { ROOT, absolutePath, type GeneratedArtifactResult, writeGeneratedArtifact } from "./badge-artifacts.js";
 
-export const DEFAULT_FLAT_SITE_BADGE_OUTPUT_PATH = "public/badges/bright-builds-flat.svg";
+export const DEFAULT_FLAT_SITE_BADGE_OUTPUT_PATH = "public/badges/bright-builds-rules-flat.svg";
 export const DEFAULT_FLAT_SITE_BADGE_LOGO_PATH = "public/favicon.svg";
 export const DEFAULT_FLAT_SITE_BADGE_LABEL = "Bright Builds";
-export const DEFAULT_FLAT_SITE_BADGE_MESSAGE = "Coding requirements";
+export const DEFAULT_FLAT_SITE_BADGE_MESSAGE = "Rules";
 export const DEFAULT_FLAT_SITE_BADGE_LABEL_COLOR = "#1c0a38";
 export const DEFAULT_FLAT_SITE_BADGE_MESSAGE_COLOR = "#7f2aff";
 export const DEFAULT_FLAT_SITE_BADGE_STYLE = "flat" as const;
@@ -41,7 +41,7 @@ export const resolveFlatSiteBadgeSpec = (
   labelColor: DEFAULT_FLAT_SITE_BADGE_LABEL_COLOR,
   color: DEFAULT_FLAT_SITE_BADGE_MESSAGE_COLOR,
   outputPath,
-  publicPath: "/badges/bright-builds-flat.svg",
+  publicPath: "/badges/bright-builds-rules-flat.svg",
   style: DEFAULT_FLAT_SITE_BADGE_STYLE,
 });
 
@@ -57,7 +57,7 @@ export const readSvgFileAsDataUrl = (
 export const buildFlatSiteBadgeSvg = (input: BuildFlatSiteBadgeSvgInput): string =>
   makeBadge({
     color: input.spec.color,
-    idSuffix: "brightBuildsFlatBadge",
+    idSuffix: "brightBuildsRulesFlatBadge",
     label: input.spec.label,
     labelColor: input.spec.labelColor,
     logoBase64: input.logoDataUrl,

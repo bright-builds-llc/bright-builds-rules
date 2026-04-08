@@ -2,7 +2,7 @@ import path from "node:path";
 import { buildCanonicalSiteBadgeSvg } from "./badge-svg.js";
 import { ROOT, type GeneratedArtifactResult, writeGeneratedArtifact } from "./badge-artifacts.js";
 
-export const DEFAULT_SITE_BADGE_OUTPUT_PATH = "public/badges/bright-builds.svg";
+export const DEFAULT_SITE_BADGE_OUTPUT_PATH = "public/badges/bright-builds-rules.svg";
 
 export interface ResolvedSiteBadgeSpec {
   label: string;
@@ -17,9 +17,9 @@ export interface GenerateSiteBadgeArtifactInput {
 }
 
 export const resolveSiteBadgeSpec = (outputPath = DEFAULT_SITE_BADGE_OUTPUT_PATH): ResolvedSiteBadgeSpec => ({
-  label: "Bright Builds Requirements",
+  label: "Bright Builds Rules",
   outputPath,
-  publicPath: "/badges/bright-builds.svg",
+  publicPath: "/badges/bright-builds-rules.svg",
 });
 
 export const buildSiteBadgeSvg = (): string => buildCanonicalSiteBadgeSvg();

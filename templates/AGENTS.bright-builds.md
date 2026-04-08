@@ -18,9 +18,9 @@ Record recurring repo-specific workflow facts in `AGENTS.md` under `## Repo-Loca
 
 ## Required workflow
 
-`AGENTS.md` is the entrypoint for repo-local instructions, not a complete Bright Builds spec.
+`AGENTS.md` is the entrypoint for repo-local instructions, not a complete Bright Builds Rules spec.
 
-1. Read `AGENTS.md`, especially any `## Repo-Local Guidance` section and any repo-specific instructions outside the managed Bright Builds block.
+1. Read `AGENTS.md`, especially any `## Repo-Local Guidance` section and any repo-specific instructions outside the managed Bright Builds Rules block.
 2. Read `AGENTS.bright-builds.md`.
 3. Read `standards-overrides.md` when it exists.
 4. Read the pinned canonical standards entrypoint and any canonical pages relevant to the task before plan, review, implementation, or audit work.
@@ -30,9 +30,9 @@ Record recurring repo-specific workflow facts in `AGENTS.md` under `## Repo-Loca
 ## Routing hints
 
 - Use the local `AGENTS.md`, especially `## Repo-Local Guidance`, for repo-specific commands, prerequisites, generated-file ownership, CI-only suites, and recurring workflow facts.
-- Use this file, `AGENTS.bright-builds.md`, for the Bright Builds default workflow and high-signal cross-cutting rules that apply in most tasks.
-- Use `standards-overrides.md` for deliberate repo-specific exceptions to the Bright Builds defaults.
-- Start with the pinned canonical entrypoint `standards/index.md` when you need to choose the right Bright Builds standards page.
+- Use this file, `AGENTS.bright-builds.md`, for the Bright Builds Rules default workflow and high-signal cross-cutting rules that apply in most tasks.
+- Use `standards-overrides.md` for deliberate repo-specific exceptions to the Bright Builds Rules defaults.
+- Start with the pinned canonical entrypoint `standards/index.md` when you need to choose the right Bright Builds Rules standards page.
 - Use the canonical page `standards/core/architecture.md` for business-logic structure, domain modeling, and functional-core versus imperative-shell decisions.
 - Use the canonical page `standards/core/code-shape.md` for control flow, naming, function/file size, and readability rules.
 - Use the canonical page `standards/core/verification.md` for sync, bootstrap, and pre-commit verification rules.

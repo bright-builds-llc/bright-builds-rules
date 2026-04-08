@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-default_repo_slug="bright-builds-llc/coding-and-architecture-requirements"
+default_repo_slug="bright-builds-llc/bright-builds-rules"
 default_ref="main"
-backup_root=".coding-and-architecture-requirements-backups"
+backup_root=".bright-builds-rules-backups"
 
 agents_block_source="templates/AGENTS.md"
 agents_destination="AGENTS.md"
@@ -11,23 +11,23 @@ sidecar_source="templates/AGENTS.bright-builds.md"
 sidecar_destination="AGENTS.bright-builds.md"
 overrides_source="templates/standards-overrides.md"
 overrides_destination="standards-overrides.md"
-audit_source="templates/coding-and-architecture-requirements.audit.md"
-audit_destination="coding-and-architecture-requirements.audit.md"
+audit_source="templates/bright-builds-rules.audit.md"
+audit_destination="bright-builds-rules.audit.md"
 auto_update_script_source="templates/bright-builds-auto-update.sh"
 auto_update_script_destination="scripts/bright-builds-auto-update.sh"
 auto_update_workflow_source="templates/bright-builds-auto-update.yml"
 auto_update_workflow_destination=".github/workflows/bright-builds-auto-update.yml"
-agents_block_begin="<!-- coding-and-architecture-requirements-managed:begin -->"
-agents_block_end="<!-- coding-and-architecture-requirements-managed:end -->"
+agents_block_begin="<!-- bright-builds-rules-managed:begin -->"
+agents_block_end="<!-- bright-builds-rules-managed:end -->"
 managed_file_marker_placeholder="REPLACE_WITH_MANAGED_FILE_MARKER"
 readme_destination="README.md"
-readme_badges_begin="<!-- coding-and-architecture-requirements-readme-badges:begin -->"
-readme_badges_end="<!-- coding-and-architecture-requirements-readme-badges:end -->"
+readme_badges_begin="<!-- bright-builds-rules-readme-badges:begin -->"
+readme_badges_end="<!-- bright-builds-rules-readme-badges:end -->"
 auto_update_branch="bright-builds/auto-update"
-auto_update_commit_message="chore: update Bright Builds requirements"
+auto_update_commit_message="chore: update Bright Builds Rules"
 auto_update_cron="0 14 * * *"
 openlinks_identity_url="https://openlinks.us/"
-bright_builds_requirements_url="https://github.com/${default_repo_slug}"
+bright_builds_rules_url="https://github.com/${default_repo_slug}"
 bright_builds_badges_base_url="https://raw.githubusercontent.com/${default_repo_slug}/${default_ref}/public/badges"
 trusted_auto_update_identities=(
   "prizz"
@@ -146,7 +146,7 @@ Options:
                            main.
   --repo <owner/repo>      Source GitHub repository. Defaults to the current
                            audit source for update, otherwise
-                           bright-builds-llc/coding-and-architecture-requirements.
+                           bright-builds-llc/bright-builds-rules.
   --repo-root <path>       Target downstream repository root. Defaults to the
                            current directory.
   --auto-update <mode>     Auto-update mode for install/update. Use
@@ -155,7 +155,7 @@ Options:
                            later updates unless explicitly overridden.
   --force                  Back up and replace blocked managed files during
                            install. The backup is written to
-                           .coding-and-architecture-requirements-backups/<UTC-timestamp>.
+                           .bright-builds-rules-backups/<UTC-timestamp>.
   -h, --help               Show this help text.
 EOF
 }
@@ -179,7 +179,7 @@ utc_now() {
 
 ensure_tmp_dir() {
   if [[ -z "$tmp_dir" || ! -d "$tmp_dir" ]]; then
-    tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/coding-reqs.XXXXXX")"
+    tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/bright-builds-rules.XXXXXX")"
   fi
 }
 
@@ -209,13 +209,13 @@ build_managed_file_marker_line() {
 
   case "$relative_destination" in
     *.md)
-      printf '<!-- coding-and-architecture-requirements-managed-file: %s -->' "$relative_destination"
+      printf '<!-- bright-builds-rules-managed-file: %s -->' "$relative_destination"
       ;;
     *.sh|*.yml|*.yaml)
-      printf '# coding-and-architecture-requirements-managed-file: %s' "$relative_destination"
+      printf '# bright-builds-rules-managed-file: %s' "$relative_destination"
       ;;
     *)
-      printf '# coding-and-architecture-requirements-managed-file: %s' "$relative_destination"
+      printf '# bright-builds-rules-managed-file: %s' "$relative_destination"
       ;;
   esac
 }
@@ -655,7 +655,7 @@ append_bright_builds_readme_badge() {
     return 0
   fi
 
-  append_readme_badge "[![Bright Builds Requirements](${bright_builds_badges_base_url}/bright-builds.svg)](${bright_builds_requirements_url})"
+  append_readme_badge "[![Bright Builds Rules](${bright_builds_badges_base_url}/bright-builds-rules.svg)](${bright_builds_rules_url})"
 }
 
 append_owner_specific_readme_badge() {
