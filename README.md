@@ -1,6 +1,6 @@
 # Personal Coding and Architecture Requirements
 
-[![GitHub Stars](https://img.shields.io/github/stars/bright-builds-llc/coding-and-architecture-requirements)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
+[![GitHub Stars](https://img.shields.io/github/stars/bright-builds-llc/coding-and-architecture-requirements)](https://github.com/bright-builds-llc/coding-and-architecture-requirements) [![Bright Builds Requirements](public/badges/bright-builds.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
 
 This repository is a versioned policy and adoption kit for a personal, opinionated coding style. It is designed to work for both humans and AI agents:
 
@@ -185,6 +185,28 @@ Alternate manual badge assets:
 - `https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/assets/badges/bright-builds-requirements-light.svg`
 - `https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/assets/badges/bright-builds-requirements-compact.svg`
 
+Rendered previews:
+
+Canonical published badge:
+
+[![Bright Builds Requirements](public/badges/bright-builds.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
+
+OpenLinks-style flat badge:
+
+[![Bright Builds: Coding requirements](public/badges/bright-builds-flat.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
+
+Alternate dark badge:
+
+[![Bright Builds Requirements](assets/badges/bright-builds-requirements-dark.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
+
+Alternate light badge:
+
+[![Bright Builds Requirements](assets/badges/bright-builds-requirements-light.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
+
+Alternate compact badge:
+
+[![Uses Bright Builds](assets/badges/bright-builds-requirements-compact.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
+
 Copy-paste Markdown snippets:
 
 ```md
@@ -193,6 +215,10 @@ Copy-paste Markdown snippets:
 
 ```md
 [![Bright Builds: Coding requirements](https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/public/badges/bright-builds-flat.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
+```
+
+```md
+[![Bright Builds Requirements](https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/assets/badges/bright-builds-requirements-dark.svg)](https://github.com/bright-builds-llc/coding-and-architecture-requirements)
 ```
 
 ```md
