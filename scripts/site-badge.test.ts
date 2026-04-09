@@ -32,6 +32,10 @@ test("buildSiteBadgeSvg renders a stable canonical badge svg", () => {
   assert.match(svg, /width="225" height="40" viewBox="0 0 225 40"/u);
   assert.match(svg, /<text x="40" y="19"[^>]*>Bright Builds<\/text>/u);
   assert.match(svg, /<text x="40" y="31\.5"[^>]*>RULES<\/text>/u);
+  assert.match(
+    svg,
+    /<text x="187\.5" y="20"[^>]*text-anchor="middle"[^>]*dominant-baseline="middle"[^>]*>ACTIVE<\/text>/u,
+  );
 });
 
 test("buildSiteBadgeSvg matches the template-backed canonical renderer", () => {
