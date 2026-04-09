@@ -1,6 +1,6 @@
 # Bright Builds Rules
 
-[![GitHub Stars](https://img.shields.io/github/stars/bright-builds-llc/bright-builds-rules)](https://github.com/bright-builds-llc/bright-builds-rules) [![Bright Builds Rules](public/badges/bright-builds-rules.svg)](https://github.com/bright-builds-llc/bright-builds-rules)
+[![GitHub Stars](https://img.shields.io/github/stars/bright-builds-llc/bright-builds-rules)](https://github.com/bright-builds-llc/bright-builds-rules) [![Bright Builds: Rules](public/badges/bright-builds-rules-flat.svg)](https://github.com/bright-builds-llc/bright-builds-rules)
 
 This repository is the canonical source and adoption kit for Bright Builds Rules. It is designed to work for both humans and AI agents:
 
@@ -146,7 +146,7 @@ When the downstream repository has at least one verified default badge, or when 
 - it inserts the block after the first `# ...` H1, or at the top when no H1 exists
 - if `README.md` is missing and at least one managed README badge applies, it creates a minimal README skeleton using the repo directory name as the H1
 - it blocks conservatively when the top insertion zone already contains unmanaged badge-like content or a partial managed badge block
-- when the managed README badge block already applies, it inserts the canonical `Bright Builds Rules` badge after any verified project badges and before any owner-specific `OpenLinks profile` badge; the image is served from this repository's published `public/badges/bright-builds-rules.svg` asset and links back here
+- when the managed README badge block already applies, it inserts the OpenLinks-style flat `Bright Builds: Rules` badge after any verified project badges and before any owner-specific `OpenLinks profile` badge; the image is served from this repository's published `public/badges/bright-builds-rules-flat.svg` asset and links back here
 - `install` and `update` normalize the exact legacy Bright Builds badge snippets this repo previously documented, rewriting old `coding-and-architecture-requirements` badge markdown to the current `bright-builds-rules` snippets and removing duplicate legacy Bright Builds badge lines from the managed top insertion zone when the managed badge block applies
 - when the downstream GitHub owner normalizes to `pRizz` or `peterryszkiewicz`, it appends an `OpenLinks profile` badge linked to `https://openlinks.us/` after any project badges
 - `install --force` backs up `README.md`, repairs only that badge region, and preserves the rest of the README body
@@ -167,7 +167,7 @@ The owner-specific OpenLinks badge is separate from those verified default detec
 
 ## Bright Builds Rules Badge
 
-This repository publishes a canonical generated badge plus a small alternate badge family so downstream READMEs can show that they use Bright Builds Rules. Managed downstream README badge blocks use the canonical published badge automatically when the block already applies for verified project badges or owner-specific badges. The Bright Builds Rules badge itself does not make the managed README badge block applicable and does not cause the installer to create a README on its own.
+This repository publishes a canonical generated badge plus a small alternate badge family so downstream READMEs can show that they use Bright Builds Rules. Managed downstream README badge blocks use the OpenLinks-style flat badge by default when the block already applies for verified project badges or owner-specific badges. The Bright Builds Rules badge itself does not make the managed README badge block applicable and does not cause the installer to create a README on its own.
 
 Default badge link target:
 

@@ -97,6 +97,10 @@ current_bright_builds_canonical_badge() {
   printf '[![Bright Builds Rules](%s/public/badges/bright-builds-rules.svg)](%s)\n' "$current_bright_builds_raw_base_url" "$current_bright_builds_url"
 }
 
+current_bright_builds_flat_badge() {
+  printf '[![Bright Builds: Rules](%s/public/badges/bright-builds-rules-flat.svg)](%s)\n' "$current_bright_builds_raw_base_url" "$current_bright_builds_url"
+}
+
 insert_line_before_marker() {
   local file_path="$1"
   local marker="$2"
@@ -108,6 +112,26 @@ insert_line_before_marker() {
       print inserted_line
       print ""
       inserted = 1
+    }
+
+    {
+      print
+    }
+  ' "$file_path" > "$updated_path"
+  mv "$updated_path" "$file_path"
+}
+
+replace_exact_line() {
+  local file_path="$1"
+  local old_line="$2"
+  local new_line="$3"
+  local updated_path="${file_path}.updated"
+
+  awk -v old_line="$old_line" -v new_line="$new_line" '
+    $0 == old_line && replaced == 0 {
+      print new_line
+      replaced = 1
+      next
     }
 
     {
@@ -266,13 +290,13 @@ test_pushes_directly_when_push_succeeds() {
   assert_eq "$latest_subject" "chore: update Bright Builds Rules" "direct push should update the remote default branch"
 }
 
-test_repairs_legacy_bright_builds_badge_when_upstream_is_otherwise_unchanged() {
+test_refreshes_old_managed_canonical_badge_to_flat_default_when_upstream_is_otherwise_unchanged() {
   local bundle_root=""
   local repo_path=""
   local remote_path=""
   local fake_bin=""
   local latest_subject=""
-  local legacy_badge=""
+  local old_managed_badge=""
   local current_badge=""
 
   bundle_root="$(create_source_bundle readme-legacy-repair)"
@@ -284,20 +308,20 @@ test_repairs_legacy_bright_builds_badge_when_upstream_is_otherwise_unchanged() {
   git -C "$repo_path" remote add origin "$remote_path"
   write_file "${repo_path}/package.json" $'{\n  "devDependencies": {\n    "typescript": "5.9.2"\n  }\n}\n'
   install_auto_update_repo "$bundle_root" "$repo_path"
-  legacy_badge="$(legacy_bright_builds_canonical_badge)"
-  current_badge="$(current_bright_builds_canonical_badge)"
-  insert_line_before_marker "${repo_path}/README.md" "<!-- bright-builds-rules-readme-badges:begin -->" "$legacy_badge"
+  old_managed_badge="$(current_bright_builds_canonical_badge)"
+  current_badge="$(current_bright_builds_flat_badge)"
+  replace_exact_line "${repo_path}/README.md" "$current_badge" "$old_managed_badge"
   commit_all "$repo_path" "Initial managed install"
   git -C "$repo_path" push -u origin main >/dev/null
   create_fake_curl_bin "$fake_bin" "$bundle_root"
 
   run_auto_update "$repo_path" "$fake_bin"
-  assert_eq "$run_status" "0" "auto-update should repair known legacy Bright Builds README badges even when the upstream bundle is otherwise unchanged"
-  assert_contains "$run_output" "Pushed managed updates directly to main" "auto-update should publish the README badge repair"
-  assert_file_not_contains "${repo_path}/README.md" "$legacy_badge" "auto-update should remove the legacy Bright Builds badge from the managed insertion zone"
-  assert_file_contains "${repo_path}/README.md" "$current_badge" "auto-update should keep the current Bright Builds Rules badge"
+  assert_eq "$run_status" "0" "auto-update should refresh the old managed canonical badge to the flat default even when the upstream bundle is otherwise unchanged"
+  assert_contains "$run_output" "Pushed managed updates directly to main" "auto-update should publish the managed badge default refresh"
+  assert_file_not_contains "${repo_path}/README.md" "$old_managed_badge" "auto-update should remove the old managed canonical badge"
+  assert_file_contains "${repo_path}/README.md" "$current_badge" "auto-update should write the flat managed Bright Builds badge"
   latest_subject="$(git --git-dir="$remote_path" log --format=%s -1 refs/heads/main)"
-  assert_eq "$latest_subject" "chore: update Bright Builds Rules" "legacy badge repair should create the standard auto-update commit"
+  assert_eq "$latest_subject" "chore: update Bright Builds Rules" "managed badge default refresh should create the standard auto-update commit"
 }
 
 test_falls_back_to_pull_request_when_direct_push_fails() {
@@ -389,7 +413,7 @@ trap cleanup EXIT
 
 test_noop_when_no_changes_exist
 test_pushes_directly_when_push_succeeds
-test_repairs_legacy_bright_builds_badge_when_upstream_is_otherwise_unchanged
+test_refreshes_old_managed_canonical_badge_to_flat_default_when_upstream_is_otherwise_unchanged
 test_falls_back_to_pull_request_when_direct_push_fails
 test_fails_when_repo_state_is_blocked
 test_fails_when_repo_state_is_blocked_by_managed_file_drift

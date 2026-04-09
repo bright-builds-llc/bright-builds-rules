@@ -244,6 +244,26 @@ insert_line_before_marker() {
   mv "$updated_path" "$file_path"
 }
 
+replace_exact_line() {
+  local file_path="$1"
+  local old_line="$2"
+  local new_line="$3"
+  local updated_path="${file_path}.updated"
+
+  awk -v old_line="$old_line" -v new_line="$new_line" '
+    $0 == old_line && replaced == 0 {
+      print new_line
+      replaced = 1
+      next
+    }
+
+    {
+      print
+    }
+  ' "$file_path" > "$updated_path"
+  mv "$updated_path" "$file_path"
+}
+
 strip_whole_file_managed_markers() {
   local repo_path="$1"
   local relative_destination=""
@@ -523,10 +543,10 @@ test_peter_ryszkiewicz_owner_gets_openlinks_identity_guidance() {
   assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "do not add a second near-duplicate README placement" "guidance should avoid duplicate README promotion"
   assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Keep the host project's main brand and CTA primary." "guidance should preserve the host brand"
   assert_file_contains "${repo_path}/README.md" "GitHub Stars" "Peter-owned GitHub repos should still include project badges"
-  assert_file_contains "${repo_path}/README.md" "Bright Builds Rules" "Peter-owned repos should include the Bright Builds Rules badge"
+  assert_file_contains "${repo_path}/README.md" "Bright Builds: Rules" "Peter-owned repos should include the flat Bright Builds badge"
   assert_file_contains "${repo_path}/README.md" "OpenLinks profile" "Peter-owned repos should receive the owner-specific OpenLinks README badge"
-  assert_line_order "${repo_path}/README.md" "GitHub Stars" "Bright Builds Rules"
-  assert_line_order "${repo_path}/README.md" "Bright Builds Rules" "OpenLinks profile"
+  assert_line_order "${repo_path}/README.md" "GitHub Stars" "Bright Builds: Rules"
+  assert_line_order "${repo_path}/README.md" "Bright Builds: Rules" "OpenLinks profile"
   assert_line_order "${repo_path}/README.md" "GitHub Stars" "OpenLinks profile"
 }
 
@@ -542,11 +562,11 @@ test_owner_specific_openlinks_badge_appends_after_detected_badges() {
   assert_eq "$run_status" "0" "Peter-owned repo install should succeed when detected project badges exist"
   assert_file_contains "${repo_path}/README.md" "TypeScript 5.9.2" "Peter-owned repos should still render detected project badges"
   assert_file_contains "${repo_path}/README.md" "Vite 7.3.1" "Peter-owned repos should still render detected project badges"
-  assert_file_contains "${repo_path}/README.md" "Bright Builds Rules" "Peter-owned repos should include the Bright Builds Rules badge"
-  assert_file_contains "${repo_path}/README.md" "public/badges/bright-builds-rules.svg" "Peter-owned repos should use the canonical published Bright Builds badge path"
+  assert_file_contains "${repo_path}/README.md" "Bright Builds: Rules" "Peter-owned repos should include the flat Bright Builds badge"
+  assert_file_contains "${repo_path}/README.md" "public/badges/bright-builds-rules-flat.svg" "Peter-owned repos should use the flat Bright Builds badge path"
   assert_file_contains "${repo_path}/README.md" "OpenLinks profile" "Peter-owned repos should append the OpenLinks badge"
-  assert_line_order "${repo_path}/README.md" "Vite 7.3.1" "Bright Builds Rules"
-  assert_line_order "${repo_path}/README.md" "Bright Builds Rules" "OpenLinks profile"
+  assert_line_order "${repo_path}/README.md" "Vite 7.3.1" "Bright Builds: Rules"
+  assert_line_order "${repo_path}/README.md" "Bright Builds: Rules" "OpenLinks profile"
   assert_line_order "${repo_path}/README.md" "Vite 7.3.1" "OpenLinks profile"
 }
 
@@ -746,9 +766,9 @@ test_readme_badges_insert_after_h1_and_refresh() {
   assert_file_contains "${repo_path}/README.md" "TypeScript 5.8.4" "README should include the detected TypeScript version"
   assert_file_contains "${repo_path}/README.md" "SolidJS 1.8.19" "README should include the detected framework badge"
   assert_file_contains "${repo_path}/README.md" "Vite 7.2.1" "README should include the detected Vite badge"
-  assert_file_contains "${repo_path}/README.md" "Bright Builds Rules" "README should include the Bright Builds Rules badge once the block applies"
-  assert_file_contains "${repo_path}/README.md" "public/badges/bright-builds-rules.svg" "README should point at the canonical published Bright Builds badge"
-  assert_line_order "${repo_path}/README.md" "Vite 7.2.1" "Bright Builds Rules"
+  assert_file_contains "${repo_path}/README.md" "Bright Builds: Rules" "README should include the flat Bright Builds badge once the block applies"
+  assert_file_contains "${repo_path}/README.md" "public/badges/bright-builds-rules-flat.svg" "README should point at the flat Bright Builds badge"
+  assert_line_order "${repo_path}/README.md" "Vite 7.2.1" "Bright Builds: Rules"
 
   write_file "${repo_path}/package.json" $'{\n  "engines": {\n    "node": "22"\n  },\n  "devDependencies": {\n    "typescript": "5.9.2",\n    "vite": "7.3.1",\n    "solid-js": "1.9.0"\n  }\n}\n'
 
@@ -758,9 +778,36 @@ test_readme_badges_insert_after_h1_and_refresh() {
   assert_file_contains "${repo_path}/README.md" "TypeScript 5.9.2" "update should refresh the TypeScript badge version"
   assert_file_contains "${repo_path}/README.md" "SolidJS 1.9.0" "update should refresh the framework badge version"
   assert_file_contains "${repo_path}/README.md" "Vite 7.3.1" "update should refresh the Vite badge version"
-  assert_file_contains "${repo_path}/README.md" "Bright Builds Rules" "update should preserve the Bright Builds Rules badge"
-  assert_line_order "${repo_path}/README.md" "Vite 7.3.1" "Bright Builds Rules"
+  assert_file_contains "${repo_path}/README.md" "Bright Builds: Rules" "update should preserve the flat Bright Builds badge"
+  assert_line_order "${repo_path}/README.md" "Vite 7.3.1" "Bright Builds: Rules"
   assert_file_contains "${repo_path}/README.md" "This line should stay after the badges." "update should preserve existing README content"
+}
+
+test_update_replaces_old_managed_canonical_badge_with_flat_default() {
+  local repo_path=""
+  local old_badge=""
+  local current_badge=""
+
+  repo_path="$(create_repo readme-managed-default-migration)"
+  write_file "${repo_path}/README.md" $'# Demo App\n\nBody text remains.\n'
+  write_file "${repo_path}/package.json" $'{\n  "devDependencies": {\n    "typescript": "5.9.2"\n  }\n}\n'
+
+  run_manage "$repo_path" install
+  assert_eq "$run_status" "0" "install should succeed before migrating the managed badge default"
+
+  old_badge="$(current_bright_builds_badge canonical)"
+  current_badge="$(current_bright_builds_badge flat)"
+  replace_exact_line "${repo_path}/README.md" "$current_badge" "$old_badge"
+
+  run_manage "$repo_path" status
+  assert_eq "$run_status" "0" "status should still treat a repo with the old managed canonical badge as installed"
+  assert_contains "$run_output" "Repo state: installed" "the old managed canonical badge should be refreshed by update rather than treated as blocked drift"
+
+  run_manage "$repo_path" update
+  assert_eq "$run_status" "0" "update should migrate the old managed canonical badge to the flat default"
+  assert_file_not_contains "${repo_path}/README.md" "$old_badge" "update should remove the old managed canonical badge"
+  assert_exact_line_count "${repo_path}/README.md" "$current_badge" "1"
+  assert_file_contains "${repo_path}/README.md" "Body text remains." "update should preserve surrounding README content while migrating the managed badge default"
 }
 
 test_readme_badges_create_skeleton_and_uninstall_removes_it() {
@@ -862,7 +909,7 @@ test_status_and_update_repair_legacy_bright_builds_badge_above_managed_block() {
   assert_eq "$run_status" "0" "install should succeed before legacy badge repair"
 
   legacy_badge="$(legacy_bright_builds_badge canonical)"
-  current_badge="$(current_bright_builds_badge canonical)"
+  current_badge="$(current_bright_builds_badge flat)"
   insert_line_before_marker "${repo_path}/README.md" "$readme_badges_begin" "$legacy_badge"
 
   run_manage "$repo_path" status
@@ -926,8 +973,8 @@ EOF
   assert_file_not_contains "${repo_path}/README.md" "$legacy_dark" "update should replace the legacy dark badge"
   assert_file_not_contains "${repo_path}/README.md" "$legacy_light" "update should replace the legacy light badge"
   assert_file_not_contains "${repo_path}/README.md" "$legacy_compact" "update should replace the legacy compact badge"
-  assert_exact_line_count "${repo_path}/README.md" "$current_canonical" "2"
-  assert_exact_line_count "${repo_path}/README.md" "$current_flat" "1"
+  assert_exact_line_count "${repo_path}/README.md" "$current_canonical" "1"
+  assert_exact_line_count "${repo_path}/README.md" "$current_flat" "2"
   assert_exact_line_count "${repo_path}/README.md" "$current_dark" "1"
   assert_exact_line_count "${repo_path}/README.md" "$current_light" "1"
   assert_exact_line_count "${repo_path}/README.md" "$current_compact" "1"
@@ -1007,8 +1054,8 @@ test_rich_readme_badge_detection() {
   assert_file_contains "${repo_path}/README.md" "Rust 1.84.1" "README should include the Rust badge"
   assert_file_contains "${repo_path}/README.md" "Python >=3.11" "README should include the Python badge"
   assert_file_contains "${repo_path}/README.md" "Go 1.23.0" "README should include the Go badge"
-  assert_file_contains "${repo_path}/README.md" "Bright Builds Rules" "README should include the Bright Builds Rules badge"
-  assert_line_order "${repo_path}/README.md" "Go 1.23.0" "Bright Builds Rules"
+  assert_file_contains "${repo_path}/README.md" "Bright Builds: Rules" "README should include the flat Bright Builds badge"
+  assert_line_order "${repo_path}/README.md" "Go 1.23.0" "Bright Builds: Rules"
   assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "README.md (managed badges block)" "audit should track the managed README badge block when present"
 }
 
@@ -1151,6 +1198,7 @@ test_update_preserves_local_agents_and_overrides
 test_legacy_exact_match_install_is_still_installed_and_update_migrates_markers
 test_drifted_whole_file_managed_file_blocks_update_and_force_repairs
 test_readme_badges_insert_after_h1_and_refresh
+test_update_replaces_old_managed_canonical_badge_with_flat_default
 test_readme_badges_create_skeleton_and_uninstall_removes_it
 test_readme_badges_block_existing_top_badges_and_force_repair
 test_partial_readme_badge_block_requires_force_repair

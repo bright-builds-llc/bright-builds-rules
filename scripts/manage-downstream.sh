@@ -766,7 +766,7 @@ append_bright_builds_readme_badge() {
     return 0
   fi
 
-  append_readme_badge "[![Bright Builds Rules](${bright_builds_badges_base_url}/bright-builds-rules.svg)](${bright_builds_rules_url})"
+  append_readme_badge "[![Bright Builds: Rules](${bright_builds_badges_base_url}/bright-builds-rules-flat.svg)](${bright_builds_rules_url})"
 }
 
 append_owner_specific_readme_badge() {
