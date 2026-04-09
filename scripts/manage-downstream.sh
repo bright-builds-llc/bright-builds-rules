@@ -13,18 +13,26 @@ overrides_source="templates/standards-overrides.md"
 overrides_destination="standards-overrides.md"
 audit_source="templates/bright-builds-rules.audit.md"
 audit_destination="bright-builds-rules.audit.md"
+legacy_audit_destination="coding-and-architecture-requirements.audit.md"
 auto_update_script_source="templates/bright-builds-auto-update.sh"
 auto_update_script_destination="scripts/bright-builds-auto-update.sh"
 auto_update_workflow_source="templates/bright-builds-auto-update.yml"
 auto_update_workflow_destination=".github/workflows/bright-builds-auto-update.yml"
 agents_block_begin="<!-- bright-builds-rules-managed:begin -->"
 agents_block_end="<!-- bright-builds-rules-managed:end -->"
+legacy_agents_block_begin="<!-- coding-and-architecture-requirements-managed:begin -->"
+legacy_agents_block_end="<!-- coding-and-architecture-requirements-managed:end -->"
 managed_file_marker_placeholder="REPLACE_WITH_MANAGED_FILE_MARKER"
+managed_file_marker_prefix="bright-builds-rules-managed-file"
+legacy_managed_file_marker_prefix="coding-and-architecture-requirements-managed-file"
 readme_destination="README.md"
 readme_badges_begin="<!-- bright-builds-rules-readme-badges:begin -->"
 readme_badges_end="<!-- bright-builds-rules-readme-badges:end -->"
+legacy_readme_badges_begin="<!-- coding-and-architecture-requirements-readme-badges:begin -->"
+legacy_readme_badges_end="<!-- coding-and-architecture-requirements-readme-badges:end -->"
 auto_update_branch="bright-builds/auto-update"
 auto_update_commit_message="chore: update Bright Builds Rules"
+legacy_auto_update_commit_message="chore: update Bright Builds requirements"
 auto_update_cron="0 14 * * *"
 openlinks_identity_url="https://openlinks.us/"
 bright_builds_rules_url="https://github.com/${default_repo_slug}"
@@ -76,6 +84,8 @@ current_auto_update=""
 current_auto_update_reason=""
 current_last_operation=""
 current_last_updated_utc=""
+current_audit_destination=""
+current_install_uses_legacy_layout=0
 repo_state=""
 recommended_action=""
 repo_slug=""
@@ -94,7 +104,9 @@ repo_was_explicit=0
 ref_was_explicit=0
 auto_update_was_explicit=0
 agents_block_state="absent"
+agents_block_family="absent"
 readme_badge_state="absent"
+readme_badges_family="absent"
 readme_badge_blocking_reason=""
 readme_badges_markdown=""
 readme_has_managed_badges=0
@@ -210,16 +222,17 @@ build_managed_files_markdown() {
 
 build_managed_file_marker_line() {
   local relative_destination="$1"
+  local marker_prefix="${managed_file_marker_prefix}"
 
   case "$relative_destination" in
     *.md)
-      printf '<!-- bright-builds-rules-managed-file: %s -->' "$relative_destination"
+      printf '<!-- %s: %s -->' "$marker_prefix" "$relative_destination"
       ;;
     *.sh|*.yml|*.yaml)
-      printf '# bright-builds-rules-managed-file: %s' "$relative_destination"
+      printf '# %s: %s' "$marker_prefix" "$relative_destination"
       ;;
     *)
-      printf '# bright-builds-rules-managed-file: %s' "$relative_destination"
+      printf '# %s: %s' "$marker_prefix" "$relative_destination"
       ;;
   esac
 }
@@ -268,6 +281,19 @@ normalize_github_identity() {
 
 normalize_personal_owner_identity() {
   printf '%s\n' "${1:-}" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]'
+}
+
+is_legacy_source_repository_url() {
+  [[ "${1:-}" == "$legacy_bright_builds_url" ]]
+}
+
+resolve_effective_audit_destination() {
+  if [[ -n "$current_audit_destination" ]]; then
+    printf '%s\n' "$current_audit_destination"
+    return
+  fi
+
+  printf '%s\n' "$audit_destination"
 }
 
 is_trusted_auto_update_identity() {
@@ -541,16 +567,158 @@ render_template_to_tmp_path_for_install_state() {
   printf '%s\n' "$rendered_path"
 }
 
+rewrite_rendered_file_for_legacy_identity() {
+  local input_path="$1"
+  local output_path="$2"
+  local relative_destination="$3"
+  local line=""
+  local skip_legacy_helper_fallback_block=0
+  local previous_auto_update_line_blank=0
+
+  {
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      if [[ "$relative_destination" == "$auto_update_script_destination" && "$skip_legacy_helper_fallback_block" -eq 1 ]]; then
+        if [[ "$line" == "fi" ]]; then
+          skip_legacy_helper_fallback_block=0
+        fi
+        continue
+      fi
+
+      line="${line//bright-builds-rules-managed-file: /coding-and-architecture-requirements-managed-file: }"
+      line="${line//${agents_block_begin}/${legacy_agents_block_begin}}"
+      line="${line//${agents_block_end}/${legacy_agents_block_end}}"
+      line="${line//${readme_badges_begin}/${legacy_readme_badges_begin}}"
+      line="${line//${readme_badges_end}/${legacy_readme_badges_end}}"
+      line="${line//Bright Builds Rules default workflow/Bright Builds default workflow}"
+      line="${line//Bright Builds Rules defaults/Bright Builds defaults}"
+      line="${line//Bright Builds Rules standards page/Bright Builds standards page}"
+      line="${line//Bright Builds Rules guidance/Bright Builds guidance}"
+      line="${line//Bright Builds Rules specification./Bright Builds specification.}"
+      line="${line//Bright Builds Rules spec./Bright Builds spec.}"
+      line="${line//Bright Builds Rules block/Bright Builds block}"
+
+      case "$relative_destination" in
+        "${agents_destination}")
+          line="${line//# Bright Builds Rules/# Bright Builds Standards}"
+          ;;
+        "${audit_destination}"|"${legacy_audit_destination}")
+          line="${line//# Bright Builds Rules Audit Trail/# Coding and Architecture Requirements Audit Trail}"
+          line="${line//This file records that this repository is using the Bright Builds Rules and shows where the managed adoption files came from./This file records that this repository is using the Bright Builds coding and architecture requirements and shows where the managed adoption files came from.}"
+          ;;
+        "${auto_update_script_destination}")
+          if [[ "$line" == 'legacy_audit_path="coding-and-architecture-requirements.audit.md"' ]]; then
+            continue
+          fi
+          if [[ "$line" == *'bright-builds-rules.audit.md \' ]]; then
+            line="${line//bright-builds-rules.audit.md/coding-and-architecture-requirements.audit.md}"
+          elif [[ "$line" == *'coding-and-architecture-requirements.audit.md \' ]]; then
+            continue
+          fi
+          if [[ "$line" == 'if [[ ! -f "$audit_path" && -f "$legacy_audit_path" ]]; then' ]]; then
+            skip_legacy_helper_fallback_block=1
+            continue
+          fi
+          line="${line//Automated Bright Builds Rules update./Automated Bright Builds requirements update.}"
+          ;;
+      esac
+
+      if [[ "$relative_destination" == "$auto_update_script_destination" ]]; then
+        if [[ "$line" =~ ^[[:space:]]*$ ]]; then
+          if [[ "$previous_auto_update_line_blank" -eq 1 ]]; then
+            continue
+          fi
+          previous_auto_update_line_blank=1
+        else
+          previous_auto_update_line_blank=0
+        fi
+      fi
+
+      printf '%s\n' "$line"
+    done < "$input_path"
+  } > "$output_path"
+}
+
+render_template_to_legacy_identity_tmp_path_for_install_state() {
+  local source_path="$1"
+  local tmp_stem="$2"
+  local relative_destination="$3"
+  local managed_files_markdown="${4:-}"
+  local include_managed_file_marker="${5:-enabled}"
+  local compare_downstream_owner="${6-__CURRENT__}"
+  local compare_repo_url="${current_source:-$legacy_bright_builds_url}"
+  local compare_requested_ref="${current_ref:-$ref}"
+  local compare_exact_commit="${current_exact_commit:-$exact_commit}"
+  local compare_entrypoint="${current_entrypoint:-}"
+  local compare_auto_update_mode="${current_auto_update:-$auto_update_mode}"
+  local compare_auto_update_reason="${current_auto_update_reason:-$auto_update_reason}"
+  local compare_last_operation="${current_last_operation:-}"
+  local compare_last_updated_utc="${current_last_updated_utc:-}"
+  local compare_owner_specific_guidance_markdown=""
+  local compare_repo_slug=""
+  local repo_url=""
+  local ref=""
+  local exact_commit=""
+  local standards_index_url=""
+  local auto_update_mode=""
+  local auto_update_reason=""
+  local last_operation=""
+  local last_updated_utc=""
+  local audit_destination="$legacy_audit_destination"
+  local managed_file_marker_prefix="$legacy_managed_file_marker_prefix"
+  local auto_update_commit_message="$legacy_auto_update_commit_message"
+  local raw_base=""
+  local downloaded_path=""
+  local rendered_path=""
+  local compat_rendered_path=""
+
+  if [[ -z "$compare_entrypoint" ]]; then
+    compare_entrypoint="${compare_repo_url}/blob/${compare_requested_ref}/standards/index.md"
+  fi
+
+  repo_url="$compare_repo_url"
+  ref="$compare_requested_ref"
+  exact_commit="$compare_exact_commit"
+  standards_index_url="$compare_entrypoint"
+  auto_update_mode="$compare_auto_update_mode"
+  auto_update_reason="$compare_auto_update_reason"
+  last_operation="$compare_last_operation"
+  last_updated_utc="$compare_last_updated_utc"
+  compare_repo_slug="$(extract_repo_slug_from_url "$repo_url")"
+
+  if [[ "$compare_downstream_owner" == "__CURRENT__" ]]; then
+    compare_owner_specific_guidance_markdown="$owner_specific_guidance_markdown"
+  else
+    compare_owner_specific_guidance_markdown="$(build_owner_specific_guidance_markdown "$compare_downstream_owner")"
+  fi
+
+  if [[ -n "$compare_repo_slug" ]]; then
+    raw_base="https://raw.githubusercontent.com/${compare_repo_slug}/${compare_requested_ref}"
+  fi
+
+  ensure_tmp_dir
+  downloaded_path="${tmp_dir}/${tmp_stem}.legacy.source"
+  rendered_path="${tmp_dir}/${tmp_stem}.legacy.rendered"
+  compat_rendered_path="${tmp_dir}/${tmp_stem}.legacy.compat.rendered"
+  download_file "$source_path" "$downloaded_path"
+  render_template_file "$downloaded_path" "$rendered_path" "$managed_files_markdown" "$relative_destination" "$include_managed_file_marker" "$compare_owner_specific_guidance_markdown"
+  rewrite_rendered_file_for_legacy_identity "$rendered_path" "$compat_rendered_path" "$relative_destination"
+  printf '%s\n' "$compat_rendered_path"
+}
+
 write_rendered_file() {
   local source_path="$1"
   local relative_destination="$2"
   local managed_files_markdown="${3:-}"
   local destination_path="${repo_root}/${relative_destination}"
   local rendered_path=""
+  local updated_path=""
 
   rendered_path="$(render_template_to_tmp_path "$source_path" "$(basename "$relative_destination")" "$managed_files_markdown" "$relative_destination")"
   mkdir -p "$(dirname "$destination_path")"
-  cp "$rendered_path" "$destination_path"
+  ensure_tmp_dir
+  updated_path="${tmp_dir}/$(basename "$relative_destination").write"
+  cp "$rendered_path" "$updated_path"
+  mv "$updated_path" "$destination_path"
   note "Wrote ${relative_destination}"
 }
 
@@ -1375,6 +1543,69 @@ detect_marker_block_state() {
   ' "$file_path"
 }
 
+compatible_marker_state="absent"
+compatible_marker_family="absent"
+
+resolve_compatible_marker_block_state() {
+  local file_path="$1"
+  local current_begin_marker="$2"
+  local current_end_marker="$3"
+  local legacy_begin_marker="$4"
+  local legacy_end_marker="$5"
+  local current_state=""
+  local legacy_state=""
+
+  compatible_marker_state="absent"
+  compatible_marker_family="absent"
+
+  current_state="$(detect_marker_block_state "$file_path" "$current_begin_marker" "$current_end_marker")"
+  legacy_state="$(detect_marker_block_state "$file_path" "$legacy_begin_marker" "$legacy_end_marker")"
+
+  if [[ "$current_state" == "present" && "$legacy_state" == "absent" ]]; then
+    compatible_marker_state="present"
+    compatible_marker_family="current"
+    return
+  fi
+
+  if [[ "$current_state" == "absent" && "$legacy_state" == "present" ]]; then
+    compatible_marker_state="present"
+    compatible_marker_family="legacy"
+    return
+  fi
+
+  if [[ "$current_state" == "absent" && "$legacy_state" == "absent" ]]; then
+    compatible_marker_state="absent"
+    compatible_marker_family="absent"
+    return
+  fi
+
+  compatible_marker_state="partial"
+  compatible_marker_family="partial"
+}
+
+resolve_agents_block_state() {
+  local file_path="$1"
+
+  resolve_compatible_marker_block_state "$file_path" "$agents_block_begin" "$agents_block_end" "$legacy_agents_block_begin" "$legacy_agents_block_end"
+  agents_block_state="$compatible_marker_state"
+  agents_block_family="$compatible_marker_family"
+}
+
+resolve_readme_badges_block_state() {
+  local file_path="$1"
+
+  resolve_compatible_marker_block_state "$file_path" "$readme_badges_begin" "$readme_badges_end" "$legacy_readme_badges_begin" "$legacy_readme_badges_end"
+  readme_badges_family="$compatible_marker_family"
+}
+
+line_is_any_readme_badges_begin_marker() {
+  [[ "${1:-}" == "$readme_badges_begin" || "${1:-}" == "$legacy_readme_badges_begin" ]]
+}
+
+line_is_any_readme_badges_end_marker() {
+  [[ "${1:-}" == "$readme_badges_end" || "${1:-}" == "$legacy_readme_badges_end" ]]
+}
+
 readme_insertion_zone_has_unmanaged_badges() {
   local file_path="$1"
   local lines=()
@@ -1405,12 +1636,12 @@ readme_insertion_zone_has_unmanaged_badges() {
   for ((index = start_index; index < ${#lines[@]}; index++)); do
     line="${lines[index]}"
 
-    if [[ "$line" == "$readme_badges_begin" ]]; then
+    if line_is_any_readme_badges_begin_marker "$line"; then
       in_managed=1
       continue
     fi
 
-    if [[ "$line" == "$readme_badges_end" ]]; then
+    if line_is_any_readme_badges_end_marker "$line"; then
       in_managed=0
       continue
     fi
@@ -1448,7 +1679,8 @@ resolve_readme_badge_state() {
     return
   fi
 
-  block_state="$(detect_marker_block_state "$destination_path" "$readme_badges_begin" "$readme_badges_end")"
+  resolve_readme_badges_block_state "$destination_path"
+  block_state="$compatible_marker_state"
 
   if [[ "$block_state" == "partial" ]]; then
     readme_badge_blocking_reason="incomplete managed README badge block"
@@ -1473,11 +1705,6 @@ resolve_readme_badge_state() {
   fi
 
   printf 'not applicable\n'
-}
-
-detect_agents_block_state() {
-  local file_path="$1"
-  detect_marker_block_state "$file_path" "$agents_block_begin" "$agents_block_end"
 }
 
 replace_marker_block() {
@@ -1524,10 +1751,24 @@ replace_marker_block() {
 }
 
 replace_managed_block() {
+  resolve_agents_block_state "$1"
+
+  if [[ "$agents_block_family" == "legacy" ]]; then
+    replace_marker_block "$1" "$2" "$3" "$legacy_agents_block_begin" "$legacy_agents_block_end"
+    return
+  fi
+
   replace_marker_block "$1" "$2" "$3" "$agents_block_begin" "$agents_block_end"
 }
 
 replace_readme_badges_block() {
+  resolve_readme_badges_block_state "$1"
+
+  if [[ "$readme_badges_family" == "legacy" ]]; then
+    replace_marker_block "$1" "$2" "$3" "$legacy_readme_badges_begin" "$legacy_readme_badges_end"
+    return
+  fi
+
   replace_marker_block "$1" "$2" "$3" "$readme_badges_begin" "$readme_badges_end"
 }
 
@@ -1564,10 +1805,24 @@ remove_marker_block() {
 }
 
 remove_managed_block() {
+  resolve_agents_block_state "$1"
+
+  if [[ "$agents_block_family" == "legacy" ]]; then
+    remove_marker_block "$1" "$2" "$legacy_agents_block_begin" "$legacy_agents_block_end"
+    return
+  fi
+
   remove_marker_block "$1" "$2" "$agents_block_begin" "$agents_block_end"
 }
 
 remove_readme_badges_block() {
+  resolve_readme_badges_block_state "$1"
+
+  if [[ "$readme_badges_family" == "legacy" ]]; then
+    remove_marker_block "$1" "$2" "$legacy_readme_badges_begin" "$legacy_readme_badges_end"
+    return
+  fi
+
   remove_marker_block "$1" "$2" "$readme_badges_begin" "$readme_badges_end"
 }
 
@@ -1575,8 +1830,8 @@ remove_readme_badge_markers() {
   local input_path="$1"
   local output_path="$2"
 
-  awk -v begin_marker="$readme_badges_begin" -v end_marker="$readme_badges_end" '
-    $0 == begin_marker || $0 == end_marker {
+  awk -v begin_marker="$readme_badges_begin" -v end_marker="$readme_badges_end" -v legacy_begin_marker="$legacy_readme_badges_begin" -v legacy_end_marker="$legacy_readme_badges_end" '
+    $0 == begin_marker || $0 == end_marker || $0 == legacy_begin_marker || $0 == legacy_end_marker {
       next
     }
 
@@ -1702,13 +1957,13 @@ strip_readme_badge_region() {
       line="${lines[index]}"
 
       if [[ "$in_marker_block" -eq 1 ]]; then
-        if [[ "$line" == "$readme_badges_end" ]]; then
+        if line_is_any_readme_badges_end_marker "$line"; then
           in_marker_block=0
           ((index++))
           continue
         fi
 
-        if line_is_blank "$line" || readme_line_is_badge_like "$line" || [[ "$line" == "$readme_badges_begin" ]]; then
+        if line_is_blank "$line" || readme_line_is_badge_like "$line" || line_is_any_readme_badges_begin_marker "$line"; then
           ((index++))
           continue
         fi
@@ -1716,13 +1971,13 @@ strip_readme_badge_region() {
         break
       fi
 
-      if [[ "$line" == "$readme_badges_begin" ]]; then
+      if line_is_any_readme_badges_begin_marker "$line"; then
         in_marker_block=1
         ((index++))
         continue
       fi
 
-      if [[ "$line" == "$readme_badges_end" ]] || line_is_blank "$line" || readme_line_is_badge_like "$line"; then
+      if line_is_any_readme_badges_end_marker "$line" || line_is_blank "$line" || readme_line_is_badge_like "$line"; then
         ((index++))
         continue
       fi
@@ -1852,7 +2107,7 @@ write_or_update_agents_file() {
   local stripped_path=""
 
   rendered_block_path="$(render_template_to_tmp_path "$agents_block_source" "agents-block")"
-  agents_block_state="$(detect_agents_block_state "$destination_path")"
+  resolve_agents_block_state "$destination_path"
 
   if [[ ! -f "$destination_path" ]]; then
     cp "$rendered_block_path" "$destination_path"
@@ -1904,7 +2159,18 @@ ensure_overrides_file() {
 }
 
 build_current_managed_status_paths() {
-  local entries=("${base_managed_status_paths[@]}")
+  local effective_audit_destination=""
+  local entries=()
+
+  effective_audit_destination="$(resolve_effective_audit_destination)"
+  entries=(
+    "${agents_destination}"
+    "${sidecar_destination}"
+    "CONTRIBUTING.md"
+    ".github/pull_request_template.md"
+    "${effective_audit_destination}"
+    "${overrides_destination}"
+  )
 
   if auto_update_files_are_relevant; then
     entries+=("${auto_update_script_destination}" "${auto_update_workflow_destination}")
@@ -1916,7 +2182,14 @@ build_current_managed_status_paths() {
 build_managed_files_markdown_for_state() {
   local current_readme_badge_state="$1"
   local current_auto_update_mode="$2"
-  local entries=("${base_managed_audit_entries[@]}")
+  local current_audit_relative_destination="${3:-$audit_destination}"
+  local entries=(
+    "${agents_destination} (managed block)"
+    "${sidecar_destination}"
+    "CONTRIBUTING.md"
+    ".github/pull_request_template.md"
+    "${current_audit_relative_destination}"
+  )
 
   if [[ "$current_readme_badge_state" == "present" ]]; then
     entries+=("${readme_destination} (managed badges block)")
@@ -1930,11 +2203,11 @@ build_managed_files_markdown_for_state() {
 }
 
 build_current_managed_files_markdown() {
-  build_managed_files_markdown_for_state "$readme_badge_state" "$auto_update_mode"
+  build_managed_files_markdown_for_state "$readme_badge_state" "$auto_update_mode" "$audit_destination"
 }
 
 build_installed_managed_files_markdown() {
-  build_managed_files_markdown_for_state "$readme_badge_state" "${current_auto_update:-$auto_update_mode}"
+  build_managed_files_markdown_for_state "$readme_badge_state" "${current_auto_update:-$auto_update_mode}" "$(resolve_effective_audit_destination)"
 }
 
 remove_auto_update_files() {
@@ -1970,11 +2243,19 @@ resolve_whole_file_managed_state() {
   local relative_destination="$2"
   local managed_files_markdown="${3:-}"
   local destination_path="${repo_root}/${relative_destination}"
+  local actual_relative_destination="$relative_destination"
   local marked_path=""
   local legacy_path=""
   local actual_owner_specific_guidance_owner=""
   local alternate_marked_path=""
   local alternate_legacy_path=""
+  local legacy_identity_marked_path=""
+  local legacy_identity_unmarked_path=""
+
+  if [[ "$relative_destination" == "$audit_destination" && ! -f "$destination_path" && -f "${repo_root}/${legacy_audit_destination}" ]]; then
+    destination_path="${repo_root}/${legacy_audit_destination}"
+    actual_relative_destination="$legacy_audit_destination"
+  fi
 
   if [[ ! -f "$destination_path" ]]; then
     printf 'missing\n'
@@ -1993,6 +2274,18 @@ resolve_whole_file_managed_state() {
     return
   fi
 
+  legacy_identity_marked_path="$(render_template_to_legacy_identity_tmp_path_for_install_state "$source_path" "$(basename "$actual_relative_destination").legacy-identity.marked" "$actual_relative_destination" "$managed_files_markdown" "enabled")"
+  if cmp -s "$destination_path" "$legacy_identity_marked_path"; then
+    printf 'legacy\n'
+    return
+  fi
+
+  legacy_identity_unmarked_path="$(render_template_to_legacy_identity_tmp_path_for_install_state "$source_path" "$(basename "$actual_relative_destination").legacy-identity.unmarked" "$actual_relative_destination" "$managed_files_markdown" "disabled")"
+  if cmp -s "$destination_path" "$legacy_identity_unmarked_path"; then
+    printf 'legacy\n'
+    return
+  fi
+
   if [[ "$relative_destination" == "$sidecar_destination" ]]; then
     if [[ -n "$owner_specific_guidance_markdown" ]]; then
       alternate_marked_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").marked.no-owner-guidance" "$relative_destination" "$managed_files_markdown" "enabled" "")"
@@ -2002,6 +2295,18 @@ resolve_whole_file_managed_state() {
       fi
 
       alternate_legacy_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").legacy.no-owner-guidance" "$relative_destination" "$managed_files_markdown" "disabled" "")"
+      if cmp -s "$destination_path" "$alternate_legacy_path"; then
+        printf 'legacy\n'
+        return
+      fi
+
+      alternate_marked_path="$(render_template_to_legacy_identity_tmp_path_for_install_state "$source_path" "$(basename "$actual_relative_destination").legacy-identity.marked.no-owner-guidance" "$actual_relative_destination" "$managed_files_markdown" "enabled" "")"
+      if cmp -s "$destination_path" "$alternate_marked_path"; then
+        printf 'legacy\n'
+        return
+      fi
+
+      alternate_legacy_path="$(render_template_to_legacy_identity_tmp_path_for_install_state "$source_path" "$(basename "$actual_relative_destination").legacy-identity.unmarked.no-owner-guidance" "$actual_relative_destination" "$managed_files_markdown" "disabled" "")"
       if cmp -s "$destination_path" "$alternate_legacy_path"; then
         printf 'legacy\n'
         return
@@ -2017,6 +2322,18 @@ resolve_whole_file_managed_state() {
       fi
 
       alternate_legacy_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").legacy.owner-guidance-compat" "$relative_destination" "$managed_files_markdown" "disabled" "$actual_owner_specific_guidance_owner")"
+      if cmp -s "$destination_path" "$alternate_legacy_path"; then
+        printf 'legacy\n'
+        return
+      fi
+
+      alternate_marked_path="$(render_template_to_legacy_identity_tmp_path_for_install_state "$source_path" "$(basename "$actual_relative_destination").legacy-identity.marked.owner-guidance-compat" "$actual_relative_destination" "$managed_files_markdown" "enabled" "$actual_owner_specific_guidance_owner")"
+      if cmp -s "$destination_path" "$alternate_marked_path"; then
+        printf 'legacy\n'
+        return
+      fi
+
+      alternate_legacy_path="$(render_template_to_legacy_identity_tmp_path_for_install_state "$source_path" "$(basename "$actual_relative_destination").legacy-identity.unmarked.owner-guidance-compat" "$actual_relative_destination" "$managed_files_markdown" "disabled" "$actual_owner_specific_guidance_owner")"
       if cmp -s "$destination_path" "$alternate_legacy_path"; then
         printf 'legacy\n'
         return
@@ -2207,6 +2524,43 @@ write_audit_manifest() {
   write_rendered_file "$audit_source" "$audit_destination" "$(build_current_managed_files_markdown)"
 }
 
+remove_legacy_audit_manifest_if_migrated() {
+  local legacy_audit_path="${repo_root}/${legacy_audit_destination}"
+
+  if [[ ! -f "$legacy_audit_path" || ! -f "${repo_root}/${audit_destination}" ]]; then
+    return
+  fi
+
+  if [[ "${GITHUB_ACTIONS:-}" == "true" && "$current_audit_destination" == "$legacy_audit_destination" ]]; then
+    return
+  fi
+
+  if [[ "$current_audit_destination" == "$legacy_audit_destination" || "$current_audit_destination" == "$audit_destination" ]]; then
+    rm -f "$legacy_audit_path"
+    note "Removed ${legacy_audit_destination}"
+  fi
+}
+
+stage_legacy_audit_migration_for_github_actions() {
+  if [[ "$current_audit_destination" != "$legacy_audit_destination" ]]; then
+    return
+  fi
+
+  if [[ "${GITHUB_ACTIONS:-}" != "true" ]]; then
+    return
+  fi
+
+  if ! command -v git >/dev/null 2>&1; then
+    return
+  fi
+
+  if ! git -C "$repo_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    return
+  fi
+
+  git -C "$repo_root" add -A -- "$audit_destination" "$legacy_audit_destination" >/dev/null 2>&1 || true
+}
+
 resolve_current_install_metadata() {
   current_source=""
   current_ref=""
@@ -2216,19 +2570,30 @@ resolve_current_install_metadata() {
   current_auto_update_reason=""
   current_last_operation=""
   current_last_updated_utc=""
+  current_audit_destination=""
+  current_install_uses_legacy_layout=0
 
-  if [[ ! -f "${repo_root}/${audit_destination}" ]]; then
-    return
+  if [[ -f "${repo_root}/${audit_destination}" ]]; then
+    current_audit_destination="$audit_destination"
+  elif [[ -f "${repo_root}/${legacy_audit_destination}" ]]; then
+    current_audit_destination="$legacy_audit_destination"
+    current_install_uses_legacy_layout=1
+  else
+    return 0
   fi
 
-  current_source="$(extract_markdown_value "${repo_root}/${audit_destination}" "Source repository")"
-  current_ref="$(extract_markdown_value "${repo_root}/${audit_destination}" "Version pin")"
-  current_exact_commit="$(extract_markdown_value "${repo_root}/${audit_destination}" "Exact commit")"
-  current_entrypoint="$(extract_markdown_value "${repo_root}/${audit_destination}" "Canonical entrypoint")"
-  current_auto_update="$(extract_markdown_value "${repo_root}/${audit_destination}" "Auto-update")"
-  current_auto_update_reason="$(extract_markdown_value "${repo_root}/${audit_destination}" "Auto-update reason")"
-  current_last_operation="$(extract_markdown_value "${repo_root}/${audit_destination}" "Last operation")"
-  current_last_updated_utc="$(extract_markdown_value "${repo_root}/${audit_destination}" "Last updated (UTC)")"
+  current_source="$(extract_markdown_value "${repo_root}/${current_audit_destination}" "Source repository")"
+  current_ref="$(extract_markdown_value "${repo_root}/${current_audit_destination}" "Version pin")"
+  current_exact_commit="$(extract_markdown_value "${repo_root}/${current_audit_destination}" "Exact commit")"
+  current_entrypoint="$(extract_markdown_value "${repo_root}/${current_audit_destination}" "Canonical entrypoint")"
+  current_auto_update="$(extract_markdown_value "${repo_root}/${current_audit_destination}" "Auto-update")"
+  current_auto_update_reason="$(extract_markdown_value "${repo_root}/${current_audit_destination}" "Auto-update reason")"
+  current_last_operation="$(extract_markdown_value "${repo_root}/${current_audit_destination}" "Last operation")"
+  current_last_updated_utc="$(extract_markdown_value "${repo_root}/${current_audit_destination}" "Last updated (UTC)")"
+
+  if is_legacy_source_repository_url "$current_source"; then
+    current_install_uses_legacy_layout=1
+  fi
 }
 
 determine_repo_state() {
@@ -2236,12 +2601,14 @@ determine_repo_state() {
   local path=""
   local auto_update_path=""
   local installed_signal=0
+  local effective_audit_destination=""
 
   repo_state=""
   recommended_action=""
   blocking_paths=()
-  agents_block_state="$(detect_agents_block_state "$agents_path")"
+  resolve_agents_block_state "$agents_path"
   readme_badge_state="$(resolve_readme_badge_state)"
+  effective_audit_destination="$(resolve_effective_audit_destination)"
 
   if [[ "$agents_block_state" == "present" && -f "${repo_root}/${sidecar_destination}" ]]; then
     installed_signal=1
@@ -2265,7 +2632,7 @@ determine_repo_state() {
   fi
 
   if [[ "$installed_signal" -ne 1 ]]; then
-    for path in "CONTRIBUTING.md" ".github/pull_request_template.md" "${audit_destination}"; do
+    for path in "CONTRIBUTING.md" ".github/pull_request_template.md" "${effective_audit_destination}"; do
       if [[ -f "${repo_root}/${path}" ]]; then
         append_unique_blocking_path "$path"
       fi
@@ -2367,6 +2734,8 @@ install_or_update() {
   write_or_update_readme_file
   sync_auto_update_files
   write_audit_manifest "$operation"
+  remove_legacy_audit_manifest_if_migrated
+  stage_legacy_audit_migration_for_github_actions
 }
 
 status() {
@@ -2399,7 +2768,9 @@ status() {
     fi
   done < <(build_current_managed_status_paths)
 
-  if [[ -f "${repo_root}/${audit_destination}" ]]; then
+  if [[ -n "$current_audit_destination" && -f "${repo_root}/${current_audit_destination}" ]]; then
+    note "Audit trail: ${current_audit_destination}"
+  elif [[ -f "${repo_root}/${audit_destination}" ]]; then
     note "Audit trail: ${audit_destination}"
   fi
 
@@ -2430,7 +2801,8 @@ uninstall() {
   local relative_destination=""
   local managed_files_markdown=""
 
-  state="$(detect_agents_block_state "$destination_path")"
+  resolve_agents_block_state "$destination_path"
+  state="$agents_block_state"
 
   if [[ "$state" == "present" ]]; then
     ensure_tmp_dir
@@ -2450,7 +2822,8 @@ uninstall() {
     note "Skipped ${agents_destination} because the managed marker block is incomplete"
   fi
 
-  readme_state="$(detect_marker_block_state "$readme_path" "$readme_badges_begin" "$readme_badges_end")"
+  resolve_readme_badges_block_state "$readme_path"
+  readme_state="$compatible_marker_state"
 
   if [[ "$readme_state" == "present" ]]; then
     ensure_tmp_dir
@@ -2558,7 +2931,7 @@ repo_root="$(cd "$repo_root" && pwd)"
 
 resolve_current_install_metadata
 
-if [[ "$repo_was_explicit" -eq 0 && -n "$current_source" ]]; then
+if [[ "$repo_was_explicit" -eq 0 && -n "$current_source" ]] && ! is_legacy_source_repository_url "$current_source"; then
   maybe_repo_slug="$(extract_repo_slug_from_url "$current_source")"
 
   if [[ -n "$maybe_repo_slug" ]]; then

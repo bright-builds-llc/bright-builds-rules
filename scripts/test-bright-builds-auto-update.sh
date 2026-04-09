@@ -10,6 +10,8 @@ legacy_bright_builds_url="https://github.com/bright-builds-llc/coding-and-archit
 legacy_bright_builds_raw_base_url="https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main"
 current_bright_builds_url="https://github.com/bright-builds-llc/bright-builds-rules"
 current_bright_builds_raw_base_url="https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main"
+legacy_audit_destination="coding-and-architecture-requirements.audit.md"
+legacy_repo_ref="0d5dce1^"
 run_output=""
 run_status=0
 
@@ -156,6 +158,29 @@ create_source_bundle() {
   printf '%s\n' "$bundle_root"
 }
 
+create_legacy_source_bundle() {
+  local name="$1"
+  local bundle_root="${temp_root}/${name}-legacy-bundle"
+  local path=""
+
+  mkdir -p "${bundle_root}/scripts" "${bundle_root}/templates"
+  for path in \
+    "scripts/manage-downstream.sh" \
+    "templates/AGENTS.md" \
+    "templates/AGENTS.bright-builds.md" \
+    "templates/CONTRIBUTING.md" \
+    "templates/pull_request_template.md" \
+    "templates/coding-and-architecture-requirements.audit.md" \
+    "templates/standards-overrides.md" \
+    "templates/bright-builds-auto-update.sh" \
+    "templates/bright-builds-auto-update.yml"; do
+    mkdir -p "${bundle_root}/$(dirname "$path")"
+    git -C "${repo_root}" show "${legacy_repo_ref}:${path}" > "${bundle_root}/${path}"
+  done
+  chmod +x "${bundle_root}/scripts/manage-downstream.sh"
+  printf '%s\n' "$bundle_root"
+}
+
 init_git_repo() {
   local repo_path="$1"
 
@@ -192,7 +217,7 @@ run_auto_update() {
   local path_prefix="$2"
 
   set +e
-  run_output="$(env PATH="${path_prefix}:$PATH" bash "${repo_path}/scripts/bright-builds-auto-update.sh" 2>&1)"
+  run_output="$(env GITHUB_ACTIONS=true PATH="${path_prefix}:$PATH" bash "${repo_path}/scripts/bright-builds-auto-update.sh" 2>&1)"
   run_status=$?
   set -e
 }
@@ -324,6 +349,43 @@ test_refreshes_old_managed_canonical_badge_to_flat_default_when_upstream_is_othe
   assert_eq "$latest_subject" "chore: update Bright Builds Rules" "managed badge default refresh should create the standard auto-update commit"
 }
 
+test_legacy_helper_migrates_prerename_install_with_current_manager() {
+  local legacy_bundle_root=""
+  local current_bundle_root=""
+  local repo_path=""
+  local remote_path=""
+  local fake_bin=""
+  local commit_count=""
+
+  legacy_bundle_root="$(create_legacy_source_bundle legacy-helper)"
+  current_bundle_root="$(create_source_bundle legacy-helper-current)"
+  repo_path="$(create_repo legacy-helper-repo)"
+  remote_path="$(create_bare_remote legacy-helper-origin)"
+  fake_bin="${temp_root}/legacy-helper-bin"
+
+  init_git_repo "$repo_path"
+  git -C "$repo_path" remote add origin "$remote_path"
+  write_file "${repo_path}/README.md" $'# Legacy App\n\nBody text remains.\n'
+  write_file "${repo_path}/package.json" $'{\n  "devDependencies": {\n    "typescript": "5.9.2"\n  }\n}\n'
+  bash "${legacy_bundle_root}/scripts/manage-downstream.sh" install --auto-update enabled --ref main --repo-root "$repo_path" >/dev/null
+  assert_file_exists "${repo_path}/${legacy_audit_destination}"
+  commit_all "$repo_path" "Initial legacy managed install"
+  git -C "$repo_path" push -u origin main >/dev/null
+  create_fake_curl_bin "$fake_bin" "$current_bundle_root"
+
+  run_auto_update "$repo_path" "$fake_bin"
+  assert_eq "$run_status" "0" "legacy helper auto-update should succeed by migrating the install through the current manager"
+  assert_contains "$run_output" "Repo state: installed" "legacy helper run should classify the repo as installed before migration"
+  assert_file_exists "${repo_path}/${legacy_audit_destination}"
+  assert_file_exists "${repo_path}/bright-builds-rules.audit.md"
+  assert_file_contains "${repo_path}/AGENTS.md" "<!-- bright-builds-rules-managed:begin -->" "legacy helper migration should rewrite AGENTS markers"
+  assert_file_contains "${repo_path}/README.md" "<!-- bright-builds-rules-readme-badges:begin -->" "legacy helper migration should rewrite README badge markers"
+  assert_file_contains "${repo_path}/scripts/bright-builds-auto-update.sh" "bright-builds-rules.audit.md" "legacy helper migration should rewrite the helper to the new audit path"
+  assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "Source repository: \`https://github.com/bright-builds-llc/bright-builds-rules\`" "legacy helper migration should write the new audit manifest"
+  commit_count="$(git -C "$repo_path" rev-list --count HEAD)"
+  assert_eq "$commit_count" "2" "legacy helper migration should create one update commit"
+}
+
 test_falls_back_to_pull_request_when_direct_push_fails() {
   local bundle_root=""
   local repo_path=""
@@ -414,6 +476,7 @@ trap cleanup EXIT
 test_noop_when_no_changes_exist
 test_pushes_directly_when_push_succeeds
 test_refreshes_old_managed_canonical_badge_to_flat_default_when_upstream_is_otherwise_unchanged
+test_legacy_helper_migrates_prerename_install_with_current_manager
 test_falls_back_to_pull_request_when_direct_push_fails
 test_fails_when_repo_state_is_blocked
 test_fails_when_repo_state_is_blocked_by_managed_file_drift

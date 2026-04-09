@@ -7,6 +7,12 @@ agents_block_begin="<!-- bright-builds-rules-managed:begin -->"
 agents_block_end="<!-- bright-builds-rules-managed:end -->"
 readme_badges_begin="<!-- bright-builds-rules-readme-badges:begin -->"
 readme_badges_end="<!-- bright-builds-rules-readme-badges:end -->"
+legacy_agents_block_begin="<!-- coding-and-architecture-requirements-managed:begin -->"
+legacy_agents_block_end="<!-- coding-and-architecture-requirements-managed:end -->"
+legacy_readme_badges_begin="<!-- coding-and-architecture-requirements-readme-badges:begin -->"
+legacy_readme_badges_end="<!-- coding-and-architecture-requirements-readme-badges:end -->"
+legacy_audit_destination="coding-and-architecture-requirements.audit.md"
+legacy_repo_ref="0d5dce1^"
 temp_root="$(mktemp -d "${TMPDIR:-/tmp}/bright-builds-rules-tests.XXXXXX")"
 repo_exact_commit="$(git -C "${repo_root}" rev-parse HEAD)"
 default_fake_bin="${temp_root}/default-fake-bin"
@@ -38,6 +44,22 @@ managed_file_marker() {
       ;;
     *)
       printf '# bright-builds-rules-managed-file: %s\n' "$relative_destination"
+      ;;
+  esac
+}
+
+legacy_managed_file_marker() {
+  local relative_destination="$1"
+
+  case "$relative_destination" in
+    *.md)
+      printf '<!-- coding-and-architecture-requirements-managed-file: %s -->\n' "$relative_destination"
+      ;;
+    *.sh|*.yml|*.yaml)
+      printf '# coding-and-architecture-requirements-managed-file: %s\n' "$relative_destination"
+      ;;
+    *)
+      printf '# coding-and-architecture-requirements-managed-file: %s\n' "$relative_destination"
       ;;
   esac
 }
@@ -355,6 +377,31 @@ create_standalone_installer_bundle() {
   mkdir -p "${bundle_root}/scripts" "${bundle_root}/templates"
   cp "$script_path" "${bundle_root}/scripts/manage-downstream.sh"
   cp -R "${repo_root}/templates/." "${bundle_root}/templates/"
+  printf '%s\n' "${bundle_root}/scripts/manage-downstream.sh"
+}
+
+create_legacy_installer_bundle() {
+  local name="$1"
+  local bundle_root="${temp_root}/${name}-legacy-bundle"
+  local path=""
+
+  mkdir -p "${bundle_root}/scripts" "${bundle_root}/templates"
+
+  for path in \
+    "scripts/manage-downstream.sh" \
+    "templates/AGENTS.md" \
+    "templates/AGENTS.bright-builds.md" \
+    "templates/CONTRIBUTING.md" \
+    "templates/pull_request_template.md" \
+    "templates/coding-and-architecture-requirements.audit.md" \
+    "templates/standards-overrides.md" \
+    "templates/bright-builds-auto-update.sh" \
+    "templates/bright-builds-auto-update.yml"; do
+    mkdir -p "${bundle_root}/$(dirname "$path")"
+    git -C "${repo_root}" show "${legacy_repo_ref}:${path}" > "${bundle_root}/${path}"
+  done
+
+  chmod +x "${bundle_root}/scripts/manage-downstream.sh"
   printf '%s\n' "${bundle_root}/scripts/manage-downstream.sh"
 }
 
@@ -720,6 +767,49 @@ test_legacy_exact_match_install_is_still_installed_and_update_migrates_markers()
   assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "$(managed_file_marker "bright-builds-rules.audit.md")" "update should restore the audit whole-file marker"
   assert_line_equals "${repo_path}/scripts/bright-builds-auto-update.sh" "2" "$(managed_file_marker "scripts/bright-builds-auto-update.sh")" "update should restore the auto-update helper whole-file marker"
   assert_line_equals "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "1" "$(managed_file_marker ".github/workflows/bright-builds-auto-update.yml")" "update should restore the auto-update workflow whole-file marker"
+}
+
+test_prerename_clean_install_is_installed_and_update_migrates_legacy_layout() {
+  local repo_path=""
+  local installer_path=""
+
+  repo_path="$(create_repo prerename-clean-install)"
+  installer_path="$(create_legacy_installer_bundle prerename-clean-install)"
+  write_file "${repo_path}/README.md" $'# Legacy App\n\nBody text remains.\n'
+  write_file "${repo_path}/package.json" $'{\n  "devDependencies": {\n    "typescript": "5.9.2"\n  }\n}\n'
+
+  run_manage_with_script "$installer_path" "$repo_path" install --auto-update enabled
+  assert_eq "$run_status" "0" "legacy installer setup should succeed"
+  assert_file_exists "${repo_path}/${legacy_audit_destination}"
+  assert_file_contains "${repo_path}/AGENTS.md" "$legacy_agents_block_begin" "legacy install should use the old AGENTS markers"
+  assert_file_contains "${repo_path}/README.md" "$legacy_readme_badges_begin" "legacy install should use the old README badge markers"
+  assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "$(legacy_managed_file_marker "AGENTS.bright-builds.md")" "legacy install should use the old whole-file marker prefix"
+
+  run_manage "$repo_path" status
+  assert_eq "$run_status" "0" "status should succeed for a clean pre-rename install"
+  assert_contains "$run_output" "Repo state: installed" "clean pre-rename installs should be treated as installed"
+  assert_contains "$run_output" "Recommended action: update" "clean pre-rename installs should recommend update"
+  assert_not_contains "$run_output" "Repo state: blocked" "clean pre-rename installs should not be blocked"
+  assert_not_contains "$run_output" "Blocking paths:" "clean pre-rename installs should not report blocking paths"
+  assert_contains "$run_output" "Audit trail: ${legacy_audit_destination}" "status should surface the legacy audit trail before migration"
+  assert_contains "$run_output" "Auto-update: enabled" "status should preserve auto-update state from the legacy audit trail"
+
+  run_manage "$repo_path" update
+  assert_eq "$run_status" "0" "update should migrate a clean pre-rename install in place"
+  assert_file_missing "${repo_path}/${legacy_audit_destination}"
+  assert_file_exists "${repo_path}/bright-builds-rules.audit.md"
+  assert_file_not_contains "${repo_path}/AGENTS.md" "$legacy_agents_block_begin" "update should remove the old AGENTS marker family"
+  assert_file_contains "${repo_path}/AGENTS.md" "$agents_block_begin" "update should install the new AGENTS marker family"
+  assert_file_not_contains "${repo_path}/README.md" "$legacy_readme_badges_begin" "update should remove the old README badge marker family"
+  assert_file_contains "${repo_path}/README.md" "$readme_badges_begin" "update should install the new README badge marker family"
+  assert_file_not_contains "${repo_path}/AGENTS.bright-builds.md" "$(legacy_managed_file_marker "AGENTS.bright-builds.md")" "update should remove the old whole-file marker prefix from the sidecar"
+  assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "$(managed_file_marker "AGENTS.bright-builds.md")" "update should rewrite the sidecar to the new whole-file marker prefix"
+  assert_line_equals "${repo_path}/scripts/bright-builds-auto-update.sh" "2" "$(managed_file_marker "scripts/bright-builds-auto-update.sh")" "update should rewrite the helper to the new whole-file marker prefix"
+  assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "Source repository: \`https://github.com/bright-builds-llc/bright-builds-rules\`" "migration should rewrite the audit source repository to the new canonical repo"
+  assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "Auto-update: \`enabled\`" "migration should preserve auto-update state in the new audit file"
+  assert_file_contains "${repo_path}/README.md" "TypeScript 5.9.2" "migration should preserve README badge detection while rewriting marker families"
+  assert_file_contains "${repo_path}/README.md" "Bright Builds: Rules" "migration should preserve the managed Bright Builds badge after rewriting the README block"
+  assert_file_contains "${repo_path}/README.md" "Body text remains." "migration should preserve README content outside managed regions"
 }
 
 test_drifted_whole_file_managed_file_blocks_update_and_force_repairs() {
@@ -1196,6 +1286,7 @@ test_explicit_auto_update_disable_persists_across_update
 test_auto_update_enabled_files_are_restored_on_update
 test_update_preserves_local_agents_and_overrides
 test_legacy_exact_match_install_is_still_installed_and_update_migrates_markers
+test_prerename_clean_install_is_installed_and_update_migrates_legacy_layout
 test_drifted_whole_file_managed_file_blocks_update_and_force_repairs
 test_readme_badges_insert_after_h1_and_refresh
 test_update_replaces_old_managed_canonical_badge_with_flat_default

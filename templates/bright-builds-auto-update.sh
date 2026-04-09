@@ -3,6 +3,7 @@ REPLACE_WITH_MANAGED_FILE_MARKER
 set -euo pipefail
 
 audit_path="REPLACE_WITH_AUDIT_MANIFEST_PATH"
+legacy_audit_path="coding-and-architecture-requirements.audit.md"
 update_branch="REPLACE_WITH_AUTO_UPDATE_BRANCH"
 commit_message="REPLACE_WITH_AUTO_UPDATE_COMMIT_MESSAGE"
 github_actions_name="github-actions[bot]"
@@ -99,6 +100,7 @@ stage_managed_paths() {
 		CONTRIBUTING.md \
 		README.md \
 		bright-builds-rules.audit.md \
+		coding-and-architecture-requirements.audit.md \
 		.github/pull_request_template.md \
 		.github/workflows/bright-builds-auto-update.yml \
 		scripts/bright-builds-auto-update.sh; do
@@ -170,6 +172,10 @@ create_or_reuse_pr() {
 trap cleanup EXIT
 
 cd "$repo_root"
+
+if [[ ! -f "$audit_path" && -f "$legacy_audit_path" ]]; then
+	audit_path="$legacy_audit_path"
+fi
 
 [[ -f "$audit_path" ]] || die "missing audit manifest: ${audit_path}"
 
