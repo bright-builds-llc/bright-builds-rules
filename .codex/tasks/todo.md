@@ -107,3 +107,15 @@ Residual risks:
 - Verification: `rg -n "bright-builds-rules|skills/bright-builds-rules|\\$bright-builds-rules" README.md AI-ADOPTION.md standards/index.md scripts/verify-docs.sh skills/bright-builds-rules`
 - Completion review: The rename stayed bounded to the skill contract, repo docs, and doc verification surfaces; no downstream installer or template behavior changed in this pass.
 - Residual risk: Any external automation or local habit that still invokes `$personal-coding-standards` will break until it switches to `$bright-builds-rules`.
+
+## task-clarify-pre-work-sync-rule | 2026-04-09 10:40 CDT | Clarify sync-first pre-work guidance
+
+- [x] Tighten the canonical verification rule so the sync-before-substantive-work expectation is more obvious at first read without replacing the rebase-first default.
+- [x] Mirror the clarified sync wording into the managed `AGENTS.bright-builds.md` and `CONTRIBUTING.md` templates.
+- [x] Extend doc verification and downstream install regression coverage for the revised sync wording.
+- [x] Run the targeted verification commands and review the diff for unintended changes.
+- Verification: `./scripts/verify-docs.sh`
+- Verification: `bash scripts/test-manage-downstream.sh`
+- Verification: `rg -n --no-heading 'sync first|git pull --rebase|fetch remote state before editing|that matches local guidance' standards/core/verification.md templates/AGENTS.bright-builds.md templates/CONTRIBUTING.md`
+- Completion review: This pass stayed bounded to the sync-first wording, the mirrored managed templates, and regression coverage. It kept fetch-plus-rebase as the default policy, framed `git pull --rebase` only as a local-guidance-dependent example, and aligned a stale README badge assertion in `scripts/verify-docs.sh` so the requested verification now passes against the checked-in docs.
+- Residual risk: Downstream repositories will not receive the clarified sync wording until they next run Bright Builds install or update, and future edits should keep the `git pull --rebase` mention framed as an example rather than silently hardening it into a universal command.

@@ -22,12 +22,18 @@ rg -Fq 'use the canonical page `standards/core/verification.md`' templates/AGENT
 rg -Fq '`AGENTS.md` is the entrypoint for repo-local instructions, not a complete Bright Builds Rules spec.' templates/AGENTS.bright-builds.md
 rg -Fq '## Routing hints' templates/AGENTS.bright-builds.md
 rg -Fq 'Use the canonical page `standards/core/testing.md` for unit-test expectations.' templates/AGENTS.bright-builds.md
+rg -Fq 'Before you start substantive implementation or other repo-changing work, sync first:' standards/core/verification.md
+rg -Fq '`git pull --rebase` when that matches local guidance' standards/core/verification.md
+rg -Fq 'Before substantive implementation work, sync first: fetch remote state before editing;' templates/AGENTS.bright-builds.md
+rg -Fq '`git pull --rebase` when local guidance uses it' templates/AGENTS.bright-builds.md
+rg -Fq 'Before substantive implementation work, sync first: fetch remote state before editing;' templates/CONTRIBUTING.md
+rg -Fq '`git pull --rebase` when local guidance uses it' templates/CONTRIBUTING.md
 rg -Fq 'After install or update, treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds Rules spec.' AI-ADOPTION.md
 rg -Fq 'Treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds Rules spec.' README.md
 rg -Fq 'Do Not Add Python Scripts To Bun-Friendly JS/TS Repositories' standards/languages/typescript-javascript.md
 rg -Fq 'do not add new Python scripts for repo-owned automation' standards/languages/typescript-javascript.md
 rg -Fq 'This repository uses Bun and TypeScript for repo-owned scripting.' AGENTS.md
-rg -Fq '[![GitHub Stars](https://img.shields.io/github/stars/bright-builds-llc/bright-builds-rules)](https://github.com/bright-builds-llc/bright-builds-rules) [![Bright Builds Rules](public/badges/bright-builds-rules.svg)](https://github.com/bright-builds-llc/bright-builds-rules)' README.md
+rg -Fq '[![GitHub Stars](https://img.shields.io/github/stars/bright-builds-llc/bright-builds-rules)](https://github.com/bright-builds-llc/bright-builds-rules) [![Bright Builds: Rules](public/badges/bright-builds-rules-flat.svg)](https://github.com/bright-builds-llc/bright-builds-rules)' README.md
 rg -Fq 'https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/public/badges/bright-builds-rules.svg' README.md
 rg -Fq 'https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/public/badges/bright-builds-rules-flat.svg' README.md
 rg -Fq 'https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/assets/badges/bright-builds-rules-dark.svg' README.md
