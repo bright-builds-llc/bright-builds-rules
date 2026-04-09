@@ -1110,15 +1110,19 @@ resolve_downstream_badges() {
     append_readme_badge "[![GitHub Stars](https://img.shields.io/github/stars/${downstream_repo_slug})](${downstream_repo_url})"
 
     if [[ -n "$downstream_ci_workflow_path" ]]; then
-      append_readme_badge "[![CI](https://github.com/${downstream_repo_slug}/actions/workflows/$(basename "$downstream_ci_workflow_path")/badge.svg)](${downstream_repo_url}/actions/workflows/$(basename "$downstream_ci_workflow_path"))"
+      local ci_workflow_badge_file=""
+      ci_workflow_badge_file="$(basename "$downstream_ci_workflow_path")"
+      append_readme_badge "[![CI](https://img.shields.io/github/actions/workflow/status/${downstream_repo_slug}/${ci_workflow_badge_file}?style=flat-square&logo=github&label=CI)](${downstream_repo_url}/actions/workflows/${ci_workflow_badge_file})"
     fi
 
     if [[ -n "$downstream_deploy_workflow_path" ]]; then
-      append_readme_badge "[![Deploy Pages](https://github.com/${downstream_repo_slug}/actions/workflows/$(basename "$downstream_deploy_workflow_path")/badge.svg)](${downstream_repo_url}/actions/workflows/$(basename "$downstream_deploy_workflow_path"))"
+      local deploy_workflow_badge_file=""
+      deploy_workflow_badge_file="$(basename "$downstream_deploy_workflow_path")"
+      append_readme_badge "[![Deploy Pages](https://img.shields.io/github/actions/workflow/status/${downstream_repo_slug}/${deploy_workflow_badge_file}?style=flat-square&logo=github&label=Deploy%20Pages)](${downstream_repo_url}/actions/workflows/${deploy_workflow_badge_file})"
     fi
 
     if [[ -n "$downstream_license_file" ]]; then
-      append_readme_badge "[![License](https://img.shields.io/github/license/${downstream_repo_slug}?s)](./${downstream_license_file})"
+      append_readme_badge "[![License](https://img.shields.io/github/license/${downstream_repo_slug}?style=flat-square)](./${downstream_license_file})"
     fi
   fi
 

@@ -813,6 +813,8 @@ test_rich_readme_badge_detection() {
   run_manage "$repo_path" install
   assert_eq "$run_status" "0" "install should render the verified rich README badge set"
   assert_file_contains "${repo_path}/README.md" "GitHub Stars" "README should include the GitHub stars badge when origin points to GitHub"
+  assert_file_contains "${repo_path}/README.md" "style=flat-square" "README shields badges should use a consistent flat-square style for vertical alignment"
+  assert_file_contains "${repo_path}/README.md" "github/actions/workflow/status" "CI and deploy badges should use shields workflow status for consistent alignment with other shields"
   assert_file_contains "${repo_path}/README.md" "CI" "README should include the CI workflow badge"
   assert_file_contains "${repo_path}/README.md" "Deploy Pages" "README should include the deploy workflow badge"
   assert_file_contains "${repo_path}/README.md" "License" "README should include the license badge"
