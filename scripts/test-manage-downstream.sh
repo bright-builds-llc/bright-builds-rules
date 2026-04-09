@@ -428,11 +428,6 @@ create_legacy_installer_bundle() {
 	done
 
 	chmod +x "${bundle_root}/scripts/manage-downstream.sh"
-	git -C "$bundle_root" init -b main >/dev/null 2>&1
-	git -C "$bundle_root" config user.name "Legacy Bundle User"
-	git -C "$bundle_root" config user.email "legacy-bundle@example.com"
-	git -C "$bundle_root" add -A
-	git -C "$bundle_root" commit -m "Initial legacy bundle" >/dev/null
 	printf '%s\n' "${bundle_root}/scripts/manage-downstream.sh"
 }
 
@@ -523,7 +518,7 @@ test_fresh_install_and_reinstall() {
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "foreign-language logic inside strings" "sidecar should include the no-foreign-code-in-strings guidance"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "rerunnable when sensible" "sidecar should include the rerunnable script guidance"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "repo-defined gitignored location" "sidecar should point scripts at a repo-defined gitignored log location"
-	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Before substantive implementation work, fetch remote state first" "sidecar should include the pre-work checkout sync guidance"
+	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Before substantive implementation work, sync first: fetch remote state before editing" "sidecar should include the pre-work checkout sync guidance"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "prefer rebasing onto the latest upstream or the repo's equivalent sync path" "sidecar should require rebase-first sync wording"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "if a worktree starts detached, assume the repo default branch, often \`main\`" "sidecar should include the detached-worktree default-branch hint"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "resolve any sync conflicts before proceeding" "sidecar should require conflict resolution before work"
@@ -539,7 +534,7 @@ test_fresh_install_and_reinstall() {
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "foreign-language logic inside strings" "CONTRIBUTING should include the no-foreign-code-in-strings guidance"
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "rerunnable when sensible" "CONTRIBUTING should include the rerunnable script guidance"
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "breadcrumb-heavy logs and summaries" "CONTRIBUTING should require breadcrumb-heavy logs and summaries"
-	assert_file_contains "${repo_path}/CONTRIBUTING.md" "Before substantive implementation work, fetch remote state first" "CONTRIBUTING should require pre-work checkout sync"
+	assert_file_contains "${repo_path}/CONTRIBUTING.md" "Before substantive implementation work, sync first: fetch remote state before editing" "CONTRIBUTING should require pre-work checkout sync"
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "prefer rebasing onto the latest upstream or the repo's equivalent sync path" "CONTRIBUTING should prefer rebase-first sync wording"
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "if a worktree starts detached, assume the repo default branch, often \`main\`" "CONTRIBUTING should include the detached-worktree default-branch hint"
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "resolve any sync conflicts before proceeding" "CONTRIBUTING should require conflict resolution before work"

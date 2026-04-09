@@ -208,11 +208,6 @@ create_legacy_source_bundle() {
 		git -C "${repo_root}" show "${legacy_repo_ref}:${path}" >"${bundle_root}/${path}"
 	done
 	chmod +x "${bundle_root}/scripts/manage-downstream.sh"
-	git -C "$bundle_root" init -b main >/dev/null 2>&1
-	git -C "$bundle_root" config user.name "Legacy Bundle User"
-	git -C "$bundle_root" config user.email "legacy-bundle@example.com"
-	git -C "$bundle_root" add -A
-	git -C "$bundle_root" commit -m "Initial legacy bundle" >/dev/null
 	printf '%s\n' "$bundle_root"
 }
 
@@ -415,7 +410,7 @@ test_legacy_helper_migrates_prerename_install_with_current_manager() {
 	assert_file_exists "${repo_path}/${legacy_audit_destination}"
 	commit_all "$repo_path" "Initial legacy managed install"
 	git -C "$repo_path" push -u origin main >/dev/null
-	create_fake_curl_bin "$fake_bin" "$current_bundle_root"
+	create_fake_curl_bin "$fake_bin" "$current_bundle_root" "$legacy_bundle_root" "$current_bundle_root"
 
 	run_auto_update "$repo_path" "$fake_bin"
 	assert_eq "$run_status" "0" "legacy helper auto-update should succeed by migrating the install through the current manager"
