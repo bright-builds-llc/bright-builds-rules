@@ -288,7 +288,7 @@ Behavior by command:
 ├── CHANGELOG.md
 ├── scripts/
 ├── skills/
-│   └── personal-coding-standards/
+│   └── bright-builds-rules/
 ├── standards/
 │   ├── core/
 │   └── languages/
@@ -309,7 +309,7 @@ Behavior by command:
 - TypeScript/JavaScript guidance: [standards/languages/typescript-javascript.md](standards/languages/typescript-javascript.md)
 - Downstream adoption templates: [templates/AGENTS.md](templates/AGENTS.md)
 - Downstream sidecar template: [templates/AGENTS.bright-builds.md](templates/AGENTS.bright-builds.md)
-- Optional Codex skill: [skills/personal-coding-standards/SKILL.md](skills/personal-coding-standards/SKILL.md)
+- Optional Codex skill: [skills/bright-builds-rules/SKILL.md](skills/bright-builds-rules/SKILL.md)
 
 ## Adoption flow
 

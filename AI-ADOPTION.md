@@ -28,7 +28,7 @@ Use this decision rule:
 12. After install or update, report the files written and point the user to `bright-builds-rules.audit.md` as the paper trail, including the source URL, requested ref, exact resolved commit when available, whether a managed README badge block was installed or refreshed, whether owner-specific OpenLinks guidance was included, whether the owner-specific OpenLinks README badge applied, and whether auto-update ended up enabled or disabled.
 13. After install or update, treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds Rules spec. Before plan, review, implementation, or audit work, load `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md` when present, and the pinned canonical standards pages relevant to the task; if that has not happened yet, stop and do it first.
 14. For plan, review, and audit work in the downstream repo, briefly acknowledge which of those sources materially informed the answer.
-15. When the downstream repo is pre-existing rather than greenfield, mention that the optional `personal-coding-standards` skill can run a read-only `audit` baseline or an `audit-and-fix` cleanup wave after adoption to surface or start remediating standards drift.
+15. When the downstream repo is pre-existing rather than greenfield, mention that the optional `bright-builds-rules` skill can run a read-only `audit` baseline or an `audit-and-fix` cleanup wave after adoption to surface or start remediating standards drift.
 
 ## Commands
 
@@ -190,4 +190,4 @@ After a successful install or update, mention:
 - whether auto-update was enabled or disabled, and whether that came from an explicit override or a trust-based default
 - that `bright-builds-rules.audit.md` records the source URL, pinned ref, exact commit when resolved, auto-update state, and managed files
 - that the standards corpus starts at `https://github.com/bright-builds-llc/bright-builds-rules/blob/main/standards/index.md`
-- for pre-existing repos, that the optional `personal-coding-standards` skill can run a whole-repo `audit` or a bounded `audit-and-fix` cleanup wave after adoption
+- for pre-existing repos, that the optional `bright-builds-rules` skill can run a whole-repo `audit` or a bounded `audit-and-fix` cleanup wave after adoption

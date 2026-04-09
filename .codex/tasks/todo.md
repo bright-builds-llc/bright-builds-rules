@@ -94,3 +94,16 @@ Residual risks:
 - Verification: `bash scripts/test-manage-downstream.sh`
 - Completion review: The install and update behavior stays unchanged; this pass only makes the downstream managed instruction pair more discoverable for partial readers and adds regression checks around that routing language.
 - Residual risk: The routing hints improve discoverability but still cannot guarantee that an agent runtime actually loads every hinted file or canonical page before acting.
+
+## task-rename-skill-to-bright-builds-rules | 2026-04-09 14:34 CDT | Rename personal-coding-standards skill
+
+- [x] Rename the repo skill slug and folder from `personal-coding-standards` to `bright-builds-rules`.
+- [x] Update skill metadata and agent metadata so the canonical invocation is `$bright-builds-rules` and the display name is `Bright Builds Rules`.
+- [x] Update README, AI adoption docs, standards index, and verification scripts to remove old-skill breadcrumbs.
+- [x] Add a changelog note for the breaking skill rename and verify the repo has no stale `personal-coding-standards` references.
+- Verification: `bash -n scripts/verify-docs.sh`
+- Verification: `./scripts/verify-docs.sh`
+- Verification: `rg -n "personal-coding-standards|skills/personal-coding-standards|\\$personal-coding-standards" -S .`
+- Verification: `rg -n "bright-builds-rules|skills/bright-builds-rules|\\$bright-builds-rules" README.md AI-ADOPTION.md standards/index.md scripts/verify-docs.sh skills/bright-builds-rules`
+- Completion review: The rename stayed bounded to the skill contract, repo docs, and doc verification surfaces; no downstream installer or template behavior changed in this pass.
+- Residual risk: Any external automation or local habit that still invokes `$personal-coding-standards` will break until it switches to `$bright-builds-rules`.

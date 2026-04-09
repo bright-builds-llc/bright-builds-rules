@@ -4,6 +4,7 @@ This repository uses a simple release-notes model instead of a heavyweight chang
 
 ## Unreleased
 
+- Breaking skill rename: renamed the optional Codex skill from `Personal Coding Standards` to `Bright Builds Rules` so the slug, path, and UI label align with `Bright Builds Rules`
 - Breaking rename: standardized the canonical project identity, downstream installer contract, audit trail name, markers, backup paths, badge assets, and docs around `Bright Builds Rules`
 - Added `should` guidance to fetch remote state, rebase onto the latest upstream or use the repo's equivalent sync path before substantive implementation work, treat detached-head worktrees as default-branch work by default unless local guidance says otherwise, resolve sync conflicts before proceeding, and then run the repo's normal bootstrap or dependency-sync step when dependencies or tools may be stale, plus matching downstream managed template wording
 - Added `should` guidance to keep shared versioned task and lesson trackers merge-safe with stable-ID append-only blocks, localized updates, and derived summaries instead of hot shared status sections, plus matching downstream managed AGENTS wording

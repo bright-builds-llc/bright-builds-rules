@@ -37,7 +37,7 @@ The supported downstream interfaces for v1 are:
 - this index page as the discovery entrypoint
 - the rule-card format used by each standards page
 - the templates in `templates/`
-- the optional Codex skill in `skills/personal-coding-standards/`
+- the optional Codex skill in `skills/bright-builds-rules/`
 
 ## Review model
 

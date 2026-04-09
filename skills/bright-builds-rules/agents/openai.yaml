@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bright Builds Rules"
+  short_description: "Adopt, refresh, review, audit, or audit-and-fix Bright Builds Rules"
+  default_prompt: "Use $bright-builds-rules to check, adopt, refresh, review, audit, or audit-and-fix a repository against Bright Builds Rules."

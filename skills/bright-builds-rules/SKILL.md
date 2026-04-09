@@ -1,9 +1,9 @@
 ---
-name: personal-coding-standards
+name: bright-builds-rules
 description: Use when adopting, checking, refreshing, reviewing, auditing, or audit-and-fixing code against Bright Builds Rules.
 ---
 
-# Personal Coding Standards
+# Bright Builds Rules
 
 Use this skill when the user wants to:
 
