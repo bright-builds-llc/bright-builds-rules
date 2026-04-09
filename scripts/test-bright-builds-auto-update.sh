@@ -6,6 +6,10 @@ script_path="${repo_root}/scripts/manage-downstream.sh"
 temp_root="$(mktemp -d "${TMPDIR:-/tmp}/bright-builds-auto-update-tests.XXXXXX")"
 repo_exact_commit="$(git -C "${repo_root}" rev-parse HEAD)"
 real_git_path="$(command -v git)"
+legacy_bright_builds_url="https://github.com/bright-builds-llc/coding-and-architecture-requirements"
+legacy_bright_builds_raw_base_url="https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main"
+current_bright_builds_url="https://github.com/bright-builds-llc/bright-builds-rules"
+current_bright_builds_raw_base_url="https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main"
 run_output=""
 run_status=0
 
@@ -52,6 +56,16 @@ assert_file_contains() {
   grep -Fq "$needle" "$file_path" || fail "${message}: missing '${needle}' in ${file_path}"
 }
 
+assert_file_not_contains() {
+  local file_path="$1"
+  local needle="$2"
+  local message="$3"
+
+  if grep -Fq "$needle" "$file_path"; then
+    fail "${message}: unexpectedly found '${needle}' in ${file_path}"
+  fi
+}
+
 assert_ref_exists() {
   local git_dir="$1"
   local ref_name="$2"
@@ -73,6 +87,34 @@ write_file() {
 
   mkdir -p "$(dirname "$file_path")"
   printf '%s' "$content" > "$file_path"
+}
+
+legacy_bright_builds_canonical_badge() {
+  printf '[![Bright Builds Requirements](%s/public/badges/bright-builds.svg)](%s)\n' "$legacy_bright_builds_raw_base_url" "$legacy_bright_builds_url"
+}
+
+current_bright_builds_canonical_badge() {
+  printf '[![Bright Builds Rules](%s/public/badges/bright-builds-rules.svg)](%s)\n' "$current_bright_builds_raw_base_url" "$current_bright_builds_url"
+}
+
+insert_line_before_marker() {
+  local file_path="$1"
+  local marker="$2"
+  local inserted_line="$3"
+  local updated_path="${file_path}.updated"
+
+  awk -v marker="$marker" -v inserted_line="$inserted_line" '
+    $0 == marker && inserted == 0 {
+      print inserted_line
+      print ""
+      inserted = 1
+    }
+
+    {
+      print
+    }
+  ' "$file_path" > "$updated_path"
+  mv "$updated_path" "$file_path"
 }
 
 create_source_bundle() {
@@ -208,6 +250,7 @@ test_pushes_directly_when_push_succeeds() {
 
   init_git_repo "$repo_path"
   git -C "$repo_path" remote add origin "$remote_path"
+  write_file "${repo_path}/package.json" $'{\n  "devDependencies": {\n    "typescript": "5.9.2"\n  }\n}\n'
   install_auto_update_repo "$bundle_root" "$repo_path"
   commit_all "$repo_path" "Initial managed install"
   git -C "$repo_path" push -u origin main >/dev/null
@@ -221,6 +264,40 @@ test_pushes_directly_when_push_succeeds() {
   assert_contains "$run_output" "Pushed managed updates directly to main" "auto-update should report the direct push path"
   latest_subject="$(git --git-dir="$remote_path" log --format=%s -1 refs/heads/main)"
   assert_eq "$latest_subject" "chore: update Bright Builds Rules" "direct push should update the remote default branch"
+}
+
+test_repairs_legacy_bright_builds_badge_when_upstream_is_otherwise_unchanged() {
+  local bundle_root=""
+  local repo_path=""
+  local remote_path=""
+  local fake_bin=""
+  local latest_subject=""
+  local legacy_badge=""
+  local current_badge=""
+
+  bundle_root="$(create_source_bundle readme-legacy-repair)"
+  repo_path="$(create_repo readme-legacy-repair-repo)"
+  remote_path="$(create_bare_remote readme-legacy-repair-origin)"
+  fake_bin="${temp_root}/readme-legacy-repair-bin"
+
+  init_git_repo "$repo_path"
+  git -C "$repo_path" remote add origin "$remote_path"
+  write_file "${repo_path}/package.json" $'{\n  "devDependencies": {\n    "typescript": "5.9.2"\n  }\n}\n'
+  install_auto_update_repo "$bundle_root" "$repo_path"
+  legacy_badge="$(legacy_bright_builds_canonical_badge)"
+  current_badge="$(current_bright_builds_canonical_badge)"
+  insert_line_before_marker "${repo_path}/README.md" "<!-- bright-builds-rules-readme-badges:begin -->" "$legacy_badge"
+  commit_all "$repo_path" "Initial managed install"
+  git -C "$repo_path" push -u origin main >/dev/null
+  create_fake_curl_bin "$fake_bin" "$bundle_root"
+
+  run_auto_update "$repo_path" "$fake_bin"
+  assert_eq "$run_status" "0" "auto-update should repair known legacy Bright Builds README badges even when the upstream bundle is otherwise unchanged"
+  assert_contains "$run_output" "Pushed managed updates directly to main" "auto-update should publish the README badge repair"
+  assert_file_not_contains "${repo_path}/README.md" "$legacy_badge" "auto-update should remove the legacy Bright Builds badge from the managed insertion zone"
+  assert_file_contains "${repo_path}/README.md" "$current_badge" "auto-update should keep the current Bright Builds Rules badge"
+  latest_subject="$(git --git-dir="$remote_path" log --format=%s -1 refs/heads/main)"
+  assert_eq "$latest_subject" "chore: update Bright Builds Rules" "legacy badge repair should create the standard auto-update commit"
 }
 
 test_falls_back_to_pull_request_when_direct_push_fails() {
@@ -312,6 +389,7 @@ trap cleanup EXIT
 
 test_noop_when_no_changes_exist
 test_pushes_directly_when_push_succeeds
+test_repairs_legacy_bright_builds_badge_when_upstream_is_otherwise_unchanged
 test_falls_back_to_pull_request_when_direct_push_fails
 test_fails_when_repo_state_is_blocked
 test_fails_when_repo_state_is_blocked_by_managed_file_drift

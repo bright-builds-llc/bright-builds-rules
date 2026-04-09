@@ -10,6 +10,10 @@ readme_badges_end="<!-- bright-builds-rules-readme-badges:end -->"
 temp_root="$(mktemp -d "${TMPDIR:-/tmp}/bright-builds-rules-tests.XXXXXX")"
 repo_exact_commit="$(git -C "${repo_root}" rev-parse HEAD)"
 default_fake_bin="${temp_root}/default-fake-bin"
+legacy_bright_builds_url="https://github.com/bright-builds-llc/coding-and-architecture-requirements"
+legacy_bright_builds_raw_base_url="https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main"
+current_bright_builds_url="https://github.com/bright-builds-llc/bright-builds-rules"
+current_bright_builds_raw_base_url="https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main"
 run_output=""
 run_status=0
 
@@ -34,6 +38,56 @@ managed_file_marker() {
       ;;
     *)
       printf '# bright-builds-rules-managed-file: %s\n' "$relative_destination"
+      ;;
+  esac
+}
+
+legacy_bright_builds_badge() {
+  local variant="$1"
+
+  case "$variant" in
+    canonical)
+      printf '[![Bright Builds Requirements](%s/public/badges/bright-builds.svg)](%s)\n' "$legacy_bright_builds_raw_base_url" "$legacy_bright_builds_url"
+      ;;
+    flat)
+      printf '[![Bright Builds: Coding requirements](%s/public/badges/bright-builds-flat.svg)](%s)\n' "$legacy_bright_builds_raw_base_url" "$legacy_bright_builds_url"
+      ;;
+    dark)
+      printf '[![Bright Builds Requirements](%s/assets/badges/bright-builds-requirements-dark.svg)](%s)\n' "$legacy_bright_builds_raw_base_url" "$legacy_bright_builds_url"
+      ;;
+    light)
+      printf '[![Bright Builds Requirements](%s/assets/badges/bright-builds-requirements-light.svg)](%s)\n' "$legacy_bright_builds_raw_base_url" "$legacy_bright_builds_url"
+      ;;
+    compact)
+      printf '[![Uses Bright Builds](%s/assets/badges/bright-builds-requirements-compact.svg)](%s)\n' "$legacy_bright_builds_raw_base_url" "$legacy_bright_builds_url"
+      ;;
+    *)
+      fail "unsupported legacy badge variant: ${variant}"
+      ;;
+  esac
+}
+
+current_bright_builds_badge() {
+  local variant="$1"
+
+  case "$variant" in
+    canonical)
+      printf '[![Bright Builds Rules](%s/public/badges/bright-builds-rules.svg)](%s)\n' "$current_bright_builds_raw_base_url" "$current_bright_builds_url"
+      ;;
+    flat)
+      printf '[![Bright Builds: Rules](%s/public/badges/bright-builds-rules-flat.svg)](%s)\n' "$current_bright_builds_raw_base_url" "$current_bright_builds_url"
+      ;;
+    dark)
+      printf '[![Bright Builds Rules](%s/assets/badges/bright-builds-rules-dark.svg)](%s)\n' "$current_bright_builds_raw_base_url" "$current_bright_builds_url"
+      ;;
+    light)
+      printf '[![Bright Builds Rules](%s/assets/badges/bright-builds-rules-light.svg)](%s)\n' "$current_bright_builds_raw_base_url" "$current_bright_builds_url"
+      ;;
+    compact)
+      printf '[![Bright Builds Rules](%s/assets/badges/bright-builds-rules-compact.svg)](%s)\n' "$current_bright_builds_raw_base_url" "$current_bright_builds_url"
+      ;;
+    *)
+      fail "unsupported current badge variant: ${variant}"
       ;;
   esac
 }
@@ -168,6 +222,26 @@ write_file() {
 
   mkdir -p "$(dirname "$file_path")"
   printf '%s' "$content" > "$file_path"
+}
+
+insert_line_before_marker() {
+  local file_path="$1"
+  local marker="$2"
+  local inserted_line="$3"
+  local updated_path="${file_path}.updated"
+
+  awk -v marker="$marker" -v inserted_line="$inserted_line" '
+    $0 == marker && inserted == 0 {
+      print inserted_line
+      print ""
+      inserted = 1
+    }
+
+    {
+      print
+    }
+  ' "$file_path" > "$updated_path"
+  mv "$updated_path" "$file_path"
 }
 
 strip_whole_file_managed_markers() {
@@ -775,6 +849,114 @@ test_readme_badges_are_removed_when_no_managed_badges_remain() {
   assert_file_not_contains "${repo_path}/bright-builds-rules.audit.md" "README.md (managed badges block)" "audit should stop tracking the README badge block once it is removed"
 }
 
+test_status_and_update_repair_legacy_bright_builds_badge_above_managed_block() {
+  local repo_path=""
+  local legacy_badge=""
+  local current_badge=""
+
+  repo_path="$(create_repo readme-legacy-top-zone)"
+  write_file "${repo_path}/README.md" $'# Demo App\n\nBody text remains.\n'
+  write_file "${repo_path}/package.json" $'{\n  "devDependencies": {\n    "typescript": "5.9.2"\n  }\n}\n'
+
+  run_manage "$repo_path" install
+  assert_eq "$run_status" "0" "install should succeed before legacy badge repair"
+
+  legacy_badge="$(legacy_bright_builds_badge canonical)"
+  current_badge="$(current_bright_builds_badge canonical)"
+  insert_line_before_marker "${repo_path}/README.md" "$readme_badges_begin" "$legacy_badge"
+
+  run_manage "$repo_path" status
+  assert_eq "$run_status" "0" "status should succeed when only a known legacy Bright Builds badge is above the managed block"
+  assert_contains "$run_output" "Repo state: installed" "known legacy Bright Builds badges should not block installed repos"
+  assert_not_contains "$run_output" "Repo state: blocked" "known legacy Bright Builds badges should be treated as repairable"
+
+  run_manage "$repo_path" update
+  assert_eq "$run_status" "0" "update should repair a known legacy Bright Builds badge above the managed block"
+  assert_file_not_contains "${repo_path}/README.md" "$legacy_badge" "update should remove the legacy Bright Builds badge from the managed insertion zone"
+  assert_exact_line_count "${repo_path}/README.md" "$current_badge" "1"
+  assert_file_contains "${repo_path}/README.md" "Body text remains." "update should preserve README body content after removing the duplicate legacy badge"
+}
+
+test_update_normalizes_legacy_bright_builds_badges_outside_insertion_zone() {
+  local repo_path=""
+  local legacy_canonical=""
+  local legacy_flat=""
+  local legacy_dark=""
+  local legacy_light=""
+  local legacy_compact=""
+  local current_canonical=""
+  local current_flat=""
+  local current_dark=""
+  local current_light=""
+  local current_compact=""
+
+  repo_path="$(create_repo readme-legacy-body)"
+  write_file "${repo_path}/README.md" $'# Demo App\n\nBody text remains.\n'
+  write_file "${repo_path}/package.json" $'{\n  "devDependencies": {\n    "typescript": "5.9.2"\n  }\n}\n'
+
+  run_manage "$repo_path" install
+  assert_eq "$run_status" "0" "install should succeed before normalizing legacy Bright Builds badges in the README body"
+
+  legacy_canonical="$(legacy_bright_builds_badge canonical)"
+  legacy_flat="$(legacy_bright_builds_badge flat)"
+  legacy_dark="$(legacy_bright_builds_badge dark)"
+  legacy_light="$(legacy_bright_builds_badge light)"
+  legacy_compact="$(legacy_bright_builds_badge compact)"
+  current_canonical="$(current_bright_builds_badge canonical)"
+  current_flat="$(current_bright_builds_badge flat)"
+  current_dark="$(current_bright_builds_badge dark)"
+  current_light="$(current_bright_builds_badge light)"
+  current_compact="$(current_bright_builds_badge compact)"
+
+  cat >> "${repo_path}/README.md" <<EOF
+
+## Legacy Badges
+
+${legacy_canonical}
+${legacy_flat}
+${legacy_dark}
+${legacy_light}
+${legacy_compact}
+EOF
+
+  run_manage "$repo_path" update
+  assert_eq "$run_status" "0" "update should normalize known legacy Bright Builds badge snippets outside the managed insertion zone"
+  assert_file_not_contains "${repo_path}/README.md" "$legacy_canonical" "update should replace the legacy canonical badge"
+  assert_file_not_contains "${repo_path}/README.md" "$legacy_flat" "update should replace the legacy flat badge"
+  assert_file_not_contains "${repo_path}/README.md" "$legacy_dark" "update should replace the legacy dark badge"
+  assert_file_not_contains "${repo_path}/README.md" "$legacy_light" "update should replace the legacy light badge"
+  assert_file_not_contains "${repo_path}/README.md" "$legacy_compact" "update should replace the legacy compact badge"
+  assert_exact_line_count "${repo_path}/README.md" "$current_canonical" "2"
+  assert_exact_line_count "${repo_path}/README.md" "$current_flat" "1"
+  assert_exact_line_count "${repo_path}/README.md" "$current_dark" "1"
+  assert_exact_line_count "${repo_path}/README.md" "$current_light" "1"
+  assert_exact_line_count "${repo_path}/README.md" "$current_compact" "1"
+}
+
+test_update_does_not_rewrite_unknown_bright_builds_like_badges() {
+  local repo_path=""
+  local custom_badge=""
+
+  repo_path="$(create_repo readme-legacy-custom-body)"
+  write_file "${repo_path}/README.md" $'# Demo App\n\nBody text remains.\n'
+  write_file "${repo_path}/package.json" $'{\n  "devDependencies": {\n    "typescript": "5.9.2"\n  }\n}\n'
+
+  run_manage "$repo_path" install
+  assert_eq "$run_status" "0" "install should succeed before preserving custom Bright Builds-like badge content"
+
+  custom_badge='[![Custom Bright Builds](https://raw.githubusercontent.com/bright-builds-llc/coding-and-architecture-requirements/main/public/badges/bright-builds.svg)](https://example.com/custom)'
+  cat >> "${repo_path}/README.md" <<EOF
+
+## Custom Badge
+
+${custom_badge}
+EOF
+
+  run_manage "$repo_path" update
+  assert_eq "$run_status" "0" "update should succeed when unknown Bright Builds-like badge content is outside the insertion zone"
+  assert_file_contains "${repo_path}/README.md" "$custom_badge" "update should leave unknown Bright Builds-like badge markdown unchanged"
+}
+
 test_update_removes_owner_specific_openlinks_badge_when_owner_changes() {
   local repo_path=""
 
@@ -973,6 +1155,9 @@ test_readme_badges_create_skeleton_and_uninstall_removes_it
 test_readme_badges_block_existing_top_badges_and_force_repair
 test_partial_readme_badge_block_requires_force_repair
 test_readme_badges_are_removed_when_no_managed_badges_remain
+test_status_and_update_repair_legacy_bright_builds_badge_above_managed_block
+test_update_normalizes_legacy_bright_builds_badges_outside_insertion_zone
+test_update_does_not_rewrite_unknown_bright_builds_like_badges
 test_update_removes_owner_specific_openlinks_badge_when_owner_changes
 test_rich_readme_badge_detection
 test_old_standalone_install_is_blocked

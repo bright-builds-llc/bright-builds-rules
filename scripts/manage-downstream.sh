@@ -28,7 +28,11 @@ auto_update_commit_message="chore: update Bright Builds Rules"
 auto_update_cron="0 14 * * *"
 openlinks_identity_url="https://openlinks.us/"
 bright_builds_rules_url="https://github.com/${default_repo_slug}"
+bright_builds_rules_raw_base_url="https://raw.githubusercontent.com/${default_repo_slug}/${default_ref}"
 bright_builds_badges_base_url="https://raw.githubusercontent.com/${default_repo_slug}/${default_ref}/public/badges"
+legacy_bright_builds_repo_slug="bright-builds-llc/coding-and-architecture-requirements"
+legacy_bright_builds_url="https://github.com/${legacy_bright_builds_repo_slug}"
+legacy_bright_builds_raw_base_url="https://raw.githubusercontent.com/${legacy_bright_builds_repo_slug}/main"
 trusted_auto_update_identities=(
   "prizz"
   "bright-builds-llc"
@@ -634,6 +638,113 @@ build_static_badge_markdown() {
   fi
 
   printf '[![%s %s](%s)](%s)\n' "$label" "$version" "$image_url" "$link_target"
+}
+
+build_current_manual_bright_builds_badge_markdown() {
+  local variant="$1"
+
+  case "$variant" in
+    canonical)
+      printf '[![Bright Builds Rules](%s/public/badges/bright-builds-rules.svg)](%s)\n' "$bright_builds_rules_raw_base_url" "$bright_builds_rules_url"
+      ;;
+    flat)
+      printf '[![Bright Builds: Rules](%s/public/badges/bright-builds-rules-flat.svg)](%s)\n' "$bright_builds_rules_raw_base_url" "$bright_builds_rules_url"
+      ;;
+    dark)
+      printf '[![Bright Builds Rules](%s/assets/badges/bright-builds-rules-dark.svg)](%s)\n' "$bright_builds_rules_raw_base_url" "$bright_builds_rules_url"
+      ;;
+    light)
+      printf '[![Bright Builds Rules](%s/assets/badges/bright-builds-rules-light.svg)](%s)\n' "$bright_builds_rules_raw_base_url" "$bright_builds_rules_url"
+      ;;
+    compact)
+      printf '[![Bright Builds Rules](%s/assets/badges/bright-builds-rules-compact.svg)](%s)\n' "$bright_builds_rules_raw_base_url" "$bright_builds_rules_url"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+normalize_known_legacy_bright_builds_badge_line() {
+  local line="$1"
+  local old_canonical_raw=""
+  local old_canonical_relative=""
+  local old_flat_raw=""
+  local old_flat_relative=""
+  local old_dark_raw=""
+  local old_dark_relative=""
+  local old_light_raw=""
+  local old_light_relative=""
+  local old_compact_raw=""
+  local old_compact_relative=""
+
+  old_canonical_raw="[![Bright Builds Requirements](${legacy_bright_builds_raw_base_url}/public/badges/bright-builds.svg)](${legacy_bright_builds_url})"
+  old_canonical_relative="[![Bright Builds Requirements](public/badges/bright-builds.svg)](${legacy_bright_builds_url})"
+  old_flat_raw="[![Bright Builds: Coding requirements](${legacy_bright_builds_raw_base_url}/public/badges/bright-builds-flat.svg)](${legacy_bright_builds_url})"
+  old_flat_relative="[![Bright Builds: Coding requirements](public/badges/bright-builds-flat.svg)](${legacy_bright_builds_url})"
+  old_dark_raw="[![Bright Builds Requirements](${legacy_bright_builds_raw_base_url}/assets/badges/bright-builds-requirements-dark.svg)](${legacy_bright_builds_url})"
+  old_dark_relative="[![Bright Builds Requirements](assets/badges/bright-builds-requirements-dark.svg)](${legacy_bright_builds_url})"
+  old_light_raw="[![Bright Builds Requirements](${legacy_bright_builds_raw_base_url}/assets/badges/bright-builds-requirements-light.svg)](${legacy_bright_builds_url})"
+  old_light_relative="[![Bright Builds Requirements](assets/badges/bright-builds-requirements-light.svg)](${legacy_bright_builds_url})"
+  old_compact_raw="[![Uses Bright Builds](${legacy_bright_builds_raw_base_url}/assets/badges/bright-builds-requirements-compact.svg)](${legacy_bright_builds_url})"
+  old_compact_relative="[![Uses Bright Builds](assets/badges/bright-builds-requirements-compact.svg)](${legacy_bright_builds_url})"
+
+  if [[ "$line" == "$old_canonical_raw" || "$line" == "$old_canonical_relative" ]]; then
+    build_current_manual_bright_builds_badge_markdown "canonical"
+    return 0
+  fi
+
+  if [[ "$line" == "$old_flat_raw" || "$line" == "$old_flat_relative" ]]; then
+    build_current_manual_bright_builds_badge_markdown "flat"
+    return 0
+  fi
+
+  if [[ "$line" == "$old_dark_raw" || "$line" == "$old_dark_relative" ]]; then
+    build_current_manual_bright_builds_badge_markdown "dark"
+    return 0
+  fi
+
+  if [[ "$line" == "$old_light_raw" || "$line" == "$old_light_relative" ]]; then
+    build_current_manual_bright_builds_badge_markdown "light"
+    return 0
+  fi
+
+  if [[ "$line" == "$old_compact_raw" || "$line" == "$old_compact_relative" ]]; then
+    build_current_manual_bright_builds_badge_markdown "compact"
+    return 0
+  fi
+
+  return 1
+}
+
+line_is_blank() {
+  [[ "${1:-}" =~ ^[[:space:]]*$ ]]
+}
+
+readme_line_is_badge_like() {
+  local line="$1"
+
+  if [[ "$line" == *"shields.io"* || "$line" == *"badge.svg"* || "$line" == *"badge?"* ]]; then
+    return 0
+  fi
+
+  if [[ "$line" == *"<img"* ]] && [[ "$line" == *"badge"* || "$line" == *"shields"* ]]; then
+    return 0
+  fi
+
+  if [[ "$line" == *"raw.githubusercontent.com/bright-builds-llc/"*"/public/badges/bright-builds"*.svg* ]]; then
+    return 0
+  fi
+
+  if [[ "$line" == *"raw.githubusercontent.com/bright-builds-llc/"*"/assets/badges/bright-builds"*.svg* ]]; then
+    return 0
+  fi
+
+  if [[ "$line" == *"(public/badges/bright-builds"*.svg* || "$line" == *"(assets/badges/bright-builds"*.svg* ]]; then
+    return 0
+  fi
+
+  return 1
 }
 
 append_readme_badge() {
@@ -1266,56 +1377,60 @@ detect_marker_block_state() {
 
 readme_insertion_zone_has_unmanaged_badges() {
   local file_path="$1"
+  local lines=()
+  local line=""
+  local maybe_replacement=""
+  local first_h1_index=-1
+  local index=0
+  local start_index=0
+  local in_managed=0
 
   [[ -f "$file_path" ]] || return 1
 
-  awk -v begin_marker="$readme_badges_begin" -v end_marker="$readme_badges_end" '
-    function is_badge_like(line) {
-      return line ~ /(shields\.io|badge\.svg|badge\?)/ || line ~ /<img[^>]*(badge|shields)/;
-    }
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    lines+=("$line")
+  done < "$file_path"
 
-    {
-      lines[++count] = $0
-      if (first_h1 == 0 && $0 ~ /^# /) {
-        first_h1 = count
-      }
-    }
+  for ((index = 0; index < ${#lines[@]}; index++)); do
+    if [[ "${lines[index]}" == '# '* ]]; then
+      first_h1_index="$index"
+      break
+    fi
+  done
 
-    END {
-      start = first_h1 > 0 ? first_h1 + 1 : 1
+  if (( first_h1_index >= 0 )); then
+    start_index=$((first_h1_index + 1))
+  fi
 
-      for (i = start; i <= count; i++) {
-        line = lines[i]
+  for ((index = start_index; index < ${#lines[@]}; index++)); do
+    line="${lines[index]}"
 
-        if (line == begin_marker) {
-          in_managed = 1
-          continue
-        }
+    if [[ "$line" == "$readme_badges_begin" ]]; then
+      in_managed=1
+      continue
+    fi
 
-        if (line == end_marker) {
-          in_managed = 0
-          continue
-        }
+    if [[ "$line" == "$readme_badges_end" ]]; then
+      in_managed=0
+      continue
+    fi
 
-        if (in_managed == 1 || line ~ /^[[:space:]]*$/) {
-          continue
-        }
+    if [[ "$in_managed" -eq 1 ]] || line_is_blank "$line"; then
+      continue
+    fi
 
-        if (is_badge_like(line)) {
-          found = 1
-          continue
-        }
+    if maybe_replacement="$(normalize_known_legacy_bright_builds_badge_line "$line" 2>/dev/null)"; then
+      continue
+    fi
 
-        break
-      }
+    if readme_line_is_badge_like "$line"; then
+      return 0
+    fi
 
-      if (found == 1) {
-        exit 0
-      }
+    break
+  done
 
-      exit 1
-    }
-  ' "$file_path"
+  return 1
 }
 
 resolve_readme_badge_state() {
@@ -1553,70 +1668,131 @@ insert_readme_badges_block() {
 strip_readme_badge_region() {
   local input_path="$1"
   local output_path="$2"
+  local lines=()
+  local line=""
+  local first_h1_index=-1
+  local start_index=0
+  local index=0
+  local in_marker_block=0
 
-  awk -v begin_marker="$readme_badges_begin" -v end_marker="$readme_badges_end" '
-    function is_badge_like(line) {
-      return line ~ /(shields\.io|badge\.svg|badge\?)/ || line ~ /<img[^>]*(badge|shields)/;
-    }
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    lines+=("$line")
+  done < "$input_path"
 
-    {
-      lines[++count] = $0
-      if (first_h1 == 0 && $0 ~ /^# /) {
-        first_h1 = count
-      }
-    }
+  for ((index = 0; index < ${#lines[@]}; index++)); do
+    if [[ "${lines[index]}" == '# '* ]]; then
+      first_h1_index="$index"
+      break
+    fi
+  done
 
-    END {
-      start = first_h1 > 0 ? first_h1 + 1 : 1
+  if (( first_h1_index >= 0 )); then
+    start_index=$((first_h1_index + 1))
+  fi
 
-      if (first_h1 > 0) {
-        for (i = 1; i <= first_h1; i++) {
-          print lines[i]
-        }
-      }
+  {
+    if (( first_h1_index >= 0 )); then
+      for ((index = 0; index <= first_h1_index; index++)); do
+        printf '%s\n' "${lines[index]}"
+      done
+    fi
 
-      i = start
-      while (i <= count) {
-        line = lines[i]
+    index="$start_index"
+    while (( index < ${#lines[@]} )); do
+      line="${lines[index]}"
 
-        if (in_marker_block == 1) {
-          if (line == end_marker) {
-            in_marker_block = 0
-            i++
-            continue
-          }
-
-          if (line ~ /^[[:space:]]*$/ || is_badge_like(line) || line == begin_marker) {
-            i++
-            continue
-          }
-
-          break
-        }
-
-        if (line == begin_marker) {
-          in_marker_block = 1
-          i++
+      if [[ "$in_marker_block" -eq 1 ]]; then
+        if [[ "$line" == "$readme_badges_end" ]]; then
+          in_marker_block=0
+          ((index++))
           continue
-        }
+        fi
 
-        if (line == end_marker || line ~ /^[[:space:]]*$/ || is_badge_like(line)) {
-          i++
+        if line_is_blank "$line" || readme_line_is_badge_like "$line" || [[ "$line" == "$readme_badges_begin" ]]; then
+          ((index++))
           continue
-        }
+        fi
 
         break
-      }
+      fi
 
-      if (first_h1 > 0 && i <= count) {
-        print ""
-      }
+      if [[ "$line" == "$readme_badges_begin" ]]; then
+        in_marker_block=1
+        ((index++))
+        continue
+      fi
 
-      for (; i <= count; i++) {
-        print lines[i]
-      }
-    }
-  ' "$input_path" > "$output_path"
+      if [[ "$line" == "$readme_badges_end" ]] || line_is_blank "$line" || readme_line_is_badge_like "$line"; then
+        ((index++))
+        continue
+      fi
+
+      break
+    done
+
+    if (( first_h1_index >= 0 && index < ${#lines[@]} )); then
+      printf '\n'
+    fi
+
+    for ((; index < ${#lines[@]}; index++)); do
+      printf '%s\n' "${lines[index]}"
+    done
+  } > "$output_path"
+}
+
+normalize_legacy_bright_builds_readme_badges() {
+  local input_path="$1"
+  local output_path="$2"
+  local remove_insertion_zone_legacy="$3"
+  local lines=()
+  local line=""
+  local maybe_replacement=""
+  local first_h1_index=-1
+  local start_index=0
+  local index=0
+  local in_insertion_zone=0
+  local insertion_zone_complete=0
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    lines+=("$line")
+  done < "$input_path"
+
+  for ((index = 0; index < ${#lines[@]}; index++)); do
+    if [[ "${lines[index]}" == '# '* ]]; then
+      first_h1_index="$index"
+      break
+    fi
+  done
+
+  if (( first_h1_index >= 0 )); then
+    start_index=$((first_h1_index + 1))
+  fi
+
+  {
+    for ((index = 0; index < ${#lines[@]}; index++)); do
+      line="${lines[index]}"
+
+      if (( insertion_zone_complete == 0 && index >= start_index )) && [[ "$in_insertion_zone" -eq 0 ]]; then
+        in_insertion_zone=1
+      fi
+
+      if maybe_replacement="$(normalize_known_legacy_bright_builds_badge_line "$line" 2>/dev/null)"; then
+        if [[ "$in_insertion_zone" -eq 1 && "$remove_insertion_zone_legacy" -eq 1 ]]; then
+          continue
+        fi
+
+        printf '%s\n' "$maybe_replacement"
+        continue
+      fi
+
+      printf '%s\n' "$line"
+
+      if [[ "$in_insertion_zone" -eq 1 ]] && ! line_is_blank "$line" && ! readme_line_is_badge_like "$line"; then
+        in_insertion_zone=0
+        insertion_zone_complete=1
+      fi
+    done
+  } > "$output_path"
 }
 
 build_readme_title() {
@@ -1908,24 +2084,44 @@ write_or_update_readme_file() {
   local base_path=""
   local updated_path=""
   local trimmed_path=""
+  local normalized_path=""
+  local remove_insertion_zone_legacy=0
 
   current_state="$(resolve_readme_badge_state)"
 
-  if [[ "$readme_has_managed_badges" -ne 1 ]]; then
-    if [[ "$current_state" == "present" ]]; then
-      ensure_tmp_dir
-      updated_path="${tmp_dir}/README.unmanaged"
-      trimmed_path="${tmp_dir}/README.trimmed"
-      remove_readme_badges_block "$destination_path" "$updated_path"
-      trim_trailing_blank_lines "$updated_path" "$trimmed_path"
+  if [[ "$readme_has_managed_badges" -eq 1 ]]; then
+    remove_insertion_zone_legacy=1
+  fi
 
-      if file_has_non_whitespace "$trimmed_path"; then
-        cp "$trimmed_path" "$destination_path"
-        note "Updated ${readme_destination}"
+  if [[ "$readme_has_managed_badges" -ne 1 ]]; then
+    if [[ -f "$destination_path" ]]; then
+      ensure_tmp_dir
+      normalized_path="${tmp_dir}/README.normalized"
+      trimmed_path="${tmp_dir}/README.normalized.trimmed"
+
+      if [[ "$current_state" == "present" ]]; then
+        updated_path="${tmp_dir}/README.unmanaged"
+        remove_readme_badges_block "$destination_path" "$updated_path"
+        normalize_legacy_bright_builds_readme_badges "$updated_path" "$normalized_path" 0
       else
-        rm -f "$destination_path"
-        note "Removed ${readme_destination}"
+        normalize_legacy_bright_builds_readme_badges "$destination_path" "$normalized_path" 0
       fi
+
+      trim_trailing_blank_lines "$normalized_path" "$trimmed_path"
+
+      if ! cmp -s "$destination_path" "$trimmed_path"; then
+        if file_has_non_whitespace "$trimmed_path"; then
+          cp "$trimmed_path" "$destination_path"
+          note "Updated ${readme_destination}"
+        else
+          rm -f "$destination_path"
+          note "Removed ${readme_destination}"
+        fi
+      fi
+    fi
+
+    if [[ "$current_state" == "present" ]]; then
+      current_state="absent"
     fi
 
     readme_badge_state="$(resolve_readme_badge_state)"
@@ -1964,6 +2160,9 @@ write_or_update_readme_file() {
   else
     cp "$destination_path" "$base_path"
   fi
+
+  normalize_legacy_bright_builds_readme_badges "$base_path" "$updated_path" "$remove_insertion_zone_legacy"
+  cp "$updated_path" "$base_path"
 
   insert_readme_badges_block "$base_path" "$updated_path" "$rendered_block_path"
   trim_trailing_blank_lines "$updated_path" "$trimmed_path"

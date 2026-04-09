@@ -129,6 +129,7 @@ Auto-update defaults behave this way:
 - fresh installs also default to `enabled` when the current GitHub user is trusted and the repo owner is not
 - once installed, later `update` runs reuse the persisted auto-update setting from the audit trail unless `--auto-update` is passed again
 - when enabled, auto-update tracks the currently pinned ref exactly, runs on the fixed UTC schedule `0 14 * * *`, pushes to the default branch when possible, and falls back to the branch `bright-builds/auto-update` plus a pull request when direct push is rejected
+- when enabled, that same `update` path also repairs the exact legacy Bright Builds README badge snippets this repo previously documented, so already-installed downstream repos can self-heal old `coding-and-architecture-requirements` badge markdown without a separate job
 
 The installer also tailors the managed sidecar when the downstream GitHub owner matches Peter Ryszkiewicz or `pRizz` after normalization:
 
@@ -142,6 +143,7 @@ The installer manages README badges conservatively:
 - it inserts the managed badge block after the first `# ...` H1 in `README.md`, or at the top when no H1 exists
 - if `README.md` is missing and at least one managed README badge applies, it creates a minimal README skeleton with the repo directory name as the H1
 - when the managed README badge block already applies, it inserts the canonical `Bright Builds Rules` badge after any verified project badges and before any owner-specific `OpenLinks profile` badge; the badge image comes from this repository's published `public/badges/bright-builds-rules.svg` asset and links back to this repo README
+- `install` and `update` also normalize the exact legacy Bright Builds badge snippets this repo previously documented, rewriting old `coding-and-architecture-requirements` badge markdown to the current `bright-builds-rules` snippets and removing duplicate legacy Bright Builds badge lines from the managed top insertion zone when the managed block applies
 - for Peter-owned repos, it appends an `OpenLinks profile` badge linked to `https://openlinks.us/` after any verified project badges
 - it emits verified project badges in this order when it can prove them from the downstream repo: stars, CI, deploy-pages, license, Node.js, TypeScript, one framework badge from `solid-js|react|next|vue|svelte`, Vite, Rust, Python, and Go
 - it derives those badges from the downstream `origin` GitHub remote, root workflows, root manifests, and root toolchain files only
@@ -185,7 +187,7 @@ After a successful install or update, mention:
 - which command you ran
 - which files were written or refreshed
 - whether `AGENTS.md` was created or had the managed Bright Builds Rules block appended to it
-- whether `README.md` received a managed badge block, was left unchanged because no managed README badges applied, or had its managed badge block removed on update
+- whether `README.md` received a managed badge block, had exact legacy Bright Builds badge snippets normalized, was left unchanged because no managed README badges applied, or had its managed badge block removed on update
 - whether `AGENTS.bright-builds.md` included the owner-specific `openlinks-identity-presence` rule for a Peter-owned repo
 - whether auto-update was enabled or disabled, and whether that came from an explicit override or a trust-based default
 - that `bright-builds-rules.audit.md` records the source URL, pinned ref, exact commit when resolved, auto-update state, and managed files

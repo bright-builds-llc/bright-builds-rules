@@ -134,6 +134,7 @@ When auto-update is enabled, the downstream repo gets a managed GitHub Actions w
 - it tries to commit managed-file changes directly to the default branch first
 - if that direct push is rejected, it falls back to the fixed branch `bright-builds/auto-update` and opens or reuses a pull request
 - it never uses `install --force`; if `status` stops reporting `Repo state: installed`, the helper script exits without mutating the repo
+- it also self-heals exact legacy Bright Builds README badge snippets during `update`, so already-installed downstream repos can repair old `coding-and-architecture-requirements` badge links without a separate workflow
 - it tracks the currently installed ref exactly, so `main` keeps moving while immutable tags and full SHAs effectively stay frozen
 
 This mechanism is intended for GitHub-hosted repos. Repos on other hosts can still use the normal manual `status`, `install`, and `update` flow.
@@ -146,6 +147,7 @@ When the downstream repository has at least one verified default badge, or when 
 - if `README.md` is missing and at least one managed README badge applies, it creates a minimal README skeleton using the repo directory name as the H1
 - it blocks conservatively when the top insertion zone already contains unmanaged badge-like content or a partial managed badge block
 - when the managed README badge block already applies, it inserts the canonical `Bright Builds Rules` badge after any verified project badges and before any owner-specific `OpenLinks profile` badge; the image is served from this repository's published `public/badges/bright-builds-rules.svg` asset and links back here
+- `install` and `update` normalize the exact legacy Bright Builds badge snippets this repo previously documented, rewriting old `coding-and-architecture-requirements` badge markdown to the current `bright-builds-rules` snippets and removing duplicate legacy Bright Builds badge lines from the managed top insertion zone when the managed badge block applies
 - when the downstream GitHub owner normalizes to `pRizz` or `peterryszkiewicz`, it appends an `OpenLinks profile` badge linked to `https://openlinks.us/` after any project badges
 - `install --force` backs up `README.md`, repairs only that badge region, and preserves the rest of the README body
 - after a blocked README repair, the agent may reinsert prior top-of-file badges or content below the managed badge block only when that does not recreate an ambiguous badge zone; otherwise it should ask the user
@@ -272,7 +274,7 @@ Behavior by command:
 - rerunning `install` on an already installed repo refreshes the managed block and does not duplicate it
 - `install --force` first backs up blocked managed files into `.bright-builds-rules-backups/<UTC-timestamp>/` before replacing them, then the agent should compare the backup with the fresh managed outputs and fold back only clearly portable downstream-specific logic or content into safe local extension points
 - if that merge review would require re-drifting a fully managed file or making a non-obvious semantic choice, the agent should stop and ask the user
-- `update` refreshes the managed AGENTS block, sidecar, managed files, managed README badge block, audit manifest, and any enabled auto-update files, but only when the installed managed files are either exact current renders or exact legacy unmarked renders
+- `update` refreshes the managed AGENTS block, sidecar, managed files, managed README badge block, audit manifest, and any enabled auto-update files, and also repairs exact legacy Bright Builds README badge snippets, but only when the installed managed files are either exact current renders or exact legacy unmarked renders
 - `status` uses the managed AGENTS marker block plus `AGENTS.bright-builds.md` as the install signal
 - `status` also reports explicit README badge state plus the resolved auto-update mode and reason
 - `status` blocks when a whole-file managed output has downstream edits, but still accepts exact-match legacy installs without the new marker headers
