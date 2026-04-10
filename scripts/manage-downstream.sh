@@ -9,15 +9,21 @@ agents_block_source="templates/AGENTS.md"
 agents_destination="AGENTS.md"
 sidecar_source="templates/AGENTS.bright-builds.md"
 sidecar_destination="AGENTS.bright-builds.md"
+prerename_compat_sidecar_source="templates/compat/prerename/AGENTS.bright-builds.md"
 overrides_source="templates/standards-overrides.md"
 overrides_destination="standards-overrides.md"
 audit_source="templates/bright-builds-rules.audit.md"
 audit_destination="bright-builds-rules.audit.md"
 legacy_audit_destination="coding-and-architecture-requirements.audit.md"
+prerename_compat_audit_source="templates/compat/prerename/coding-and-architecture-requirements.audit.md"
 auto_update_script_source="templates/bright-builds-auto-update.sh"
 auto_update_script_destination="scripts/bright-builds-auto-update.sh"
 auto_update_workflow_source="templates/bright-builds-auto-update.yml"
 auto_update_workflow_destination=".github/workflows/bright-builds-auto-update.yml"
+prerename_compat_auto_update_script_source="templates/compat/prerename/bright-builds-auto-update.sh"
+prerename_compat_auto_update_workflow_source="templates/compat/prerename/bright-builds-auto-update.yml"
+prerename_compat_contributing_source="templates/compat/prerename/CONTRIBUTING.md"
+prerename_compat_pull_request_template_source="templates/compat/prerename/pull_request_template.md"
 agents_block_begin="<!-- bright-builds-rules-managed:begin -->"
 agents_block_end="<!-- bright-builds-rules-managed:end -->"
 legacy_agents_block_begin="<!-- coding-and-architecture-requirements-managed:begin -->"
@@ -775,6 +781,101 @@ render_template_to_legacy_identity_tmp_path_for_install_state() {
 	render_template_file "$downloaded_path" "$rendered_path" "$managed_files_markdown" "$relative_destination" "$include_managed_file_marker" "$compare_owner_specific_guidance_markdown"
 	rewrite_rendered_file_for_legacy_identity "$rendered_path" "$compat_rendered_path" "$relative_destination"
 	printf '%s\n' "$compat_rendered_path"
+}
+
+prerename_compat_source_path_for_relative_destination() {
+	local relative_destination="$1"
+
+	case "$relative_destination" in
+	"${sidecar_destination}")
+		printf '%s\n' "$prerename_compat_sidecar_source"
+		;;
+	"CONTRIBUTING.md")
+		printf '%s\n' "$prerename_compat_contributing_source"
+		;;
+	".github/pull_request_template.md")
+		printf '%s\n' "$prerename_compat_pull_request_template_source"
+		;;
+	"${audit_destination}" | "${legacy_audit_destination}")
+		printf '%s\n' "$prerename_compat_audit_source"
+		;;
+	"${auto_update_script_destination}")
+		printf '%s\n' "$prerename_compat_auto_update_script_source"
+		;;
+	"${auto_update_workflow_destination}")
+		printf '%s\n' "$prerename_compat_auto_update_workflow_source"
+		;;
+	esac
+}
+
+render_template_to_prerename_compat_tmp_path_for_install_state() {
+	local tmp_stem="$1"
+	local relative_destination="$2"
+	local managed_files_markdown="${3:-}"
+	local include_managed_file_marker="${4:-enabled}"
+	local compare_downstream_owner="${5-__CURRENT__}"
+	local compare_repo_url="${current_source:-$legacy_bright_builds_url}"
+	local compare_requested_ref="${current_ref:-$ref}"
+	local compare_exact_commit="${current_exact_commit:-$exact_commit}"
+	local compare_entrypoint="${current_entrypoint:-}"
+	local compare_auto_update_mode="${current_auto_update:-$auto_update_mode}"
+	local compare_auto_update_reason="${current_auto_update_reason:-$auto_update_reason}"
+	local compare_last_operation="${current_last_operation:-}"
+	local compare_last_updated_utc="${current_last_updated_utc:-}"
+	local compare_owner_specific_guidance_markdown=""
+	local manager_repo_slug="$repo_slug"
+	local manager_requested_ref="$ref"
+	local manager_exact_commit="$exact_commit"
+	local compat_source_path=""
+	local repo_url=""
+	local ref=""
+	local exact_commit=""
+	local standards_index_url=""
+	local auto_update_mode=""
+	local auto_update_reason=""
+	local last_operation=""
+	local last_updated_utc=""
+	local audit_destination="$legacy_audit_destination"
+	local managed_file_marker_prefix="$legacy_managed_file_marker_prefix"
+	local auto_update_commit_message="$legacy_auto_update_commit_message"
+	local downloaded_path=""
+	local rendered_path=""
+
+	compat_source_path="$(prerename_compat_source_path_for_relative_destination "$relative_destination")"
+	if [[ -z "$compat_source_path" ]]; then
+		printf '\n'
+		return 0
+	fi
+
+	if [[ -z "$compare_entrypoint" ]]; then
+		compare_entrypoint="${compare_repo_url}/blob/${compare_requested_ref}/standards/index.md"
+	fi
+
+	repo_url="$compare_repo_url"
+	ref="$compare_requested_ref"
+	exact_commit="$compare_exact_commit"
+	standards_index_url="$compare_entrypoint"
+	auto_update_mode="$compare_auto_update_mode"
+	auto_update_reason="$compare_auto_update_reason"
+	last_operation="$compare_last_operation"
+	last_updated_utc="$compare_last_updated_utc"
+
+	if [[ "$compare_downstream_owner" == "__CURRENT__" ]]; then
+		compare_owner_specific_guidance_markdown="$owner_specific_guidance_markdown"
+	else
+		compare_owner_specific_guidance_markdown="$(build_owner_specific_guidance_markdown "$compare_downstream_owner")"
+	fi
+
+	ensure_tmp_dir
+	downloaded_path="${tmp_dir}/${tmp_stem}.prerename-compat.source"
+	rendered_path="${tmp_dir}/${tmp_stem}.prerename-compat.rendered"
+	if ! download_file_for_install_state_rendering "$compat_source_path" "$downloaded_path" "" "" "" "$manager_repo_slug" "$manager_requested_ref" "$manager_exact_commit"; then
+		printf '\n'
+		return 0
+	fi
+
+	render_template_file "$downloaded_path" "$rendered_path" "$managed_files_markdown" "$relative_destination" "$include_managed_file_marker" "$compare_owner_specific_guidance_markdown"
+	printf '%s\n' "$rendered_path"
 }
 
 write_rendered_file() {
@@ -2331,6 +2432,8 @@ resolve_whole_file_managed_state() {
 	local alternate_legacy_path=""
 	local legacy_identity_marked_path=""
 	local legacy_identity_unmarked_path=""
+	local prerename_compat_marked_path=""
+	local prerename_compat_unmarked_path=""
 
 	if [[ "$relative_destination" == "$audit_destination" && ! -f "$destination_path" && -f "${repo_root}/${legacy_audit_destination}" ]]; then
 		destination_path="${repo_root}/${legacy_audit_destination}"
@@ -2366,6 +2469,20 @@ resolve_whole_file_managed_state() {
 		return
 	fi
 
+	if [[ "$current_install_uses_legacy_layout" -eq 1 ]]; then
+		prerename_compat_marked_path="$(render_template_to_prerename_compat_tmp_path_for_install_state "$(basename "$actual_relative_destination").prerename-compat.marked" "$actual_relative_destination" "$managed_files_markdown" "enabled")"
+		if candidate_path_matches_destination "$destination_path" "$prerename_compat_marked_path"; then
+			printf 'legacy\n'
+			return
+		fi
+
+		prerename_compat_unmarked_path="$(render_template_to_prerename_compat_tmp_path_for_install_state "$(basename "$actual_relative_destination").prerename-compat.unmarked" "$actual_relative_destination" "$managed_files_markdown" "disabled")"
+		if candidate_path_matches_destination "$destination_path" "$prerename_compat_unmarked_path"; then
+			printf 'legacy\n'
+			return
+		fi
+	fi
+
 	if [[ "$relative_destination" == "$sidecar_destination" ]]; then
 		if [[ -n "$owner_specific_guidance_markdown" ]]; then
 			alternate_marked_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").marked.no-owner-guidance" "$relative_destination" "$managed_files_markdown" "enabled" "")"
@@ -2390,6 +2507,20 @@ resolve_whole_file_managed_state() {
 			if candidate_path_matches_destination "$destination_path" "$alternate_legacy_path"; then
 				printf 'legacy\n'
 				return
+			fi
+
+			if [[ "$current_install_uses_legacy_layout" -eq 1 ]]; then
+				alternate_marked_path="$(render_template_to_prerename_compat_tmp_path_for_install_state "$(basename "$actual_relative_destination").prerename-compat.marked.no-owner-guidance" "$actual_relative_destination" "$managed_files_markdown" "enabled" "")"
+				if candidate_path_matches_destination "$destination_path" "$alternate_marked_path"; then
+					printf 'legacy\n'
+					return
+				fi
+
+				alternate_legacy_path="$(render_template_to_prerename_compat_tmp_path_for_install_state "$(basename "$actual_relative_destination").prerename-compat.unmarked.no-owner-guidance" "$actual_relative_destination" "$managed_files_markdown" "disabled" "")"
+				if candidate_path_matches_destination "$destination_path" "$alternate_legacy_path"; then
+					printf 'legacy\n'
+					return
+				fi
 			fi
 		fi
 
@@ -2417,6 +2548,20 @@ resolve_whole_file_managed_state() {
 			if candidate_path_matches_destination "$destination_path" "$alternate_legacy_path"; then
 				printf 'legacy\n'
 				return
+			fi
+
+			if [[ "$current_install_uses_legacy_layout" -eq 1 ]]; then
+				alternate_marked_path="$(render_template_to_prerename_compat_tmp_path_for_install_state "$(basename "$actual_relative_destination").prerename-compat.marked.owner-guidance-compat" "$actual_relative_destination" "$managed_files_markdown" "enabled" "$actual_owner_specific_guidance_owner")"
+				if candidate_path_matches_destination "$destination_path" "$alternate_marked_path"; then
+					printf 'legacy\n'
+					return
+				fi
+
+				alternate_legacy_path="$(render_template_to_prerename_compat_tmp_path_for_install_state "$(basename "$actual_relative_destination").prerename-compat.unmarked.owner-guidance-compat" "$actual_relative_destination" "$managed_files_markdown" "disabled" "$actual_owner_specific_guidance_owner")"
+				if candidate_path_matches_destination "$destination_path" "$alternate_legacy_path"; then
+					printf 'legacy\n'
+					return
+				fi
 			fi
 		fi
 	fi
