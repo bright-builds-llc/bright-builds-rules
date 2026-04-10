@@ -340,6 +340,10 @@ test_pushes_directly_when_push_succeeds() {
 	git -C "$repo_path" remote add origin "$remote_path"
 	write_file "${repo_path}/package.json" $'{\n  "devDependencies": {\n    "typescript": "5.9.2"\n  }\n}\n'
 	install_auto_update_repo "$bundle_root" "$repo_path"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'BRIGHT_BUILDS_PUSH_TOKEN: ${{ secrets.BRIGHT_BUILDS_PUSH_TOKEN || github.token }}' "managed workflow should expose the optional dedicated push token"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'token: ${{ secrets.BRIGHT_BUILDS_PUSH_TOKEN || github.token }}' "managed workflow should pass the dedicated token to checkout"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'GH_TOKEN: ${{ env.BRIGHT_BUILDS_PUSH_TOKEN }}' "managed workflow should export GH_TOKEN for the helper"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'GITHUB_TOKEN: ${{ env.BRIGHT_BUILDS_PUSH_TOKEN }}' "managed workflow should export GITHUB_TOKEN for the helper"
 	commit_all "$repo_path" "Initial managed install"
 	git -C "$repo_path" push -u origin main >/dev/null
 	printf '\n- Added direct-push update marker.\n' >>"${bundle_root}/templates/AGENTS.bright-builds.md"
