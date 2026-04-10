@@ -3,6 +3,8 @@
 
 `AGENTS.md` is the entrypoint for repo-local instructions, not the complete Bright Builds Rules specification.
 
+This managed block is owned upstream by `bright-builds-rules`. If this block needs a fix, open an upstream PR or issue instead of editing the managed text in a downstream repo. Keep downstream-specific instructions outside this managed block.
+
 Before plan, review, implementation, or audit work:
 
 1. Read the repo-local instructions in `AGENTS.md`, including any `## Repo-Local Guidance` section and any instructions outside this managed block.

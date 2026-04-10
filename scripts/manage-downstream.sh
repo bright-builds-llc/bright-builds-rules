@@ -2021,6 +2021,7 @@ render_readme_badges_block_to_tmp_path() {
 	rendered_path="${tmp_dir}/README.badges.rendered"
 	{
 		printf '%s\n' "$readme_badges_begin"
+		printf '%s\n' "<!-- Managed upstream by bright-builds-rules. If this badge block needs a fix, open an upstream PR or issue instead of editing the downstream managed block. Keep repo-local README content outside this managed badge block. -->"
 		if [[ -n "$readme_badges_markdown" ]]; then
 			printf '%s\n' "$readme_badges_markdown"
 		fi
@@ -3188,7 +3189,7 @@ determine_repo_state
 case "$command_name" in
 install)
 	if [[ "$repo_state" == "blocked" && "$force" -ne 1 ]]; then
-		die "repo has blocked managed-file paths: ${blocking_paths[*]}. Re-run install --force to back up and replace them."
+		die "repo has blocked upstream-managed paths: ${blocking_paths[*]}. Prefer fixing the managed source in bright-builds-rules via upstream PR or issue. Re-run install --force only when you explicitly want to back up and replace the downstream copies."
 	fi
 
 	if [[ "$repo_state" == "blocked" && "$force" -eq 1 ]]; then
@@ -3209,7 +3210,7 @@ update)
 	fi
 
 	if [[ "$repo_state" == "blocked" ]]; then
-		die "repo has blocked managed-file paths: ${blocking_paths[*]}. Re-run install --force to back up and replace them."
+		die "repo has blocked upstream-managed paths: ${blocking_paths[*]}. Prefer fixing the managed source in bright-builds-rules via upstream PR or issue. Re-run install --force only when you explicitly want to back up and replace the downstream copies."
 	fi
 
 	install_or_update "update"

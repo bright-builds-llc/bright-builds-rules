@@ -4,6 +4,8 @@ REPLACE_WITH_MANAGED_FILE_MARKER
 
 Use this file as the starting point for a downstream repository's contribution guide.
 
+This file is managed upstream by `bright-builds-rules`. If this managed guidance needs a fix, open an upstream PR or issue instead of editing the downstream copy directly.
+
 ## Default contribution expectations
 
 - Treat `AGENTS.md` as the entrypoint for repo-local instructions, not the complete Bright Builds Rules spec.

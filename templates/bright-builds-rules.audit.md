@@ -4,6 +4,8 @@ REPLACE_WITH_MANAGED_FILE_MARKER
 
 This file records that this repository is using the Bright Builds Rules and shows where the managed adoption files came from.
 
+This audit trail is managed upstream by `bright-builds-rules`. If the managed audit format or content needs a fix, open an upstream PR or issue instead of editing the downstream copy directly.
+
 ## Current installation
 
 - Source repository: `REPLACE_WITH_REPO_URL`

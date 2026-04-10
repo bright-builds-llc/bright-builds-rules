@@ -1,4 +1,6 @@
 REPLACE_WITH_MANAGED_FILE_MARKER
+# Managed upstream by bright-builds-rules.
+# If this workflow needs a fix, open an upstream PR or issue instead of editing the downstream managed copy.
 name: Bright Builds Auto Update
 
 on:

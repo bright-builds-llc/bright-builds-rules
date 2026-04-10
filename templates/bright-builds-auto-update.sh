@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 REPLACE_WITH_MANAGED_FILE_MARKER
+# Managed upstream by bright-builds-rules.
+# If this helper needs a fix, open an upstream PR or issue instead of editing the downstream managed copy.
 set -euo pipefail
 
 audit_path="REPLACE_WITH_AUDIT_MANIFEST_PATH"
