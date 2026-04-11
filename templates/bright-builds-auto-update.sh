@@ -242,10 +242,7 @@ fi
 
 default_branch="$(resolve_default_branch)"
 
-git config user.name "$github_actions_name"
-git config user.email "$github_actions_email"
-
-git commit -m "$commit_message" >/dev/null
+git -c user.name="$github_actions_name" -c user.email="$github_actions_email" commit -m "$commit_message" >/dev/null
 
 if git push origin HEAD:"${default_branch}" >/dev/null 2>&1; then
 	note "Pushed managed updates directly to ${default_branch}"

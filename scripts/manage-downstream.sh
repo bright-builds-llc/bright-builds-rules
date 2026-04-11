@@ -738,6 +738,12 @@ rewrite_rendered_file_for_legacy_identity() {
 				line="${line//This file records that this repository is using the Bright Builds Rules and shows where the managed adoption files came from./This file records that this repository is using the Bright Builds coding and architecture requirements and shows where the managed adoption files came from.}"
 				;;
 			"${auto_update_script_destination}")
+				if [[ "$line" == '# Managed upstream by bright-builds-rules.' ]]; then
+					continue
+				fi
+				if [[ "$line" == '# If this helper needs a fix, open an upstream PR or issue instead of editing the downstream managed copy.' ]]; then
+					continue
+				fi
 				if [[ "$line" == 'legacy_audit_path="coding-and-architecture-requirements.audit.md"' ]]; then
 					continue
 				fi
@@ -749,6 +755,12 @@ rewrite_rendered_file_for_legacy_identity() {
 				if [[ "$line" == 'if [[ ! -f "$audit_path" && -f "$legacy_audit_path" ]]; then' ]]; then
 					skip_legacy_helper_fallback_block=1
 					continue
+				fi
+				if [[ "$line" == 'git -c user.name="$github_actions_name" -c user.email="$github_actions_email" commit -m "$commit_message" >/dev/null' ]]; then
+					printf '%s\n' 'git config user.name "$github_actions_name"'
+					printf '%s\n' 'git config user.email "$github_actions_email"'
+					printf '\n'
+					line='git commit -m "$commit_message" >/dev/null'
 				fi
 				line="${line//Automated Bright Builds Rules update./Automated Bright Builds requirements update.}"
 				;;
@@ -3169,6 +3181,122 @@ stage_legacy_audit_migration_for_github_actions() {
 	git -C "$repo_root" add -A -- "$audit_destination" "$legacy_audit_destination" >/dev/null 2>&1 || true
 }
 
+read_repo_local_git_config_value() {
+	local key="$1"
+	local value=""
+	local status=0
+
+	set +e
+	value="$(git -C "$repo_root" config --local --get "$key" 2>/dev/null)"
+	status=$?
+	set -e
+
+	if [[ "$status" -eq 0 ]]; then
+		printf '%s\n' "$value"
+	fi
+}
+
+prepare_legacy_auto_update_identity_restore_for_github_actions() {
+	local git_dir=""
+	local restore_root=""
+	local hook_dir=""
+	local post_commit_path=""
+	local saved_user_name_path=""
+	local saved_user_email_path=""
+	local saved_hooks_path_path=""
+	local before_user_name=""
+	local before_user_email=""
+	local before_hooks_path=""
+	local quoted_repo_root=""
+	local quoted_saved_user_name_path=""
+	local quoted_saved_user_email_path=""
+	local quoted_saved_hooks_path_path=""
+
+	if [[ "${GITHUB_ACTIONS:-}" != "true" ]]; then
+		return
+	fi
+
+	if [[ "$current_audit_destination" != "$legacy_audit_destination" ]]; then
+		return
+	fi
+
+	if ! command -v git >/dev/null 2>&1; then
+		return
+	fi
+
+	if ! git -C "$repo_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+		return
+	fi
+
+	git_dir="$(git -C "$repo_root" rev-parse --git-dir)"
+	restore_root="${git_dir}/bright-builds-auto-update-identity-restore"
+	hook_dir="${restore_root}/hooks"
+	post_commit_path="${hook_dir}/post-commit"
+	saved_user_name_path="${restore_root}/user.name"
+	saved_user_email_path="${restore_root}/user.email"
+	saved_hooks_path_path="${restore_root}/core.hooksPath"
+	before_user_name="$(read_repo_local_git_config_value "user.name")"
+	before_user_email="$(read_repo_local_git_config_value "user.email")"
+	before_hooks_path="$(read_repo_local_git_config_value "core.hooksPath")"
+
+	mkdir -p "$hook_dir"
+	rm -f "$saved_user_name_path" "$saved_user_email_path" "$saved_hooks_path_path"
+
+	if [[ -n "$before_user_name" ]]; then
+		printf '%s' "$before_user_name" >"$saved_user_name_path"
+	fi
+
+	if [[ -n "$before_user_email" ]]; then
+		printf '%s' "$before_user_email" >"$saved_user_email_path"
+	fi
+
+	if [[ -n "$before_hooks_path" ]]; then
+		printf '%s' "$before_hooks_path" >"$saved_hooks_path_path"
+	fi
+
+	printf -v quoted_repo_root '%q' "$repo_root"
+	printf -v quoted_saved_user_name_path '%q' "$saved_user_name_path"
+	printf -v quoted_saved_user_email_path '%q' "$saved_user_email_path"
+	printf -v quoted_saved_hooks_path_path '%q' "$saved_hooks_path_path"
+
+	cat >"$post_commit_path" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+
+restore_local_value() {
+	local key="\$1"
+	local value_path="\$2"
+
+	if [[ -f "\$value_path" ]]; then
+		git -C ${quoted_repo_root} config --local "\$key" "\$(cat "\$value_path")"
+		return
+	fi
+
+	set +e
+	git -C ${quoted_repo_root} config --local --unset-all "\$key" >/dev/null 2>&1
+	set -e
+}
+
+restore_local_value "user.name" ${quoted_saved_user_name_path}
+restore_local_value "user.email" ${quoted_saved_user_email_path}
+
+if [[ -f ${quoted_saved_hooks_path_path} ]]; then
+	git -C ${quoted_repo_root} config --local core.hooksPath "\$(cat ${quoted_saved_hooks_path_path})"
+else
+	set +e
+	git -C ${quoted_repo_root} config --local --unset-all core.hooksPath >/dev/null 2>&1
+	set -e
+fi
+
+rm -f ${quoted_saved_user_name_path} ${quoted_saved_user_email_path} ${quoted_saved_hooks_path_path}
+EOF
+	chmod +x "$post_commit_path"
+
+	# Old pre-rename helpers rewrite repo-local identity before committing.
+	# Use a one-shot post-commit hook so that migration runs restore the prior local config.
+	git -C "$repo_root" config --local core.hooksPath "$hook_dir"
+}
+
 resolve_current_install_metadata() {
 	current_source=""
 	current_ref=""
@@ -3366,6 +3494,7 @@ install_or_update() {
 	write_audit_manifest "$operation"
 	remove_legacy_audit_manifest_if_migrated
 	stage_legacy_audit_migration_for_github_actions
+	prepare_legacy_auto_update_identity_restore_for_github_actions
 }
 
 status() {
