@@ -44,6 +44,10 @@ rg -Fq 'After install or update, treat downstream `AGENTS.md` as the local entry
 rg -Fq 'Treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds Rules spec.' README.md
 rg -Fq 'Do Not Add Python Scripts To Bun-Friendly JS/TS Repositories' standards/languages/typescript-javascript.md
 rg -Fq 'do not add new Python scripts for repo-owned automation' standards/languages/typescript-javascript.md
+rg -Fq 'Prefer Stack-Aligned UI Libraries For TS/JS Frontends' standards/languages/typescript-javascript.md
+rg -Fq 'prefer [MysticUI](https://github.com/pRizz/mystic-ui) for SolidJS apps and [MagicUI](https://github.com/magicuidesign/magicui) for React-based apps' standards/languages/typescript-javascript.md
+rg -Fq 'pin the GitHub dependency to the latest available commit SHA at the time of adoption or update' standards/languages/typescript-javascript.md
+rg -Fq 'Use the [MysticUI README](https://github.com/pRizz/mystic-ui/blob/main/README.md) as the source of truth' standards/languages/typescript-javascript.md
 rg -Fq 'This repository uses Bun and TypeScript for repo-owned scripting.' AGENTS.md
 rg -Fq '[![GitHub Stars](https://img.shields.io/github/stars/bright-builds-llc/bright-builds-rules)](https://github.com/bright-builds-llc/bright-builds-rules) [![Bright Builds: Rules](public/badges/bright-builds-rules-flat.svg)](https://github.com/bright-builds-llc/bright-builds-rules)' README.md
 rg -Fq 'https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/public/badges/bright-builds-rules.svg' README.md

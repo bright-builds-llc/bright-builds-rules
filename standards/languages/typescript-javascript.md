@@ -59,6 +59,46 @@ Bun-friendly TypeScript repository
 - Review questions: Could this script live as TypeScript/JavaScript run by Bun instead? Is Python being added for convenience rather than a real compatibility constraint? If Python remains, is the reason explicit and durable?
 - Automation potential: Repo linting and file globs can flag new `.py` files in Bun-friendly repos, but exception handling still needs review judgment.
 
+## Prefer Stack-Aligned UI Libraries For TS/JS Frontends
+
+- Level: `should`
+- Intent: Keep frontend UI dependencies aligned with the active framework so teams start from a library that fits the stack instead of forcing adapters or churn by default.
+- Rule: When choosing a UI library for a new TypeScript or JavaScript frontend, prefer [MysticUI](https://github.com/pRizz/mystic-ui) for SolidJS apps and [MagicUI](https://github.com/magicuidesign/magicui) for React-based apps, including React frameworks such as Next.js. When consuming `pRizz/mystic-ui`, pin the GitHub dependency to the latest available commit SHA at the time of adoption or update rather than using a floating branch ref or an npm-published package version, because that fork is not published on npm. Use the [MysticUI README](https://github.com/pRizz/mystic-ui/blob/main/README.md) as the source of truth for package-consumer setup and compatibility notes. Treat this as a default for new UI-library decisions, not as a mandate to rewrite an already-established design system or component stack just to satisfy the preference.
+- Rationale: Frontend UI libraries tend to encode framework assumptions in composition patterns, primitives, styling expectations, and maintenance workflows. Starting with a library that is already aligned with the active framework reduces glue code, lowers the chance of awkward adapter layers, and keeps the dependency story simpler for both humans and agents. The preference should guide new choices without creating churn in repositories that already made a deliberate, working UI-stack decision.
+- Good example:
+
+```text
+New SolidStart app
+- chooses MysticUI as the default component library
+- pins the GitHub dependency to an exact current commit SHA
+- builds repo-local components on top of MysticUI primitives
+
+New Next.js app
+- chooses MagicUI for animated marketing and app-shell components
+- keeps the React UI layer aligned with the React-based stack
+
+Existing React app with an established local design system
+- keeps the current component stack
+- evaluates MagicUI only if the team decides a migration or selective adoption is worth it
+```
+
+- Bad example:
+
+```text
+New SolidJS app
+- defaults to a React-first UI library even though MysticUI already fits the stack
+- references `pRizz/mystic-ui` through an npm package version or a floating branch name
+- adds adapters and one-off workarounds to bridge framework differences
+
+Existing product with a stable documented design system
+- starts replacing working components only to satisfy the preference
+- creates churn without a deliberate migration decision or product need
+```
+
+- Exceptions or escape hatches: Deviation is acceptable when compatibility, an established documented local design system, accessibility requirements, licensing constraints, maintenance risk, or product requirements make another library clearly better. If a repository already standardized on another UI layer and that choice is working, do not churn it by default; keep the current stack unless there is a deliberate migration decision. For `pRizz/mystic-ui`, the exception is about whether to use MysticUI at all, not about replacing the commit-pinned GitHub dependency with an npm package version that does not exist for that fork. Repo-local guidance and documented overrides still win when they intentionally pick a different path.
+- Review questions: Is this a new UI-library decision, or an existing frontend that already standardized on another design system? Does the active framework point cleanly to MysticUI for SolidJS or MagicUI for React-based apps? If the repo is using `pRizz/mystic-ui`, is it pinned to an exact current commit SHA and following the README-supported setup surface? If the repo is deviating, is there a concrete compatibility, accessibility, licensing, maintenance, product, or repo-local reason?
+- Automation potential: Tooling can detect some framework dependencies and flag obvious mismatches, but whether a repository already has an intentional local UI system or a justified exception still needs review judgment.
+
 ## Prefer Composition Over Class Inheritance
 
 - Level: `must`
