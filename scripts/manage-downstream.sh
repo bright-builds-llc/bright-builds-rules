@@ -135,6 +135,30 @@ cleanup() {
 	fi
 }
 
+resolve_local_source_root() {
+	local maybe_script_path="${BASH_SOURCE[0]-}"
+	local maybe_script_dir=""
+	local maybe_source_root=""
+
+	[[ -n "$maybe_script_path" ]] || return 0
+	[[ -e "$maybe_script_path" ]] || return 0
+
+	if ! maybe_script_dir="$(cd "$(dirname "$maybe_script_path")" 2>/dev/null && pwd)"; then
+		return 0
+	fi
+
+	if [[ ! -f "${maybe_script_dir}/../templates/AGENTS.md" ]]; then
+		return 0
+	fi
+
+	if ! maybe_source_root="$(cd "${maybe_script_dir}/.." 2>/dev/null && pwd)"; then
+		return 0
+	fi
+
+	script_dir="$maybe_script_dir"
+	local_source_root="$maybe_source_root"
+}
+
 usage() {
 	cat <<'EOF'
 Usage: manage-downstream.sh <install|update|status|uninstall> [options]
@@ -3098,11 +3122,7 @@ uninstall() {
 
 trap cleanup EXIT
 
-if script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"; then
-	if [[ -f "${script_dir}/../templates/AGENTS.md" ]]; then
-		local_source_root="$(cd "${script_dir}/.." && pwd)"
-	fi
-fi
+resolve_local_source_root
 
 command_name="${1:-}"
 

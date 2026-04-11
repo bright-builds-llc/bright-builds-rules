@@ -380,6 +380,29 @@ run_manage_with_path_prefix() {
 	set -e
 }
 
+run_manage_via_stdin() {
+	local installer_path="$1"
+	local repo_path="$2"
+	shift 2
+
+	set +e
+	run_output="$(cat "$installer_path" | bash -s -- "$@" --repo-root "$repo_path" 2>&1)"
+	run_status=$?
+	set -e
+}
+
+run_manage_via_stdin_with_path_prefix() {
+	local installer_path="$1"
+	local repo_path="$2"
+	local path_prefix="$3"
+	shift 3
+
+	set +e
+	run_output="$(cat "$installer_path" | env PATH="${path_prefix}:$PATH" bash -s -- "$@" --repo-root "$repo_path" 2>&1)"
+	run_status=$?
+	set -e
+}
+
 run_manage_with_actor() {
 	local repo_path="$1"
 	local actor="$2"
@@ -948,6 +971,98 @@ test_script_only_status_falls_back_when_legacy_exact_commit_is_unavailable() {
 	assert_not_contains "$run_output" "No such file or directory" "script-only status should not surface missing temp-path errors for unavailable provenance"
 }
 
+test_stdin_status_does_not_emit_bash_source_error() {
+	local repo_path=""
+	local installer_path=""
+
+	repo_path="$(create_repo stdin-status)"
+	installer_path="$(create_standalone_installer_bundle stdin-status)"
+
+	run_manage_via_stdin "$installer_path" "$repo_path" status
+	assert_eq "$run_status" "0" "stdin status should succeed"
+	assert_contains "$run_output" "Repo state: installable" "stdin status should still classify a fresh repo as installable"
+	assert_contains "$run_output" "Recommended action: install" "stdin status should still recommend install"
+	assert_not_contains "$run_output" "BASH_SOURCE[0]: unbound variable" "stdin status should not emit a BASH_SOURCE error"
+	assert_not_contains "$run_output" "No such file or directory" "stdin status should not emit path-resolution noise"
+}
+
+test_stdin_install_uses_remote_rendering() {
+	local repo_path=""
+	local installer_path=""
+	local bundle_root=""
+	local fake_bin=""
+	local bundle_exact_commit=""
+
+	repo_path="$(create_repo stdin-install)"
+	installer_path="$(create_standalone_installer_bundle stdin-install)"
+	bundle_root="$(cd "$(dirname "$installer_path")/.." && pwd)"
+	fake_bin="${temp_root}/stdin-install-bin"
+	bundle_exact_commit="$(git -C "$bundle_root" rev-parse HEAD)"
+	create_fake_remote_fetch_bin "$fake_bin" "$bundle_root" "$bundle_root"
+
+	run_manage_via_stdin_with_path_prefix "$installer_path" "$repo_path" "$fake_bin" install
+	assert_eq "$run_status" "0" "stdin install should succeed"
+	assert_not_contains "$run_output" "BASH_SOURCE[0]: unbound variable" "stdin install should not emit a BASH_SOURCE error"
+	assert_not_contains "$run_output" "No such file or directory" "stdin install should not emit path-resolution noise"
+	assert_file_exists "${repo_path}/AGENTS.md"
+	assert_file_exists "${repo_path}/AGENTS.bright-builds.md"
+	assert_file_exists "${repo_path}/CONTRIBUTING.md"
+	assert_file_exists "${repo_path}/.github/pull_request_template.md"
+	assert_file_exists "${repo_path}/bright-builds-rules.audit.md"
+	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Exact commit: \`${bundle_exact_commit}\`" "stdin install should resolve the remote exact commit"
+}
+
+test_stdin_update_uses_remote_rendering() {
+	local repo_path=""
+	local installer_path=""
+	local bundle_root=""
+	local fake_bin=""
+
+	repo_path="$(create_repo stdin-update)"
+	installer_path="$(create_standalone_installer_bundle stdin-update)"
+	bundle_root="$(cd "$(dirname "$installer_path")/.." && pwd)"
+	fake_bin="${temp_root}/stdin-update-bin"
+	create_fake_remote_fetch_bin "$fake_bin" "$bundle_root" "$bundle_root"
+
+	run_manage_with_script "$installer_path" "$repo_path" install
+	assert_eq "$run_status" "0" "stdin update setup install should succeed"
+
+	run_manage_via_stdin_with_path_prefix "$installer_path" "$repo_path" "$fake_bin" update
+	assert_eq "$run_status" "0" "stdin update should succeed"
+	assert_contains "$run_output" "Updated AGENTS.md" "stdin update should refresh the managed AGENTS block"
+	assert_contains "$run_output" "Wrote bright-builds-rules.audit.md" "stdin update should refresh the audit trail"
+	assert_not_contains "$run_output" "BASH_SOURCE[0]: unbound variable" "stdin update should not emit a BASH_SOURCE error"
+	assert_not_contains "$run_output" "No such file or directory" "stdin update should not emit path-resolution noise"
+}
+
+test_stdin_force_install_repairs_drifted_managed_file() {
+	local repo_path=""
+	local installer_path=""
+	local bundle_root=""
+	local fake_bin=""
+	local backup_file=""
+
+	repo_path="$(create_repo stdin-force-install)"
+	installer_path="$(create_standalone_installer_bundle stdin-force-install)"
+	bundle_root="$(cd "$(dirname "$installer_path")/.." && pwd)"
+	fake_bin="${temp_root}/stdin-force-install-bin"
+	create_fake_remote_fetch_bin "$fake_bin" "$bundle_root" "$bundle_root"
+
+	run_manage_with_script "$installer_path" "$repo_path" install
+	assert_eq "$run_status" "0" "stdin force-install setup install should succeed"
+
+	printf '\nLocal downstream change.\n' >>"${repo_path}/CONTRIBUTING.md"
+
+	run_manage_via_stdin_with_path_prefix "$installer_path" "$repo_path" "$fake_bin" install --force
+	assert_eq "$run_status" "0" "stdin force install should succeed"
+	assert_not_contains "$run_output" "BASH_SOURCE[0]: unbound variable" "stdin force install should not emit a BASH_SOURCE error"
+	assert_not_contains "$run_output" "No such file or directory" "stdin force install should not emit path-resolution noise"
+	backup_file="$(find "${repo_path}/.bright-builds-rules-backups" -type f -name 'CONTRIBUTING.md' | head -n 1)"
+	[[ -n "$backup_file" ]] || fail "expected stdin force install to back up the drifted CONTRIBUTING.md"
+	assert_file_contains "${repo_path}/CONTRIBUTING.md" "$(managed_file_marker "CONTRIBUTING.md")" "stdin force install should restore the CONTRIBUTING whole-file marker"
+	assert_file_not_contains "${repo_path}/CONTRIBUTING.md" "Local downstream change." "stdin force install should remove the drifted local edit"
+}
+
 test_drifted_whole_file_managed_file_blocks_update_and_force_repairs() {
 	local repo_path=""
 	local backup_file=""
@@ -1426,6 +1541,10 @@ test_legacy_exact_match_install_is_still_installed_and_update_migrates_markers
 test_prerename_clean_install_is_installed_and_update_migrates_legacy_layout
 test_script_only_status_falls_back_from_stale_legacy_exact_commit
 test_script_only_status_falls_back_when_legacy_exact_commit_is_unavailable
+test_stdin_status_does_not_emit_bash_source_error
+test_stdin_install_uses_remote_rendering
+test_stdin_update_uses_remote_rendering
+test_stdin_force_install_repairs_drifted_managed_file
 test_drifted_whole_file_managed_file_blocks_update_and_force_repairs
 test_readme_badges_insert_after_h1_and_refresh
 test_update_replaces_old_managed_canonical_badge_with_flat_default
