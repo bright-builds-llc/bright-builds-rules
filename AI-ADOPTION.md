@@ -18,7 +18,7 @@ Use this decision rule:
 2. Run `status`.
 3. If `status` reports `Repo state: installable`, run `install`.
 4. If `status` reports `Repo state: installed`, run `update`.
-5. If `status` reports `Repo state: blocked`, stop and explain the blocking files instead of forcing an overwrite automatically. Treat downstream edits inside marked whole-file managed outputs as blocking drift, not as content to overwrite silently.
+5. If `status` reports `Repo state: blocked`, stop and explain the blocking files instead of forcing an overwrite automatically. Treat downstream edits inside marked whole-file managed outputs and downstream edits inside the managed `CONTRIBUTING.md` block as blocking drift, not as content to overwrite silently.
 6. Use `install --force` only when the user explicitly wants to replace blocked managed files. Frame that choice as a backup-first, merge-assisted path rather than a blind overwrite; the command first writes `.bright-builds-rules-backups/<UTC-timestamp>/`.
 7. After `install --force`, inspect the timestamped backup, diff each backed-up file against the fresh managed output, and reapply only clearly portable downstream-specific logic or content into safe local extension points such as repo-local `AGENTS.md` content outside the managed block, `standards-overrides.md`, existing non-managed project docs, and `README.md` content outside the managed badge block.
 8. If preserving prior behavior would require re-drifting a fully managed file, inventing a new contract, or making a non-obvious semantic choice, stop and ask the user instead of guessing.
@@ -116,8 +116,10 @@ Interpret those states this way:
 - a repo with an existing unmarked local `AGENTS.md` and no other managed-file conflicts also reports `installable`
 - a repo with the managed AGENTS marker block plus `AGENTS.bright-builds.md` reports `installed`
 - a repo with an exact-match legacy install of the fully managed files but without the new whole-file marker headers still reports `installed`, and `update` migrates those files into the marked format
-- a repo with conflicting managed files such as `CONTRIBUTING.md`, `.github/pull_request_template.md`, `AGENTS.bright-builds.md`, or `bright-builds-rules.audit.md` reports `blocked`
+- a repo with conflicting managed files such as `.github/pull_request_template.md`, `AGENTS.bright-builds.md`, or `bright-builds-rules.audit.md` reports `blocked`
 - a repo whose marked whole-file managed outputs have downstream edits also reports `blocked` and lists the drifted paths in `Blocking paths:`
+- a repo whose managed `CONTRIBUTING.md` block is partial or has downstream edits inside the managed block also reports `blocked` and includes `CONTRIBUTING.md` in `Blocking paths:`
+- a repo with an existing unmarked local `CONTRIBUTING.md` and no other managed conflicts remains `installable`; `install` preserves that file and appends the managed CONTRIBUTING block
 - a repo whose managed README insertion zone already contains badge-like content, or whose README badge marker block is partial, also reports `blocked` and includes `README.md` in `Blocking paths:`
 
 If the repo reports `installable` and already has a local `AGENTS.md`, `install` preserves that file and appends the managed Bright Builds Rules block to the end.
@@ -173,6 +175,7 @@ If the downstream repository already contains conflicting managed files:
 - explain which files block installation
 - explain whether they look like marker-based Bright Builds Rules files or unrelated local files
 - if a blocking file is one of the marked whole-file managed surfaces, explain that the downstream copy drifted from the pinned managed render instead of being a safe local extension point
+- if the blocking file is `CONTRIBUTING.md`, explain whether the managed block itself drifted or whether the repo is still on a legacy whole-file `CONTRIBUTING.md` install
 - use `update` only when `status` reports `installed`
 - otherwise stop and ask how the user wants to reconcile the conflict
 - if the user explicitly chooses replacement, tell them `install --force` will back up the blocked files into `.bright-builds-rules-backups/<UTC-timestamp>/` before writing the managed files, then review the backup against the fresh managed outputs and reapply only clearly portable downstream-specific logic or content

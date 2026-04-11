@@ -5,6 +5,8 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 script_path="${repo_root}/scripts/manage-downstream.sh"
 agents_block_begin="<!-- bright-builds-rules-managed:begin -->"
 agents_block_end="<!-- bright-builds-rules-managed:end -->"
+contributing_block_begin="<!-- bright-builds-rules-contributing:begin -->"
+contributing_block_end="<!-- bright-builds-rules-contributing:end -->"
 readme_badges_begin="<!-- bright-builds-rules-readme-badges:begin -->"
 readme_badges_end="<!-- bright-builds-rules-readme-badges:end -->"
 legacy_agents_block_begin="<!-- coding-and-architecture-requirements-managed:begin -->"
@@ -255,6 +257,13 @@ write_file() {
 	printf '%s' "$content" >"$file_path"
 }
 
+append_file() {
+	local file_path="$1"
+	local content="$2"
+
+	printf '%s' "$content" >>"$file_path"
+}
+
 insert_line_before_marker() {
 	local file_path="$1"
 	local marker="$2"
@@ -337,6 +346,69 @@ strip_whole_file_managed_markers() {
 		awk '!/bright-builds-rules-managed-file:/' "$file_path" >"$stripped_path"
 		mv "$stripped_path" "$file_path"
 	done
+}
+
+render_current_whole_file_contributing_compat() {
+	local output_path="$1"
+	local version_pin="${2:-main}"
+	local exact_commit="${3:-$repo_exact_commit}"
+	local audit_path="${4:-bright-builds-rules.audit.md}"
+	local template_path="${repo_root}/templates/compat/pre-contributing-block/CONTRIBUTING.md"
+
+	sed \
+		-e "s#REPLACE_WITH_MANAGED_FILE_MARKER#$(managed_file_marker "CONTRIBUTING.md" | sed 's/[&/]/\\&/g')#" \
+		-e "s#REPLACE_WITH_REPO_URL#${current_bright_builds_url}#g" \
+		-e "s#REPLACE_WITH_TAG_OR_COMMIT#${version_pin}#g" \
+		-e "s#REPLACE_WITH_EXACT_COMMIT#${exact_commit}#g" \
+		-e "s#REPLACE_WITH_TAGGED_STANDARDS_INDEX_URL#${current_bright_builds_url}/blob/${version_pin}/standards/index.md#g" \
+		-e "s#REPLACE_WITH_AUDIT_MANIFEST_PATH#${audit_path}#g" \
+		"$template_path" >"$output_path"
+}
+
+render_current_whole_file_audit_compat() {
+	local output_path="$1"
+	local version_pin="${2:-main}"
+	local exact_commit="${3:-$repo_exact_commit}"
+	local audit_path="${4:-bright-builds-rules.audit.md}"
+	local auto_update_mode="${5:-disabled}"
+	local auto_update_reason="${6:-default disabled}"
+	local last_operation="${7:-install}"
+	local last_updated_utc="${8:-2026-04-11T00:00:00Z}"
+	local managed_files_markdown="${9:-$'- `AGENTS.md (managed block)`\n- `AGENTS.bright-builds.md`\n- `CONTRIBUTING.md`\n- `.github/pull_request_template.md`\n- `bright-builds-rules.audit.md`'}"
+	local template_path="${repo_root}/templates/compat/pre-contributing-block/bright-builds-rules.audit.md"
+	local managed_files_path="${output_path}.managed-files"
+
+	sed \
+		-e "s#REPLACE_WITH_MANAGED_FILE_MARKER#$(managed_file_marker "bright-builds-rules.audit.md" | sed 's/[&/]/\\&/g')#" \
+		-e "s#REPLACE_WITH_REPO_URL#${current_bright_builds_url}#g" \
+		-e "s#REPLACE_WITH_TAG_OR_COMMIT#${version_pin}#g" \
+		-e "s#REPLACE_WITH_EXACT_COMMIT#${exact_commit}#g" \
+		-e "s#REPLACE_WITH_TAGGED_STANDARDS_INDEX_URL#${current_bright_builds_url}/blob/${version_pin}/standards/index.md#g" \
+		-e "s#REPLACE_WITH_MANAGED_SIDECAR_PATH#AGENTS.bright-builds.md#g" \
+		-e "s#REPLACE_WITH_AUDIT_MANIFEST_PATH#${audit_path}#g" \
+		-e "s#REPLACE_WITH_AUTO_UPDATE_MODE#${auto_update_mode}#g" \
+		-e "s#REPLACE_WITH_AUTO_UPDATE_REASON#${auto_update_reason}#g" \
+		-e "s#REPLACE_WITH_LAST_OPERATION#${last_operation}#g" \
+		-e "s#REPLACE_WITH_LAST_UPDATED_UTC#${last_updated_utc}#g" \
+		"$template_path" >"${output_path}.base"
+
+	printf '%s\n' "$managed_files_markdown" >"$managed_files_path"
+	awk -v replacement_path="$managed_files_path" '
+    BEGIN {
+      while ((getline line < replacement_path) > 0) {
+        replacement[++replacement_count] = line
+      }
+      close(replacement_path)
+    }
+    $0 == "REPLACE_WITH_MANAGED_FILES_LIST" {
+      for (i = 1; i <= replacement_count; i++) {
+        print replacement[i]
+      }
+      next
+    }
+    { print }
+  ' "${output_path}.base" >"$output_path"
+	rm -f "${output_path}.base" "$managed_files_path"
 }
 
 disable_real_gh_by_default() {
@@ -568,11 +640,14 @@ test_fresh_install_and_reinstall() {
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Prefer the repo's own verify/check/validate entrypoint when it exists" "sidecar should prefer repo-owned verification entrypoints"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "If hook-managed verification is detected and local docs are silent, ask before duplicating it manually." "sidecar should include the hook-aware prompting rule"
 	assert_file_not_contains "${repo_path}/AGENTS.bright-builds.md" "openlinks-identity-presence" "non-matching owners should not receive the OpenLinks identity guidance"
-	assert_file_contains "${repo_path}/CONTRIBUTING.md" "Treat \`AGENTS.md\` as the entrypoint for repo-local instructions, not the complete Bright Builds Rules spec." "CONTRIBUTING should explain that AGENTS is the local entrypoint rather than the full spec"
-	assert_file_contains "${repo_path}/CONTRIBUTING.md" "This file is managed upstream by \`bright-builds-rules\`." "CONTRIBUTING should direct fixes upstream"
+	assert_file_contains "${repo_path}/CONTRIBUTING.md" "# Bright Builds Contribution Defaults" "CONTRIBUTING should include the managed contribution defaults heading"
+	assert_file_contains "${repo_path}/CONTRIBUTING.md" "This managed block is owned upstream by \`bright-builds-rules\`." "CONTRIBUTING should direct fixes upstream through the managed block notice"
+	assert_file_contains "${repo_path}/CONTRIBUTING.md" "Keep repo-local contribution guidance outside this managed block." "CONTRIBUTING should preserve local contribution guidance outside the managed block"
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "Before plan, review, implementation, or audit work, read local \`AGENTS.md\`, \`AGENTS.bright-builds.md\`, \`standards-overrides.md\` when present, and the pinned canonical standards pages relevant to the task; if that has not happened yet, stop and load them before continuing." "CONTRIBUTING should require the layered reading order"
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "internal nullable or optional names with \`maybe\`" "CONTRIBUTING should include the expanded maybe-prefix naming guidance"
-	assert_file_contains "${repo_path}/CONTRIBUTING.md" "$(managed_file_marker "CONTRIBUTING.md")" "CONTRIBUTING should include the whole-file managed marker"
+	assert_exact_line_count "${repo_path}/CONTRIBUTING.md" "$contributing_block_begin" "1"
+	assert_exact_line_count "${repo_path}/CONTRIBUTING.md" "$contributing_block_end" "1"
+	assert_file_not_contains "${repo_path}/CONTRIBUTING.md" "$(managed_file_marker "CONTRIBUTING.md")" "CONTRIBUTING should no longer use a whole-file managed marker"
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "foreign-language logic inside strings" "CONTRIBUTING should include the no-foreign-code-in-strings guidance"
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "rerunnable when sensible" "CONTRIBUTING should include the rerunnable script guidance"
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "breadcrumb-heavy logs and summaries" "CONTRIBUTING should require breadcrumb-heavy logs and summaries"
@@ -615,21 +690,27 @@ test_existing_agents_is_installable() {
 
 	repo_path="$(create_repo existing-agents)"
 	write_file "${repo_path}/AGENTS.md" $'# Local AGENTS\n\n- Keep this instruction.\n'
+	write_file "${repo_path}/CONTRIBUTING.md" $'# Local CONTRIBUTING\n\nLocal team guidance.\n'
 
 	run_manage "$repo_path" status
 	assert_eq "$run_status" "0" "existing AGENTS status should succeed"
-	assert_contains "$run_output" "Repo state: installable" "existing AGENTS alone should still be installable"
+	assert_contains "$run_output" "Repo state: installable" "existing local AGENTS and CONTRIBUTING files should still be installable"
 
 	run_manage "$repo_path" install
-	assert_eq "$run_status" "0" "install should append to an existing AGENTS.md"
+	assert_eq "$run_status" "0" "install should append managed blocks to existing local AGENTS and CONTRIBUTING files"
 	assert_file_contains "${repo_path}/AGENTS.md" "Keep this instruction." "local AGENTS content should remain"
 	assert_exact_line_count "${repo_path}/AGENTS.md" "$agents_block_begin" "1"
 	assert_exact_line_count "${repo_path}/AGENTS.md" "$agents_block_end" "1"
 	assert_line_order "${repo_path}/AGENTS.md" "Keep this instruction." "$agents_block_begin"
+	assert_file_contains "${repo_path}/CONTRIBUTING.md" "Local team guidance." "local CONTRIBUTING content should remain"
+	assert_exact_line_count "${repo_path}/CONTRIBUTING.md" "$contributing_block_begin" "1"
+	assert_exact_line_count "${repo_path}/CONTRIBUTING.md" "$contributing_block_end" "1"
+	assert_line_order "${repo_path}/CONTRIBUTING.md" "Local team guidance." "$contributing_block_begin"
 	assert_markdown_is_mdformat_clean \
-		"install should append an mdformat-clean managed AGENTS block" \
+		"install should append mdformat-clean managed AGENTS and CONTRIBUTING blocks" \
 		"${repo_path}/AGENTS.md" \
-		"${repo_path}/AGENTS.bright-builds.md"
+		"${repo_path}/AGENTS.bright-builds.md" \
+		"${repo_path}/CONTRIBUTING.md"
 }
 
 test_trusted_repo_owner_enables_auto_update_by_default() {
@@ -776,13 +857,13 @@ test_blocked_conflicts_and_force_install() {
 
 	repo_path="$(create_repo blocked-force)"
 	write_file "${repo_path}/AGENTS.md" $'# Local AGENTS\n'
-	write_file "${repo_path}/CONTRIBUTING.md" $'# Local CONTRIBUTING\n'
+	write_file "${repo_path}/.github/pull_request_template.md" $'# Local Pull Request Template\n'
 
 	run_manage "$repo_path" status
 	assert_eq "$run_status" "0" "blocked repo status should succeed"
 	assert_contains "$run_output" "Repo state: blocked" "repo with conflicting managed files should be blocked"
 	assert_contains "$run_output" "Recommended action: install --force" "blocked repo should recommend force install"
-	assert_contains "$run_output" "Blocking paths: CONTRIBUTING.md" "blocked repo should list the managed conflict"
+	assert_contains "$run_output" "Blocking paths: .github/pull_request_template.md" "blocked repo should list the managed conflict"
 
 	run_manage "$repo_path" install
 	assert_eq "$run_status" "1" "install should fail for blocked repos"
@@ -792,12 +873,12 @@ test_blocked_conflicts_and_force_install() {
 	assert_eq "$run_status" "0" "force install should succeed"
 	assert_contains "$run_output" "Legacy backup: .bright-builds-rules-backups/" "force install should report the backup root"
 
-	backup_file="$(find "${repo_path}/.bright-builds-rules-backups" -type f -name 'CONTRIBUTING.md' | head -n 1)"
-	[[ -n "$backup_file" ]] || fail "expected force install to back up CONTRIBUTING.md"
+	backup_file="$(find "${repo_path}/.bright-builds-rules-backups" -type f -name 'pull_request_template.md' | head -n 1)"
+	[[ -n "$backup_file" ]] || fail "expected force install to back up the PR template"
 
 	assert_file_contains "${repo_path}/AGENTS.md" "# Local AGENTS" "force install should preserve an unmarked AGENTS.md"
 	assert_exact_line_count "${repo_path}/AGENTS.md" "$agents_block_begin" "1"
-	assert_file_contains "${repo_path}/CONTRIBUTING.md" "# CONTRIBUTING.md" "force install should replace CONTRIBUTING.md with the managed template"
+	assert_file_contains "${repo_path}/.github/pull_request_template.md" "# Pull Request Template" "force install should replace the PR template with the managed template"
 }
 
 test_explicit_auto_update_disable_persists_across_update() {
@@ -850,21 +931,55 @@ test_update_preserves_local_agents_and_overrides() {
 	run_manage "$repo_path" install
 	assert_eq "$run_status" "0" "initial install should succeed before update"
 
+	append_file "${repo_path}/CONTRIBUTING.md" $'\n## Local Contribution Notes\n\nKeep this local contribution rule.\n'
 	printf '\n| `custom` | `keep it` | `local` | `owner` | `2026-03-13` |\n' >>"${repo_path}/standards-overrides.md"
+
+	run_manage "$repo_path" status
+	assert_eq "$run_status" "0" "status should succeed when CONTRIBUTING has local text outside the managed block"
+	assert_contains "$run_output" "Repo state: installed" "local CONTRIBUTING text outside the managed block should not block status"
 
 	run_manage "$repo_path" update --ref integration-test-ref
 	assert_eq "$run_status" "0" "update should succeed for the marker-based layout"
 	assert_file_contains "${repo_path}/AGENTS.md" "Preserve this." "update should keep local AGENTS content"
 	assert_line_order "${repo_path}/AGENTS.md" "Preserve this." "$agents_block_begin"
 	assert_exact_line_count "${repo_path}/AGENTS.md" "$agents_block_begin" "1"
+	assert_file_contains "${repo_path}/CONTRIBUTING.md" "Keep this local contribution rule." "update should preserve local CONTRIBUTING text outside the managed block"
+	assert_exact_line_count "${repo_path}/CONTRIBUTING.md" "$contributing_block_begin" "1"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Version pin: \`integration-test-ref\`" "update should refresh managed files"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Exact commit: \`${repo_exact_commit}\`" "update should preserve exact local provenance"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "copyable summary with the exact commit when available" "update should keep the UI provenance guidance"
 	assert_file_contains "${repo_path}/standards-overrides.md" "| \`custom\` | \`keep it\` | \`local\` | \`owner\` | \`2026-03-13\` |" "update should preserve local overrides"
 	assert_markdown_is_mdformat_clean \
-		"update should keep downstream AGENTS markdown mdformat-clean" \
+		"update should keep downstream AGENTS and CONTRIBUTING markdown mdformat-clean" \
 		"${repo_path}/AGENTS.md" \
-		"${repo_path}/AGENTS.bright-builds.md"
+		"${repo_path}/AGENTS.bright-builds.md" \
+		"${repo_path}/CONTRIBUTING.md"
+}
+
+test_current_whole_file_contributing_install_is_installed_and_update_migrates() {
+	local repo_path=""
+	local managed_files_markdown=""
+
+	repo_path="$(create_repo current-whole-file-contributing)"
+
+	run_manage "$repo_path" install
+	assert_eq "$run_status" "0" "current whole-file migration setup install should succeed"
+
+	managed_files_markdown=$'- `AGENTS.md (managed block)`\n- `AGENTS.bright-builds.md`\n- `CONTRIBUTING.md`\n- `.github/pull_request_template.md`\n- `bright-builds-rules.audit.md`'
+	render_current_whole_file_contributing_compat "${repo_path}/CONTRIBUTING.md"
+	render_current_whole_file_audit_compat "${repo_path}/bright-builds-rules.audit.md" "main" "$repo_exact_commit" "bright-builds-rules.audit.md" "disabled" "default disabled" "install" "2026-04-11T00:00:00Z" "$managed_files_markdown"
+
+	run_manage "$repo_path" status
+	assert_eq "$run_status" "0" "status should succeed for a current clean whole-file CONTRIBUTING install"
+	assert_contains "$run_output" "Repo state: installed" "current clean whole-file CONTRIBUTING installs should still count as installed"
+	assert_not_contains "$run_output" "Blocking paths: CONTRIBUTING.md" "current clean whole-file CONTRIBUTING installs should not block status"
+
+	run_manage "$repo_path" update
+	assert_eq "$run_status" "0" "update should migrate a current clean whole-file CONTRIBUTING install"
+	assert_exact_line_count "${repo_path}/CONTRIBUTING.md" "$contributing_block_begin" "1"
+	assert_exact_line_count "${repo_path}/CONTRIBUTING.md" "$contributing_block_end" "1"
+	assert_file_not_contains "${repo_path}/CONTRIBUTING.md" "$(managed_file_marker "CONTRIBUTING.md")" "update should remove the old CONTRIBUTING whole-file marker"
+	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "CONTRIBUTING.md (managed block)" "audit should describe CONTRIBUTING as a managed block after migration"
 }
 
 test_legacy_exact_match_install_is_still_installed_and_update_migrates_markers() {
@@ -885,11 +1000,44 @@ test_legacy_exact_match_install_is_still_installed_and_update_migrates_markers()
 	run_manage "$repo_path" update
 	assert_eq "$run_status" "0" "update should migrate legacy exact-match installs to the marked format"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "$(managed_file_marker "AGENTS.bright-builds.md")" "update should restore the sidecar whole-file marker"
-	assert_file_contains "${repo_path}/CONTRIBUTING.md" "$(managed_file_marker "CONTRIBUTING.md")" "update should restore the CONTRIBUTING whole-file marker"
+	assert_exact_line_count "${repo_path}/CONTRIBUTING.md" "$contributing_block_begin" "1"
+	assert_exact_line_count "${repo_path}/CONTRIBUTING.md" "$contributing_block_end" "1"
+	assert_file_not_contains "${repo_path}/CONTRIBUTING.md" "$(managed_file_marker "CONTRIBUTING.md")" "update should migrate CONTRIBUTING to the bounded-block format"
 	assert_file_contains "${repo_path}/.github/pull_request_template.md" "$(managed_file_marker ".github/pull_request_template.md")" "update should restore the PR template whole-file marker"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "$(managed_file_marker "bright-builds-rules.audit.md")" "update should restore the audit whole-file marker"
 	assert_line_equals "${repo_path}/scripts/bright-builds-auto-update.sh" "2" "$(managed_file_marker "scripts/bright-builds-auto-update.sh")" "update should restore the auto-update helper whole-file marker"
 	assert_line_equals "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "1" "$(managed_file_marker ".github/workflows/bright-builds-auto-update.yml")" "update should restore the auto-update workflow whole-file marker"
+}
+
+test_drifted_contributing_block_blocks_update_and_force_repairs() {
+	local repo_path=""
+	local backup_file=""
+
+	repo_path="$(create_repo drifted-contributing-block)"
+
+	run_manage "$repo_path" install
+	assert_eq "$run_status" "0" "drifted CONTRIBUTING block setup install should succeed"
+
+	replace_exact_line \
+		"${repo_path}/CONTRIBUTING.md" \
+		"- Prefer simple, root-cause fixes over broad rewrites." \
+		"- Prefer downstream rewrites over the managed block."
+
+	run_manage "$repo_path" status
+	assert_eq "$run_status" "0" "drifted CONTRIBUTING block status should succeed"
+	assert_contains "$run_output" "Repo state: blocked" "drifted CONTRIBUTING blocks should block the repo"
+	assert_contains "$run_output" "Blocking paths: CONTRIBUTING.md" "status should list the drifted CONTRIBUTING block"
+
+	run_manage "$repo_path" update
+	assert_eq "$run_status" "1" "update should fail when the managed CONTRIBUTING block has downstream edits"
+
+	run_manage "$repo_path" install --force
+	assert_eq "$run_status" "0" "force install should repair a drifted CONTRIBUTING block"
+	backup_file="$(find "${repo_path}/.bright-builds-rules-backups" -type f -name 'CONTRIBUTING.md' | head -n 1)"
+	[[ -n "$backup_file" ]] || fail "expected force install to back up the drifted CONTRIBUTING.md"
+	assert_exact_line_count "${repo_path}/CONTRIBUTING.md" "$contributing_block_begin" "1"
+	assert_exact_line_count "${repo_path}/CONTRIBUTING.md" "$contributing_block_end" "1"
+	assert_file_not_contains "${repo_path}/CONTRIBUTING.md" "Prefer downstream rewrites over the managed block." "force install should remove the drifted local block edit"
 }
 
 test_prerename_clean_install_is_installed_and_update_migrates_legacy_layout() {
@@ -927,6 +1075,9 @@ test_prerename_clean_install_is_installed_and_update_migrates_legacy_layout() {
 	assert_file_contains "${repo_path}/README.md" "$readme_badges_begin" "update should install the new README badge marker family"
 	assert_file_not_contains "${repo_path}/AGENTS.bright-builds.md" "$(legacy_managed_file_marker "AGENTS.bright-builds.md")" "update should remove the old whole-file marker prefix from the sidecar"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "$(managed_file_marker "AGENTS.bright-builds.md")" "update should rewrite the sidecar to the new whole-file marker prefix"
+	assert_exact_line_count "${repo_path}/CONTRIBUTING.md" "$contributing_block_begin" "1"
+	assert_exact_line_count "${repo_path}/CONTRIBUTING.md" "$contributing_block_end" "1"
+	assert_file_not_contains "${repo_path}/CONTRIBUTING.md" "$(legacy_managed_file_marker "CONTRIBUTING.md")" "update should rewrite CONTRIBUTING into the new bounded-block format"
 	assert_line_equals "${repo_path}/scripts/bright-builds-auto-update.sh" "2" "$(managed_file_marker "scripts/bright-builds-auto-update.sh")" "update should rewrite the helper to the new whole-file marker prefix"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "Source repository: \`https://github.com/bright-builds-llc/bright-builds-rules\`" "migration should rewrite the audit source repository to the new canonical repo"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "Auto-update: \`enabled\`" "migration should preserve auto-update state in the new audit file"
@@ -937,6 +1088,7 @@ test_prerename_clean_install_is_installed_and_update_migrates_legacy_layout() {
 		"legacy layout migration should keep rewritten downstream Markdown mdformat-clean" \
 		"${repo_path}/AGENTS.md" \
 		"${repo_path}/AGENTS.bright-builds.md" \
+		"${repo_path}/CONTRIBUTING.md" \
 		"${repo_path}/README.md"
 }
 
@@ -1090,7 +1242,10 @@ test_stdin_force_install_repairs_drifted_managed_file() {
 	run_manage_with_script "$installer_path" "$repo_path" install
 	assert_eq "$run_status" "0" "stdin force-install setup install should succeed"
 
-	printf '\nLocal downstream change.\n' >>"${repo_path}/CONTRIBUTING.md"
+	replace_exact_line \
+		"${repo_path}/CONTRIBUTING.md" \
+		"- Prefer simple, root-cause fixes over broad rewrites." \
+		"- Prefer drifted local rewrites over upstream defaults."
 
 	run_manage_via_stdin_with_path_prefix "$installer_path" "$repo_path" "$fake_bin" install --force
 	assert_eq "$run_status" "0" "stdin force install should succeed"
@@ -1098,23 +1253,29 @@ test_stdin_force_install_repairs_drifted_managed_file() {
 	assert_not_contains "$run_output" "No such file or directory" "stdin force install should not emit path-resolution noise"
 	backup_file="$(find "${repo_path}/.bright-builds-rules-backups" -type f -name 'CONTRIBUTING.md' | head -n 1)"
 	[[ -n "$backup_file" ]] || fail "expected stdin force install to back up the drifted CONTRIBUTING.md"
-	assert_file_contains "${repo_path}/CONTRIBUTING.md" "$(managed_file_marker "CONTRIBUTING.md")" "stdin force install should restore the CONTRIBUTING whole-file marker"
-	assert_file_not_contains "${repo_path}/CONTRIBUTING.md" "Local downstream change." "stdin force install should remove the drifted local edit"
+	assert_exact_line_count "${repo_path}/CONTRIBUTING.md" "$contributing_block_begin" "1"
+	assert_exact_line_count "${repo_path}/CONTRIBUTING.md" "$contributing_block_end" "1"
+	assert_file_not_contains "${repo_path}/CONTRIBUTING.md" "Prefer drifted local rewrites over upstream defaults." "stdin force install should remove the drifted local block edit"
 }
 
 test_drifted_whole_file_managed_file_blocks_update_and_force_repairs() {
 	local repo_path=""
 	local backup_file=""
+	local managed_files_markdown=""
 
 	repo_path="$(create_repo drifted-managed-file)"
 
 	run_manage "$repo_path" install
-	assert_eq "$run_status" "0" "drifted managed file setup install should succeed"
+	assert_eq "$run_status" "0" "whole-file drift setup install should succeed"
+
+	managed_files_markdown=$'- `AGENTS.md (managed block)`\n- `AGENTS.bright-builds.md`\n- `CONTRIBUTING.md`\n- `.github/pull_request_template.md`\n- `bright-builds-rules.audit.md`'
+	render_current_whole_file_contributing_compat "${repo_path}/CONTRIBUTING.md"
+	render_current_whole_file_audit_compat "${repo_path}/bright-builds-rules.audit.md" "main" "$repo_exact_commit" "bright-builds-rules.audit.md" "disabled" "default disabled" "install" "2026-04-11T00:00:00Z" "$managed_files_markdown"
 
 	printf '\nLocal downstream change.\n' >>"${repo_path}/CONTRIBUTING.md"
 
 	run_manage "$repo_path" status
-	assert_eq "$run_status" "0" "drifted managed file status should succeed"
+	assert_eq "$run_status" "0" "drifted whole-file managed file status should succeed"
 	assert_contains "$run_output" "Repo state: blocked" "drifted whole-file managed files should block the repo"
 	assert_contains "$run_output" "Blocking paths: CONTRIBUTING.md" "status should list the drifted managed file"
 
@@ -1125,7 +1286,8 @@ test_drifted_whole_file_managed_file_blocks_update_and_force_repairs() {
 	assert_eq "$run_status" "0" "force install should repair drifted whole-file managed files"
 	backup_file="$(find "${repo_path}/.bright-builds-rules-backups" -type f -name 'CONTRIBUTING.md' | head -n 1)"
 	[[ -n "$backup_file" ]] || fail "expected force install to back up the drifted CONTRIBUTING.md"
-	assert_file_contains "${repo_path}/CONTRIBUTING.md" "$(managed_file_marker "CONTRIBUTING.md")" "force install should restore the CONTRIBUTING whole-file marker"
+	assert_exact_line_count "${repo_path}/CONTRIBUTING.md" "$contributing_block_begin" "1"
+	assert_exact_line_count "${repo_path}/CONTRIBUTING.md" "$contributing_block_end" "1"
 	assert_file_not_contains "${repo_path}/CONTRIBUTING.md" "Local downstream change." "force install should remove the drifted local edit"
 }
 
@@ -1486,11 +1648,14 @@ test_uninstall_preserves_drifted_whole_file_managed_files() {
 	run_manage "$repo_path" install --auto-update enabled
 	assert_eq "$run_status" "0" "install should succeed before drift-preserving uninstall"
 
-	printf '\nKeep this downstream change.\n' >>"${repo_path}/CONTRIBUTING.md"
+	replace_exact_line \
+		"${repo_path}/CONTRIBUTING.md" \
+		"- Prefer simple, root-cause fixes over broad rewrites." \
+		"- Keep this downstream change inside the managed block."
 	printf '\nprintf drifted-helper\n' >>"${repo_path}/scripts/bright-builds-auto-update.sh"
 
 	run_manage "$repo_path" uninstall
-	assert_eq "$run_status" "0" "uninstall should succeed when drifted whole-file managed files are present"
+	assert_eq "$run_status" "0" "uninstall should succeed when drifted managed files are present"
 	assert_file_missing "${repo_path}/AGENTS.md"
 	assert_file_missing "${repo_path}/AGENTS.bright-builds.md"
 	assert_file_missing "${repo_path}/.github/pull_request_template.md"
@@ -1498,7 +1663,7 @@ test_uninstall_preserves_drifted_whole_file_managed_files() {
 	assert_file_missing "${repo_path}/.github/workflows/bright-builds-auto-update.yml"
 	assert_file_exists "${repo_path}/CONTRIBUTING.md"
 	assert_file_exists "${repo_path}/scripts/bright-builds-auto-update.sh"
-	assert_file_contains "${repo_path}/CONTRIBUTING.md" "Keep this downstream change." "uninstall should preserve drifted CONTRIBUTING content"
+	assert_file_contains "${repo_path}/CONTRIBUTING.md" "Keep this downstream change inside the managed block." "uninstall should preserve drifted CONTRIBUTING content"
 	assert_file_contains "${repo_path}/scripts/bright-builds-auto-update.sh" "printf drifted-helper" "uninstall should preserve the drifted auto-update helper"
 	assert_file_exists "${repo_path}/standards-overrides.md"
 }
@@ -1576,7 +1741,9 @@ test_blocked_conflicts_and_force_install
 test_explicit_auto_update_disable_persists_across_update
 test_auto_update_enabled_files_are_restored_on_update
 test_update_preserves_local_agents_and_overrides
+test_current_whole_file_contributing_install_is_installed_and_update_migrates
 test_legacy_exact_match_install_is_still_installed_and_update_migrates_markers
+test_drifted_contributing_block_blocks_update_and_force_repairs
 test_prerename_clean_install_is_installed_and_update_migrates_legacy_layout
 test_script_only_status_falls_back_from_stale_legacy_exact_commit
 test_script_only_status_falls_back_when_legacy_exact_commit_is_unavailable

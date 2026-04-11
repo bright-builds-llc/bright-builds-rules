@@ -12,9 +12,13 @@ sidecar_destination="AGENTS.bright-builds.md"
 prerename_compat_sidecar_source="templates/compat/prerename/AGENTS.bright-builds.md"
 overrides_source="templates/standards-overrides.md"
 overrides_destination="standards-overrides.md"
+contributing_block_source="templates/CONTRIBUTING.md"
+contributing_destination="CONTRIBUTING.md"
+current_contributing_whole_file_compat_source="templates/compat/pre-contributing-block/CONTRIBUTING.md"
 audit_source="templates/bright-builds-rules.audit.md"
 audit_destination="bright-builds-rules.audit.md"
 legacy_audit_destination="coding-and-architecture-requirements.audit.md"
+current_audit_whole_file_compat_source="templates/compat/pre-contributing-block/bright-builds-rules.audit.md"
 prerename_compat_audit_source="templates/compat/prerename/coding-and-architecture-requirements.audit.md"
 auto_update_script_source="templates/bright-builds-auto-update.sh"
 auto_update_script_destination="scripts/bright-builds-auto-update.sh"
@@ -28,6 +32,8 @@ agents_block_begin="<!-- bright-builds-rules-managed:begin -->"
 agents_block_end="<!-- bright-builds-rules-managed:end -->"
 legacy_agents_block_begin="<!-- coding-and-architecture-requirements-managed:begin -->"
 legacy_agents_block_end="<!-- coding-and-architecture-requirements-managed:end -->"
+contributing_block_begin="<!-- bright-builds-rules-contributing:begin -->"
+contributing_block_end="<!-- bright-builds-rules-contributing:end -->"
 managed_file_marker_placeholder="REPLACE_WITH_MANAGED_FILE_MARKER"
 managed_file_marker_prefix="bright-builds-rules-managed-file"
 legacy_managed_file_marker_prefix="coding-and-architecture-requirements-managed-file"
@@ -54,12 +60,10 @@ trusted_auto_update_identities=(
 
 base_managed_pairs=(
 	"${sidecar_source}|${sidecar_destination}"
-	"templates/CONTRIBUTING.md|CONTRIBUTING.md"
 	"templates/pull_request_template.md|.github/pull_request_template.md"
 )
 base_whole_file_managed_pairs=(
 	"${sidecar_source}|${sidecar_destination}"
-	"templates/CONTRIBUTING.md|CONTRIBUTING.md"
 	"templates/pull_request_template.md|.github/pull_request_template.md"
 	"${audit_source}|${audit_destination}"
 )
@@ -74,7 +78,7 @@ base_managed_status_paths=(
 base_managed_audit_entries=(
 	"${agents_destination} (managed block)"
 	"${sidecar_destination}"
-	"CONTRIBUTING.md"
+	"${contributing_destination} (managed block)"
 	".github/pull_request_template.md"
 	"${audit_destination}"
 )
@@ -111,6 +115,7 @@ ref_was_explicit=0
 auto_update_was_explicit=0
 agents_block_state="absent"
 agents_block_family="absent"
+contributing_block_state="absent"
 readme_badge_state="absent"
 readme_badges_family="absent"
 readme_badge_blocking_reason=""
@@ -168,23 +173,24 @@ Run `status` first to classify the repo as `installable`, `installed`, or
 
 Commands:
   install     Install the managed AGENTS block, AGENTS.bright-builds.md,
-              CONTRIBUTING.md, PR template, audit trail, and default README
-              badge block when managed README badges apply, plus the managed
-              auto-update workflow and helper script when auto-update resolves
-              to enabled. A pre-existing unmarked AGENTS.md is preserved and
-              receives the managed block at the end. Blocked repos stop unless
+              a managed CONTRIBUTING block, PR template, audit trail, and
+              default README badge block when managed README badges apply,
+              plus the managed auto-update workflow and helper script when
+              auto-update resolves to enabled. Pre-existing unmarked
+              AGENTS.md and CONTRIBUTING.md files are preserved and receive
+              the managed block at the end. Blocked repos stop unless
               --force is passed.
   update      Refresh the managed AGENTS block, AGENTS.bright-builds.md, the
-              managed files, README badge block, audit trail, and managed
-              auto-update files for repos already using the marker-based
-              layout.
+              managed CONTRIBUTING block, other managed files, README badge
+              block, audit trail, and managed auto-update files for repos
+              already using the marker-based layout.
   status      Show which managed files are present, classify the repo state,
               print the recommended next action, and report README badge state
               plus the resolved auto-update mode and reason.
-  uninstall   Remove the managed AGENTS block, AGENTS.bright-builds.md,
-              CONTRIBUTING.md, the PR template, audit trail, managed README
-              badges, and managed auto-update files. Keeps
-              standards-overrides.md.
+  uninstall   Remove the managed AGENTS block, AGENTS.bright-builds.md, the
+              managed CONTRIBUTING block or legacy clean CONTRIBUTING file,
+              the PR template, audit trail, managed README badges, and
+              managed auto-update files. Keeps standards-overrides.md.
 
 Options:
   --ref <git-ref>          Source ref to pin in downstream files. Defaults to
@@ -541,7 +547,7 @@ should_mdformat_whole_file_managed_markdown() {
 	local relative_destination="$1"
 
 	case "$relative_destination" in
-	"${sidecar_destination}" | "CONTRIBUTING.md" | ".github/pull_request_template.md" | "${audit_destination}" | "${legacy_audit_destination}")
+	"${sidecar_destination}" | ".github/pull_request_template.md" | "${audit_destination}" | "${legacy_audit_destination}")
 		return 0
 		;;
 	*)
@@ -852,6 +858,16 @@ prerename_compat_source_path_for_relative_destination() {
 		;;
 	"${auto_update_workflow_destination}")
 		printf '%s\n' "$prerename_compat_auto_update_workflow_source"
+		;;
+	esac
+}
+
+current_whole_file_compat_source_path_for_relative_destination() {
+	local relative_destination="$1"
+
+	case "$relative_destination" in
+	"${audit_destination}" | "${legacy_audit_destination}")
+		printf '%s\n' "$current_audit_whole_file_compat_source"
 		;;
 	esac
 }
@@ -1813,6 +1829,12 @@ resolve_agents_block_state() {
 	agents_block_family="$compatible_marker_family"
 }
 
+resolve_contributing_block_state() {
+	local file_path="$1"
+
+	contributing_block_state="$(detect_marker_block_state "$file_path" "$contributing_block_begin" "$contributing_block_end")"
+}
+
 resolve_readme_badges_block_state() {
 	local file_path="$1"
 
@@ -1983,6 +2005,10 @@ replace_managed_block() {
 	replace_marker_block "$1" "$2" "$3" "$agents_block_begin" "$agents_block_end"
 }
 
+replace_contributing_block() {
+	replace_marker_block "$1" "$2" "$3" "$contributing_block_begin" "$contributing_block_end"
+}
+
 replace_readme_badges_block() {
 	resolve_readme_badges_block_state "$1"
 
@@ -1992,6 +2018,34 @@ replace_readme_badges_block() {
 	fi
 
 	replace_marker_block "$1" "$2" "$3" "$readme_badges_begin" "$readme_badges_end"
+}
+
+extract_marker_block() {
+	local input_path="$1"
+	local output_path="$2"
+	local begin_marker="$3"
+	local end_marker="$4"
+
+	awk -v begin_marker="$begin_marker" -v end_marker="$end_marker" '
+    $0 == begin_marker && in_block == 0 {
+      in_block = 1
+      extracted = 1
+    }
+
+    in_block == 1 {
+      print
+      if ($0 == end_marker) {
+        in_block = 0
+      }
+      next
+    }
+
+    END {
+      if (extracted != 1 || in_block == 1) {
+        exit 3
+      }
+    }
+  ' "$input_path" >"$output_path"
 }
 
 remove_marker_block() {
@@ -2035,6 +2089,10 @@ remove_managed_block() {
 	fi
 
 	remove_marker_block "$1" "$2" "$agents_block_begin" "$agents_block_end"
+}
+
+remove_contributing_block() {
+	remove_marker_block "$1" "$2" "$contributing_block_begin" "$contributing_block_end"
 }
 
 remove_readme_badges_block() {
@@ -2373,6 +2431,53 @@ write_or_update_agents_file() {
 	esac
 }
 
+write_or_update_contributing_file() {
+	local destination_path="${repo_root}/${contributing_destination}"
+	local rendered_block_path=""
+	local updated_path=""
+	local stripped_path=""
+	local state=""
+
+	rendered_block_path="$(render_template_to_tmp_path "$contributing_block_source" "contributing-block")"
+	state="$(resolve_contributing_file_state)"
+
+	case "$state" in
+	missing | whole-file-clean)
+		cp "$rendered_block_path" "$destination_path"
+		note "Wrote ${contributing_destination}"
+		;;
+	unmanaged-or-whole-file-drifted)
+		ensure_tmp_dir
+		updated_path="${tmp_dir}/CONTRIBUTING.updated"
+		stripped_path="${tmp_dir}/CONTRIBUTING.stripped"
+		trim_trailing_blank_lines "$destination_path" "$stripped_path"
+
+		if file_has_non_whitespace "$stripped_path"; then
+			{
+				cat "$stripped_path"
+				printf '\n'
+				cat "$rendered_block_path"
+			} >"$updated_path"
+		else
+			cp "$rendered_block_path" "$updated_path"
+		fi
+
+		cp "$updated_path" "$destination_path"
+		note "Updated ${contributing_destination}"
+		;;
+	block-clean | block-drifted)
+		ensure_tmp_dir
+		updated_path="${tmp_dir}/CONTRIBUTING.updated"
+		replace_contributing_block "$destination_path" "$updated_path" "$rendered_block_path"
+		cp "$updated_path" "$destination_path"
+		note "Updated ${contributing_destination}"
+		;;
+	partial)
+		die "${contributing_destination} contains an incomplete managed marker block. Re-run install --force to back up and replace it."
+		;;
+	esac
+}
+
 ensure_overrides_file() {
 	local destination_path="${repo_root}/${overrides_destination}"
 
@@ -2411,7 +2516,7 @@ build_managed_files_markdown_for_state() {
 	local entries=(
 		"${agents_destination} (managed block)"
 		"${sidecar_destination}"
-		"CONTRIBUTING.md"
+		"${contributing_destination} (managed block)"
 		".github/pull_request_template.md"
 		"${current_audit_relative_destination}"
 	)
@@ -2433,6 +2538,10 @@ build_current_managed_files_markdown() {
 
 build_installed_managed_files_markdown() {
 	build_managed_files_markdown_for_state "$readme_badge_state" "${current_auto_update:-$auto_update_mode}" "$(resolve_effective_audit_destination)"
+}
+
+build_current_whole_file_contributing_compat_managed_files_markdown() {
+	build_managed_files_markdown_for_state "$readme_badge_state" "${current_auto_update:-$auto_update_mode}" "$(resolve_effective_audit_destination)" | sed "s#\`${contributing_destination} (managed block)\`#\`${contributing_destination}\`#"
 }
 
 remove_auto_update_files() {
@@ -2519,6 +2628,76 @@ marked_candidate_path_matches_destination_as_legacy_exact_match() {
 	candidate_path_matches_destination "$destination_path" "$stripped_candidate_path"
 }
 
+resolve_contributing_file_state() {
+	local destination_path="${repo_root}/${contributing_destination}"
+	local rendered_block_path=""
+	local extracted_block_path=""
+	local whole_file_state=""
+
+	if [[ ! -f "$destination_path" ]]; then
+		printf 'missing\n'
+		return
+	fi
+
+	resolve_contributing_block_state "$destination_path"
+
+	case "$contributing_block_state" in
+	partial)
+		printf 'partial\n'
+		return
+		;;
+	present)
+		rendered_block_path="$(render_template_to_tmp_path "$contributing_block_source" "contributing-block")"
+		ensure_tmp_dir
+		extracted_block_path="${tmp_dir}/CONTRIBUTING.block.extracted"
+		extract_marker_block "$destination_path" "$extracted_block_path" "$contributing_block_begin" "$contributing_block_end"
+		if cmp -s "$destination_path" "$rendered_block_path"; then
+			printf 'block-clean\n'
+			return
+		fi
+		if cmp -s "$extracted_block_path" "$rendered_block_path"; then
+			printf 'block-clean\n'
+			return
+		fi
+		printf 'block-drifted\n'
+		return
+		;;
+	esac
+
+	whole_file_state="$(resolve_whole_file_managed_state "$current_contributing_whole_file_compat_source" "$contributing_destination")"
+	if [[ "$whole_file_state" == "marked" || "$whole_file_state" == "legacy" ]]; then
+		printf 'whole-file-clean\n'
+		return
+	fi
+
+	printf 'unmanaged-or-whole-file-drifted\n'
+}
+
+repair_blocking_contributing_file() {
+	local destination_path="${repo_root}/${contributing_destination}"
+	local state=""
+	local rendered_block_path=""
+	local updated_path=""
+
+	[[ -f "$destination_path" ]] || return
+
+	state="$(resolve_contributing_file_state)"
+	case "$state" in
+	block-clean | block-drifted)
+		rendered_block_path="$(render_template_to_tmp_path "$contributing_block_source" "contributing-block")"
+		ensure_tmp_dir
+		updated_path="${tmp_dir}/CONTRIBUTING.repaired"
+		replace_contributing_block "$destination_path" "$updated_path" "$rendered_block_path"
+		cp "$updated_path" "$destination_path"
+		note "Repaired ${contributing_destination}"
+		;;
+	*)
+		rm -f "$destination_path"
+		note "Removed conflicting ${contributing_destination}"
+		;;
+	esac
+}
+
 resolve_whole_file_managed_state() {
 	local source_path="$1"
 	local relative_destination="$2"
@@ -2532,6 +2711,11 @@ resolve_whole_file_managed_state() {
 	local alternate_legacy_path=""
 	local legacy_identity_marked_path=""
 	local legacy_identity_unmarked_path=""
+	local current_compat_source_path=""
+	local current_compat_managed_files_markdown=""
+	local legacy_compat_managed_files_markdown="$managed_files_markdown"
+	local current_compat_marked_path=""
+	local current_compat_legacy_path=""
 	local prerename_compat_marked_path=""
 	local prerename_compat_unmarked_path=""
 
@@ -2543,6 +2727,10 @@ resolve_whole_file_managed_state() {
 	if [[ ! -f "$destination_path" ]]; then
 		printf 'missing\n'
 		return
+	fi
+
+	if [[ "$actual_relative_destination" == "$audit_destination" || "$actual_relative_destination" == "$legacy_audit_destination" ]]; then
+		legacy_compat_managed_files_markdown="$(build_current_whole_file_contributing_compat_managed_files_markdown)"
 	fi
 
 	marked_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").marked" "$relative_destination" "$managed_files_markdown" "enabled")"
@@ -2577,8 +2765,28 @@ resolve_whole_file_managed_state() {
 		return
 	fi
 
+	current_compat_source_path="$(current_whole_file_compat_source_path_for_relative_destination "$actual_relative_destination")"
+	if [[ -n "$current_compat_source_path" ]]; then
+		current_compat_managed_files_markdown="$legacy_compat_managed_files_markdown"
+		current_compat_marked_path="$(render_template_to_tmp_path_for_install_state "$current_compat_source_path" "$(basename "$actual_relative_destination").current-compat.marked" "$actual_relative_destination" "$current_compat_managed_files_markdown" "enabled")"
+		if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$current_compat_marked_path" "$actual_relative_destination"; then
+			printf 'legacy\n'
+			return
+		fi
+		if marked_candidate_path_matches_destination_as_legacy_exact_match "$destination_path" "$current_compat_marked_path" "$actual_relative_destination"; then
+			printf 'legacy\n'
+			return
+		fi
+
+		current_compat_legacy_path="$(render_template_to_tmp_path_for_install_state "$current_compat_source_path" "$(basename "$actual_relative_destination").current-compat.legacy" "$actual_relative_destination" "$current_compat_managed_files_markdown" "disabled")"
+		if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$current_compat_legacy_path" "$actual_relative_destination"; then
+			printf 'legacy\n'
+			return
+		fi
+	fi
+
 	if [[ "$current_install_uses_legacy_layout" -eq 1 ]]; then
-		prerename_compat_marked_path="$(render_template_to_prerename_compat_tmp_path_for_install_state "$(basename "$actual_relative_destination").prerename-compat.marked" "$actual_relative_destination" "$managed_files_markdown" "enabled")"
+		prerename_compat_marked_path="$(render_template_to_prerename_compat_tmp_path_for_install_state "$(basename "$actual_relative_destination").prerename-compat.marked" "$actual_relative_destination" "$legacy_compat_managed_files_markdown" "enabled")"
 		if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$prerename_compat_marked_path" "$actual_relative_destination"; then
 			printf 'legacy\n'
 			return
@@ -2588,7 +2796,7 @@ resolve_whole_file_managed_state() {
 			return
 		fi
 
-		prerename_compat_unmarked_path="$(render_template_to_prerename_compat_tmp_path_for_install_state "$(basename "$actual_relative_destination").prerename-compat.unmarked" "$actual_relative_destination" "$managed_files_markdown" "disabled")"
+		prerename_compat_unmarked_path="$(render_template_to_prerename_compat_tmp_path_for_install_state "$(basename "$actual_relative_destination").prerename-compat.unmarked" "$actual_relative_destination" "$legacy_compat_managed_files_markdown" "disabled")"
 		if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$prerename_compat_unmarked_path" "$actual_relative_destination"; then
 			printf 'legacy\n'
 			return
@@ -2630,7 +2838,7 @@ resolve_whole_file_managed_state() {
 			fi
 
 			if [[ "$current_install_uses_legacy_layout" -eq 1 ]]; then
-				alternate_marked_path="$(render_template_to_prerename_compat_tmp_path_for_install_state "$(basename "$actual_relative_destination").prerename-compat.marked.no-owner-guidance" "$actual_relative_destination" "$managed_files_markdown" "enabled" "")"
+				alternate_marked_path="$(render_template_to_prerename_compat_tmp_path_for_install_state "$(basename "$actual_relative_destination").prerename-compat.marked.no-owner-guidance" "$actual_relative_destination" "$legacy_compat_managed_files_markdown" "enabled" "")"
 				if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$alternate_marked_path" "$actual_relative_destination"; then
 					printf 'legacy\n'
 					return
@@ -2640,7 +2848,7 @@ resolve_whole_file_managed_state() {
 					return
 				fi
 
-				alternate_legacy_path="$(render_template_to_prerename_compat_tmp_path_for_install_state "$(basename "$actual_relative_destination").prerename-compat.unmarked.no-owner-guidance" "$actual_relative_destination" "$managed_files_markdown" "disabled" "")"
+				alternate_legacy_path="$(render_template_to_prerename_compat_tmp_path_for_install_state "$(basename "$actual_relative_destination").prerename-compat.unmarked.no-owner-guidance" "$actual_relative_destination" "$legacy_compat_managed_files_markdown" "disabled" "")"
 				if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$alternate_legacy_path" "$actual_relative_destination"; then
 					printf 'legacy\n'
 					return
@@ -2683,7 +2891,7 @@ resolve_whole_file_managed_state() {
 			fi
 
 			if [[ "$current_install_uses_legacy_layout" -eq 1 ]]; then
-				alternate_marked_path="$(render_template_to_prerename_compat_tmp_path_for_install_state "$(basename "$actual_relative_destination").prerename-compat.marked.owner-guidance-compat" "$actual_relative_destination" "$managed_files_markdown" "enabled" "$actual_owner_specific_guidance_owner")"
+				alternate_marked_path="$(render_template_to_prerename_compat_tmp_path_for_install_state "$(basename "$actual_relative_destination").prerename-compat.marked.owner-guidance-compat" "$actual_relative_destination" "$legacy_compat_managed_files_markdown" "enabled" "$actual_owner_specific_guidance_owner")"
 				if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$alternate_marked_path" "$actual_relative_destination"; then
 					printf 'legacy\n'
 					return
@@ -2693,7 +2901,7 @@ resolve_whole_file_managed_state() {
 					return
 				fi
 
-				alternate_legacy_path="$(render_template_to_prerename_compat_tmp_path_for_install_state "$(basename "$actual_relative_destination").prerename-compat.unmarked.owner-guidance-compat" "$actual_relative_destination" "$managed_files_markdown" "disabled" "$actual_owner_specific_guidance_owner")"
+				alternate_legacy_path="$(render_template_to_prerename_compat_tmp_path_for_install_state "$(basename "$actual_relative_destination").prerename-compat.unmarked.owner-guidance-compat" "$actual_relative_destination" "$legacy_compat_managed_files_markdown" "disabled" "$actual_owner_specific_guidance_owner")"
 				if candidate_path_matches_destination "$destination_path" "$alternate_legacy_path"; then
 					printf 'legacy\n'
 					return
@@ -2739,6 +2947,45 @@ remove_clean_installed_whole_file() {
 		;;
 	drifted)
 		note "Skipped ${relative_destination} because it has downstream edits"
+		;;
+	esac
+}
+
+remove_or_update_contributing_file_for_uninstall() {
+	local destination_path="${repo_root}/${contributing_destination}"
+	local state=""
+	local updated_path=""
+	local trimmed_path=""
+
+	state="$(resolve_contributing_file_state)"
+
+	case "$state" in
+	block-clean)
+		ensure_tmp_dir
+		updated_path="${tmp_dir}/CONTRIBUTING.unmanaged"
+		trimmed_path="${tmp_dir}/CONTRIBUTING.trimmed"
+		remove_contributing_block "$destination_path" "$updated_path"
+		trim_trailing_blank_lines "$updated_path" "$trimmed_path"
+
+		if file_has_non_whitespace "$trimmed_path"; then
+			cp "$trimmed_path" "$destination_path"
+			note "Updated ${contributing_destination}"
+		else
+			rm -f "$destination_path"
+			note "Removed ${contributing_destination}"
+		fi
+		;;
+	partial | block-drifted)
+		note "Skipped ${contributing_destination} because the managed block has downstream edits"
+		;;
+	whole-file-clean)
+		rm -f "$destination_path"
+		note "Removed ${contributing_destination}"
+		;;
+	unmanaged-or-whole-file-drifted)
+		if [[ -f "$destination_path" ]]; then
+			note "Skipped ${contributing_destination} because it has downstream edits"
+		fi
 		;;
 	esac
 }
@@ -2961,6 +3208,7 @@ determine_repo_state() {
 	local agents_path="${repo_root}/${agents_destination}"
 	local path=""
 	local auto_update_path=""
+	local contributing_state=""
 	local installed_signal=0
 	local effective_audit_destination=""
 
@@ -2970,6 +3218,7 @@ determine_repo_state() {
 	resolve_agents_block_state "$agents_path"
 	readme_badge_state="$(resolve_readme_badge_state)"
 	effective_audit_destination="$(resolve_effective_audit_destination)"
+	contributing_state="$(resolve_contributing_file_state)"
 
 	if [[ "$agents_block_state" == "present" && -f "${repo_root}/${sidecar_destination}" ]]; then
 		installed_signal=1
@@ -2992,8 +3241,22 @@ determine_repo_state() {
 		append_drifted_installed_whole_file_paths
 	fi
 
+	if [[ "$installed_signal" -eq 1 ]]; then
+		case "$contributing_state" in
+		partial | block-drifted | unmanaged-or-whole-file-drifted)
+			append_unique_blocking_path "$contributing_destination"
+			;;
+		esac
+	else
+		case "$contributing_state" in
+		block-clean | block-drifted | partial | whole-file-clean)
+			append_unique_blocking_path "$contributing_destination"
+			;;
+		esac
+	fi
+
 	if [[ "$installed_signal" -ne 1 ]]; then
-		for path in "CONTRIBUTING.md" ".github/pull_request_template.md" "${effective_audit_destination}"; do
+		for path in ".github/pull_request_template.md" "${effective_audit_destination}"; do
 			if [[ -f "${repo_root}/${path}" ]]; then
 				append_unique_blocking_path "$path"
 			fi
@@ -3070,6 +3333,11 @@ clear_blocking_paths() {
 			continue
 		fi
 
+		if [[ "$relative_destination" == "$contributing_destination" ]]; then
+			repair_blocking_contributing_file
+			continue
+		fi
+
 		rm -f "$destination_path"
 		note "Removed conflicting ${relative_destination}"
 	done
@@ -3085,6 +3353,7 @@ install_or_update() {
 	local relative_destination=""
 
 	write_or_update_agents_file
+	write_or_update_contributing_file
 
 	for pair in "${base_managed_pairs[@]}"; do
 		IFS='|' read -r source_path relative_destination <<<"$pair"
@@ -3182,6 +3451,8 @@ uninstall() {
 	elif [[ "$state" == "partial" ]]; then
 		note "Skipped ${agents_destination} because the managed marker block is incomplete"
 	fi
+
+	remove_or_update_contributing_file_for_uninstall
 
 	resolve_readme_badges_block_state "$readme_path"
 	readme_state="$compatible_marker_state"
