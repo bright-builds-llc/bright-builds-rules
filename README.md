@@ -359,6 +359,8 @@ Run the docs hygiene checks with:
 ./scripts/verify-docs.sh
 ```
 
+`./scripts/verify-docs.sh` also runs `mdformat --check` against the current downstream Markdown templates, so keep `mdformat` available on `PATH` when running it.
+
 Run the managed shell template checks with:
 
 ```bash

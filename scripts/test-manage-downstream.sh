@@ -190,6 +190,14 @@ assert_command_succeeds() {
 	"$@" >/dev/null 2>&1 || fail "${message}: $*"
 }
 
+assert_markdown_is_mdformat_clean() {
+	local message="$1"
+	shift
+
+	command -v mdformat >/dev/null 2>&1 || fail "mdformat must be available on PATH for markdown cleanliness assertions"
+	mdformat --check "$@" >/dev/null 2>&1 || fail "${message}: mdformat --check failed for $*"
+}
+
 assert_line_equals() {
 	local file_path="$1"
 	local line_number="$2"
@@ -513,6 +521,14 @@ test_fresh_install_and_reinstall() {
 	assert_file_missing "${repo_path}/README.md"
 	assert_file_missing "${repo_path}/scripts/bright-builds-auto-update.sh"
 	assert_file_missing "${repo_path}/.github/workflows/bright-builds-auto-update.yml"
+	assert_markdown_is_mdformat_clean \
+		"fresh install should write mdformat-clean downstream Markdown" \
+		"${repo_path}/AGENTS.md" \
+		"${repo_path}/AGENTS.bright-builds.md" \
+		"${repo_path}/CONTRIBUTING.md" \
+		"${repo_path}/.github/pull_request_template.md" \
+		"${repo_path}/bright-builds-rules.audit.md" \
+		"${repo_path}/standards-overrides.md"
 
 	assert_file_contains "${repo_path}/AGENTS.md" "\`AGENTS.md\` is the entrypoint for repo-local instructions, not the complete Bright Builds Rules specification." "root AGENTS should define AGENTS as the local entrypoint rather than the full spec"
 	assert_file_contains "${repo_path}/AGENTS.md" "This managed block is owned upstream by \`bright-builds-rules\`." "root AGENTS managed block should direct fixes upstream"
@@ -610,6 +626,10 @@ test_existing_agents_is_installable() {
 	assert_exact_line_count "${repo_path}/AGENTS.md" "$agents_block_begin" "1"
 	assert_exact_line_count "${repo_path}/AGENTS.md" "$agents_block_end" "1"
 	assert_line_order "${repo_path}/AGENTS.md" "Keep this instruction." "$agents_block_begin"
+	assert_markdown_is_mdformat_clean \
+		"install should append an mdformat-clean managed AGENTS block" \
+		"${repo_path}/AGENTS.md" \
+		"${repo_path}/AGENTS.bright-builds.md"
 }
 
 test_trusted_repo_owner_enables_auto_update_by_default() {
@@ -683,6 +703,11 @@ test_peter_ryszkiewicz_owner_gets_openlinks_identity_guidance() {
 	assert_line_order "${repo_path}/README.md" "GitHub Stars" "Bright Builds: Rules"
 	assert_line_order "${repo_path}/README.md" "Bright Builds: Rules" "OpenLinks profile"
 	assert_line_order "${repo_path}/README.md" "GitHub Stars" "OpenLinks profile"
+	assert_markdown_is_mdformat_clean \
+		"Peter-owned installs should keep AGENTS and README mdformat-clean" \
+		"${repo_path}/AGENTS.md" \
+		"${repo_path}/AGENTS.bright-builds.md" \
+		"${repo_path}/README.md"
 }
 
 test_owner_specific_openlinks_badge_appends_after_detected_badges() {
@@ -703,6 +728,11 @@ test_owner_specific_openlinks_badge_appends_after_detected_badges() {
 	assert_line_order "${repo_path}/README.md" "Vite 7.3.1" "Bright Builds: Rules"
 	assert_line_order "${repo_path}/README.md" "Bright Builds: Rules" "OpenLinks profile"
 	assert_line_order "${repo_path}/README.md" "Vite 7.3.1" "OpenLinks profile"
+	assert_markdown_is_mdformat_clean \
+		"owner-specific badge insertion should keep README and AGENTS mdformat-clean" \
+		"${repo_path}/AGENTS.md" \
+		"${repo_path}/AGENTS.bright-builds.md" \
+		"${repo_path}/README.md"
 }
 
 test_untracked_auto_update_files_are_ignored_when_disabled() {
@@ -831,6 +861,10 @@ test_update_preserves_local_agents_and_overrides() {
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Exact commit: \`${repo_exact_commit}\`" "update should preserve exact local provenance"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "copyable summary with the exact commit when available" "update should keep the UI provenance guidance"
 	assert_file_contains "${repo_path}/standards-overrides.md" "| \`custom\` | \`keep it\` | \`local\` | \`owner\` | \`2026-03-13\` |" "update should preserve local overrides"
+	assert_markdown_is_mdformat_clean \
+		"update should keep downstream AGENTS markdown mdformat-clean" \
+		"${repo_path}/AGENTS.md" \
+		"${repo_path}/AGENTS.bright-builds.md"
 }
 
 test_legacy_exact_match_install_is_still_installed_and_update_migrates_markers() {
@@ -899,6 +933,11 @@ test_prerename_clean_install_is_installed_and_update_migrates_legacy_layout() {
 	assert_file_contains "${repo_path}/README.md" "TypeScript 5.9.2" "migration should preserve README badge detection while rewriting marker families"
 	assert_file_contains "${repo_path}/README.md" "Bright Builds: Rules" "migration should preserve the managed Bright Builds badge after rewriting the README block"
 	assert_file_contains "${repo_path}/README.md" "Body text remains." "migration should preserve README content outside managed regions"
+	assert_markdown_is_mdformat_clean \
+		"legacy layout migration should keep rewritten downstream Markdown mdformat-clean" \
+		"${repo_path}/AGENTS.md" \
+		"${repo_path}/AGENTS.bright-builds.md" \
+		"${repo_path}/README.md"
 }
 
 test_script_only_status_falls_back_from_stale_legacy_exact_commit() {

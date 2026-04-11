@@ -537,6 +537,30 @@ render_template_file() {
 	} >"$output_path"
 }
 
+should_mdformat_whole_file_managed_markdown() {
+	local relative_destination="$1"
+
+	case "$relative_destination" in
+	"${sidecar_destination}" | "CONTRIBUTING.md" | ".github/pull_request_template.md" | "${audit_destination}" | "${legacy_audit_destination}")
+		return 0
+		;;
+	*)
+		return 1
+		;;
+	esac
+}
+
+maybe_mdformat_whole_file_managed_markdown() {
+	local file_path="$1"
+	local relative_destination="$2"
+
+	[[ "$relative_destination" == *.md ]] || return 0
+	should_mdformat_whole_file_managed_markdown "$relative_destination" || return 0
+	command -v mdformat >/dev/null 2>&1 || return 0
+
+	mdformat "$file_path" >/dev/null 2>&1 || die "mdformat failed for ${relative_destination}"
+}
+
 resolve_exact_commit() {
 	local resolved_commit=""
 	local remote_url=""
@@ -915,6 +939,7 @@ write_rendered_file() {
 	ensure_tmp_dir
 	updated_path="${tmp_dir}/$(basename "$relative_destination").write"
 	cp "$rendered_path" "$updated_path"
+	maybe_mdformat_whole_file_managed_markdown "$updated_path" "$relative_destination"
 	mv "$updated_path" "$destination_path"
 	note "Wrote ${relative_destination}"
 }
@@ -2044,10 +2069,12 @@ render_readme_badges_block_to_tmp_path() {
 	ensure_tmp_dir
 	rendered_path="${tmp_dir}/README.badges.rendered"
 	{
-		printf '%s\n' "$readme_badges_begin"
+		printf '%s\n\n' "$readme_badges_begin"
 		printf '%s\n' "<!-- Managed upstream by bright-builds-rules. If this badge block needs a fix, open an upstream PR or issue instead of editing the downstream managed block. Keep repo-local README content outside this managed badge block. -->"
 		if [[ -n "$readme_badges_markdown" ]]; then
-			printf '%s\n' "$readme_badges_markdown"
+			printf '\n%s\n\n' "$readme_badges_markdown"
+		else
+			printf '\n'
 		fi
 		printf '%s\n' "$readme_badges_end"
 	} >"$rendered_path"
@@ -2323,7 +2350,7 @@ write_or_update_agents_file() {
 		if file_has_non_whitespace "$stripped_path"; then
 			{
 				cat "$stripped_path"
-				printf '\n\n'
+				printf '\n'
 				cat "$rendered_block_path"
 			} >"$updated_path"
 		else
@@ -2444,6 +2471,54 @@ candidate_path_matches_destination() {
 	cmp -s "$destination_path" "$candidate_path"
 }
 
+candidate_path_matches_destination_or_mdformat_variant() {
+	local destination_path="$1"
+	local candidate_path="$2"
+	local relative_destination="$3"
+	local formatted_candidate_path=""
+
+	if candidate_path_matches_destination "$destination_path" "$candidate_path"; then
+		return 0
+	fi
+
+	should_mdformat_whole_file_managed_markdown "$relative_destination" || return 1
+	command -v mdformat >/dev/null 2>&1 || return 1
+
+	ensure_tmp_dir
+	formatted_candidate_path="${tmp_dir}/$(basename "$candidate_path").mdformat"
+	cp "$candidate_path" "$formatted_candidate_path"
+	mdformat "$formatted_candidate_path" >/dev/null 2>&1 || die "mdformat failed while matching ${relative_destination}"
+
+	candidate_path_matches_destination "$destination_path" "$formatted_candidate_path"
+}
+
+strip_managed_file_marker_line() {
+	local input_path="$1"
+	local output_path="$2"
+
+	grep -Ev '^(<!-- (bright-builds-rules|coding-and-architecture-requirements)-managed-file: .* -->|# (bright-builds-rules|coding-and-architecture-requirements)-managed-file: .*)$' "$input_path" >"$output_path"
+}
+
+marked_candidate_path_matches_destination_as_legacy_exact_match() {
+	local destination_path="$1"
+	local candidate_path="$2"
+	local relative_destination="$3"
+	local formatted_candidate_path=""
+	local stripped_candidate_path=""
+
+	should_mdformat_whole_file_managed_markdown "$relative_destination" || return 1
+	command -v mdformat >/dev/null 2>&1 || return 1
+
+	ensure_tmp_dir
+	formatted_candidate_path="${tmp_dir}/$(basename "$candidate_path").marked.mdformat"
+	stripped_candidate_path="${tmp_dir}/$(basename "$candidate_path").marked.stripped"
+	cp "$candidate_path" "$formatted_candidate_path"
+	mdformat "$formatted_candidate_path" >/dev/null 2>&1 || die "mdformat failed while matching ${relative_destination}"
+	strip_managed_file_marker_line "$formatted_candidate_path" "$stripped_candidate_path"
+
+	candidate_path_matches_destination "$destination_path" "$stripped_candidate_path"
+}
+
 resolve_whole_file_managed_state() {
 	local source_path="$1"
 	local relative_destination="$2"
@@ -2471,38 +2546,50 @@ resolve_whole_file_managed_state() {
 	fi
 
 	marked_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").marked" "$relative_destination" "$managed_files_markdown" "enabled")"
-	if candidate_path_matches_destination "$destination_path" "$marked_path"; then
+	if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$marked_path" "$actual_relative_destination"; then
 		printf 'marked\n'
+		return
+	fi
+	if marked_candidate_path_matches_destination_as_legacy_exact_match "$destination_path" "$marked_path" "$actual_relative_destination"; then
+		printf 'legacy\n'
 		return
 	fi
 
 	legacy_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").legacy" "$relative_destination" "$managed_files_markdown" "disabled")"
-	if candidate_path_matches_destination "$destination_path" "$legacy_path"; then
+	if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$legacy_path" "$actual_relative_destination"; then
 		printf 'legacy\n'
 		return
 	fi
 
 	legacy_identity_marked_path="$(render_template_to_legacy_identity_tmp_path_for_install_state "$source_path" "$(basename "$actual_relative_destination").legacy-identity.marked" "$actual_relative_destination" "$managed_files_markdown" "enabled")"
-	if candidate_path_matches_destination "$destination_path" "$legacy_identity_marked_path"; then
+	if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$legacy_identity_marked_path" "$actual_relative_destination"; then
+		printf 'legacy\n'
+		return
+	fi
+	if marked_candidate_path_matches_destination_as_legacy_exact_match "$destination_path" "$legacy_identity_marked_path" "$actual_relative_destination"; then
 		printf 'legacy\n'
 		return
 	fi
 
 	legacy_identity_unmarked_path="$(render_template_to_legacy_identity_tmp_path_for_install_state "$source_path" "$(basename "$actual_relative_destination").legacy-identity.unmarked" "$actual_relative_destination" "$managed_files_markdown" "disabled")"
-	if candidate_path_matches_destination "$destination_path" "$legacy_identity_unmarked_path"; then
+	if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$legacy_identity_unmarked_path" "$actual_relative_destination"; then
 		printf 'legacy\n'
 		return
 	fi
 
 	if [[ "$current_install_uses_legacy_layout" -eq 1 ]]; then
 		prerename_compat_marked_path="$(render_template_to_prerename_compat_tmp_path_for_install_state "$(basename "$actual_relative_destination").prerename-compat.marked" "$actual_relative_destination" "$managed_files_markdown" "enabled")"
-		if candidate_path_matches_destination "$destination_path" "$prerename_compat_marked_path"; then
+		if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$prerename_compat_marked_path" "$actual_relative_destination"; then
+			printf 'legacy\n'
+			return
+		fi
+		if marked_candidate_path_matches_destination_as_legacy_exact_match "$destination_path" "$prerename_compat_marked_path" "$actual_relative_destination"; then
 			printf 'legacy\n'
 			return
 		fi
 
 		prerename_compat_unmarked_path="$(render_template_to_prerename_compat_tmp_path_for_install_state "$(basename "$actual_relative_destination").prerename-compat.unmarked" "$actual_relative_destination" "$managed_files_markdown" "disabled")"
-		if candidate_path_matches_destination "$destination_path" "$prerename_compat_unmarked_path"; then
+		if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$prerename_compat_unmarked_path" "$actual_relative_destination"; then
 			printf 'legacy\n'
 			return
 		fi
@@ -2511,38 +2598,50 @@ resolve_whole_file_managed_state() {
 	if [[ "$relative_destination" == "$sidecar_destination" ]]; then
 		if [[ -n "$owner_specific_guidance_markdown" ]]; then
 			alternate_marked_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").marked.no-owner-guidance" "$relative_destination" "$managed_files_markdown" "enabled" "")"
-			if candidate_path_matches_destination "$destination_path" "$alternate_marked_path"; then
+			if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$alternate_marked_path" "$actual_relative_destination"; then
 				printf 'marked\n'
+				return
+			fi
+			if marked_candidate_path_matches_destination_as_legacy_exact_match "$destination_path" "$alternate_marked_path" "$actual_relative_destination"; then
+				printf 'legacy\n'
 				return
 			fi
 
 			alternate_legacy_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").legacy.no-owner-guidance" "$relative_destination" "$managed_files_markdown" "disabled" "")"
-			if candidate_path_matches_destination "$destination_path" "$alternate_legacy_path"; then
+			if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$alternate_legacy_path" "$actual_relative_destination"; then
 				printf 'legacy\n'
 				return
 			fi
 
 			alternate_marked_path="$(render_template_to_legacy_identity_tmp_path_for_install_state "$source_path" "$(basename "$actual_relative_destination").legacy-identity.marked.no-owner-guidance" "$actual_relative_destination" "$managed_files_markdown" "enabled" "")"
-			if candidate_path_matches_destination "$destination_path" "$alternate_marked_path"; then
+			if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$alternate_marked_path" "$actual_relative_destination"; then
+				printf 'legacy\n'
+				return
+			fi
+			if marked_candidate_path_matches_destination_as_legacy_exact_match "$destination_path" "$alternate_marked_path" "$actual_relative_destination"; then
 				printf 'legacy\n'
 				return
 			fi
 
 			alternate_legacy_path="$(render_template_to_legacy_identity_tmp_path_for_install_state "$source_path" "$(basename "$actual_relative_destination").legacy-identity.unmarked.no-owner-guidance" "$actual_relative_destination" "$managed_files_markdown" "disabled" "")"
-			if candidate_path_matches_destination "$destination_path" "$alternate_legacy_path"; then
+			if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$alternate_legacy_path" "$actual_relative_destination"; then
 				printf 'legacy\n'
 				return
 			fi
 
 			if [[ "$current_install_uses_legacy_layout" -eq 1 ]]; then
 				alternate_marked_path="$(render_template_to_prerename_compat_tmp_path_for_install_state "$(basename "$actual_relative_destination").prerename-compat.marked.no-owner-guidance" "$actual_relative_destination" "$managed_files_markdown" "enabled" "")"
-				if candidate_path_matches_destination "$destination_path" "$alternate_marked_path"; then
+				if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$alternate_marked_path" "$actual_relative_destination"; then
+					printf 'legacy\n'
+					return
+				fi
+				if marked_candidate_path_matches_destination_as_legacy_exact_match "$destination_path" "$alternate_marked_path" "$actual_relative_destination"; then
 					printf 'legacy\n'
 					return
 				fi
 
 				alternate_legacy_path="$(render_template_to_prerename_compat_tmp_path_for_install_state "$(basename "$actual_relative_destination").prerename-compat.unmarked.no-owner-guidance" "$actual_relative_destination" "$managed_files_markdown" "disabled" "")"
-				if candidate_path_matches_destination "$destination_path" "$alternate_legacy_path"; then
+				if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$alternate_legacy_path" "$actual_relative_destination"; then
 					printf 'legacy\n'
 					return
 				fi
@@ -2552,8 +2651,12 @@ resolve_whole_file_managed_state() {
 		actual_owner_specific_guidance_owner="$(extract_sidecar_owner_specific_guidance_owner "$destination_path")"
 		if [[ -n "$actual_owner_specific_guidance_owner" && "$actual_owner_specific_guidance_owner" != "$downstream_repo_owner" ]]; then
 			alternate_marked_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").marked.owner-guidance-compat" "$relative_destination" "$managed_files_markdown" "enabled" "$actual_owner_specific_guidance_owner")"
-			if candidate_path_matches_destination "$destination_path" "$alternate_marked_path"; then
+			if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$alternate_marked_path" "$actual_relative_destination"; then
 				printf 'marked\n'
+				return
+			fi
+			if marked_candidate_path_matches_destination_as_legacy_exact_match "$destination_path" "$alternate_marked_path" "$actual_relative_destination"; then
+				printf 'legacy\n'
 				return
 			fi
 
@@ -2564,7 +2667,11 @@ resolve_whole_file_managed_state() {
 			fi
 
 			alternate_marked_path="$(render_template_to_legacy_identity_tmp_path_for_install_state "$source_path" "$(basename "$actual_relative_destination").legacy-identity.marked.owner-guidance-compat" "$actual_relative_destination" "$managed_files_markdown" "enabled" "$actual_owner_specific_guidance_owner")"
-			if candidate_path_matches_destination "$destination_path" "$alternate_marked_path"; then
+			if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$alternate_marked_path" "$actual_relative_destination"; then
+				printf 'legacy\n'
+				return
+			fi
+			if marked_candidate_path_matches_destination_as_legacy_exact_match "$destination_path" "$alternate_marked_path" "$actual_relative_destination"; then
 				printf 'legacy\n'
 				return
 			fi
@@ -2577,7 +2684,11 @@ resolve_whole_file_managed_state() {
 
 			if [[ "$current_install_uses_legacy_layout" -eq 1 ]]; then
 				alternate_marked_path="$(render_template_to_prerename_compat_tmp_path_for_install_state "$(basename "$actual_relative_destination").prerename-compat.marked.owner-guidance-compat" "$actual_relative_destination" "$managed_files_markdown" "enabled" "$actual_owner_specific_guidance_owner")"
-				if candidate_path_matches_destination "$destination_path" "$alternate_marked_path"; then
+				if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$alternate_marked_path" "$actual_relative_destination"; then
+					printf 'legacy\n'
+					return
+				fi
+				if marked_candidate_path_matches_destination_as_legacy_exact_match "$destination_path" "$alternate_marked_path" "$actual_relative_destination"; then
 					printf 'legacy\n'
 					return
 				fi

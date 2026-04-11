@@ -4,6 +4,11 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
+command -v mdformat >/dev/null 2>&1 || {
+  echo "mdformat must be available on PATH for downstream Markdown verification" >&2
+  exit 1
+}
+
 npx --yes markdownlint-cli2@0.18.1 \
   "AGENTS.md" \
   "AI-ADOPTION.md" \
@@ -13,6 +18,13 @@ npx --yes markdownlint-cli2@0.18.1 \
   "skills/**/*.md" \
   "standards/**/*.md" \
   "templates/**/*.md"
+mdformat --check \
+  "templates/AGENTS.md" \
+  "templates/AGENTS.bright-builds.md" \
+  "templates/CONTRIBUTING.md" \
+  "templates/pull_request_template.md" \
+  "templates/bright-builds-rules.audit.md" \
+  "templates/standards-overrides.md"
 # Run one recursive link-check pass instead of spawning a fresh npx process per file.
 npx --yes markdown-link-check@3.14.1 -c .markdown-link-check.json --ignore .git,node_modules .
 

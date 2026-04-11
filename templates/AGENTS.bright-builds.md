@@ -23,11 +23,11 @@ Record recurring repo-specific workflow facts in `AGENTS.md` under `## Repo-Loca
 `AGENTS.md` is the entrypoint for repo-local instructions, not a complete Bright Builds Rules spec.
 
 1. Read `AGENTS.md`, especially any `## Repo-Local Guidance` section and any repo-specific instructions outside the managed Bright Builds Rules block.
-2. Read `AGENTS.bright-builds.md`.
-3. Read `standards-overrides.md` when it exists.
-4. Read the pinned canonical standards entrypoint and any canonical pages relevant to the task before plan, review, implementation, or audit work.
-5. If that reading has not happened yet, stop and load those sources before continuing.
-6. In plan, review, and audit outputs, briefly acknowledge which local guidance, sidecar, overrides, or canonical standards pages materially informed the answer.
+1. Read `AGENTS.bright-builds.md`.
+1. Read `standards-overrides.md` when it exists.
+1. Read the pinned canonical standards entrypoint and any canonical pages relevant to the task before plan, review, implementation, or audit work.
+1. If that reading has not happened yet, stop and load those sources before continuing.
+1. In plan, review, and audit outputs, briefly acknowledge which local guidance, sidecar, overrides, or canonical standards pages materially informed the answer.
 
 ## Routing hints
 
