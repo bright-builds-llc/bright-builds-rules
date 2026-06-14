@@ -12,9 +12,9 @@ current_bright_builds_url="https://github.com/bright-builds-llc/bright-builds-ru
 current_bright_builds_raw_base_url="https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main"
 legacy_audit_destination="coding-and-architecture-requirements.audit.md"
 legacy_repo_ref="0d5dce1^"
+pre_local_standards_ref="05f8d7a6c9c2e157ec4f922a05273e72dab97676"
 run_output=""
 run_status=0
-
 cleanup() {
 	rm -rf "$temp_root"
 }
@@ -179,6 +179,7 @@ create_source_bundle() {
 
 	mkdir -p "${bundle_root}/scripts" "${bundle_root}/templates" "${bundle_root}/standards"
 	cp "$script_path" "${bundle_root}/scripts/manage-downstream.sh"
+	cp -R "${repo_root}/scripts/manage-downstream" "${bundle_root}/scripts/manage-downstream"
 	cp -R "${repo_root}/templates/." "${bundle_root}/templates/"
 	cp -R "${repo_root}/standards/." "${bundle_root}/standards/"
 	git -C "$bundle_root" init -b main >/dev/null 2>&1
@@ -209,6 +210,25 @@ create_legacy_source_bundle() {
 		git -C "${repo_root}" show "${legacy_repo_ref}:${path}" >"${bundle_root}/${path}"
 	done
 	chmod +x "${bundle_root}/scripts/manage-downstream.sh"
+	printf '%s\n' "$bundle_root"
+}
+
+create_pre_local_standards_source_bundle() {
+	local name="$1"
+	local bundle_root="${temp_root}/${name}-pre-local-standards-bundle"
+
+	mkdir -p "$bundle_root"
+	git -C "$repo_root" archive "$pre_local_standards_ref" \
+		scripts/manage-downstream.sh \
+		templates \
+		standards | tar -x -C "$bundle_root"
+
+	chmod +x "${bundle_root}/scripts/manage-downstream.sh"
+	git -C "$bundle_root" init -b main >/dev/null 2>&1
+	git -C "$bundle_root" config user.name "Bundle User"
+	git -C "$bundle_root" config user.email "bundle@example.com"
+	git -C "$bundle_root" add -A
+	git -C "$bundle_root" commit -m "Pre-local-standards bundle" >/dev/null
 	printf '%s\n' "$bundle_root"
 }
 
@@ -259,9 +279,10 @@ create_fake_curl_bin() {
 	local legacy_source_root="${3:-$current_source_root}"
 	local legacy_script_source_root="${4:-$current_source_root}"
 	local stale_ref="${5:-}"
+	local pre_local_standards_source_root="${6:-}"
 
 	mkdir -p "$bin_dir"
-	write_file "${bin_dir}/curl" $'#!/usr/bin/env bash\nset -euo pipefail\noutput=""\nurl=""\nwhile [[ $# -gt 0 ]]; do\n  case "$1" in\n    -o)\n      output="$2"\n      shift 2\n      ;;\n    -f|-s|-S|-L|-fsSL)\n      shift\n      ;;\n    *)\n      url="$1"\n      shift\n      ;;\n  esac\ndone\n[[ -n "$output" ]] || exit 1\nrepo_slug="$(printf "%s" "$url" | sed -n "s#^https://raw\\.githubusercontent\\.com/\\([^/]*/[^/]*\\)/[^/]*/.*#\\1#p")"\nrequested_ref="$(printf "%s" "$url" | sed -n "s#^https://raw\\.githubusercontent\\.com/[^/]*/[^/]*/\\([^/]*\\)/.*#\\1#p")"\nrelative_path="$(printf "%s" "$url" | sed -n "s#^https://raw\\.githubusercontent\\.com/[^/]*/[^/]*/[^/]*/##p")"\n[[ -n "$repo_slug" && -n "$requested_ref" && -n "$relative_path" ]] || exit 1\ncase "$repo_slug" in\n  bright-builds-llc/bright-builds-rules)\n    source_root="${FAKE_CURL_CURRENT_SOURCE_ROOT}"\n    ;;\n  bright-builds-llc/coding-and-architecture-requirements)\n    if [[ "$relative_path" == "scripts/manage-downstream.sh" ]]; then\n      source_root="${FAKE_CURL_LEGACY_SCRIPT_SOURCE_ROOT}"\n    else\n      source_root="${FAKE_CURL_LEGACY_SOURCE_ROOT}"\n    fi\n    ;;\n  *)\n    source_root=""\n    ;;\nesac\nif [[ -z "$source_root" ]]; then\n  printf "curl: (22) The requested URL returned error: 404\\n" >&2\n  exit 22\nfi\nif [[ -n "${FAKE_CURL_STALE_REF:-}" && "$repo_slug" == "bright-builds-llc/coding-and-architecture-requirements" && "$requested_ref" == "${FAKE_CURL_STALE_REF}" ]]; then\n  printf "curl: (22) The requested URL returned error: 404\\n" >&2\n  exit 22\nfi\nif "${REAL_GIT_PATH}" -C "$source_root" rev-parse --verify "${requested_ref}^{commit}" >/dev/null 2>&1; then\n  if "${REAL_GIT_PATH}" -C "$source_root" cat-file -e "${requested_ref}:${relative_path}" >/dev/null 2>&1; then\n    "${REAL_GIT_PATH}" -C "$source_root" show "${requested_ref}:${relative_path}" > "$output"\n    exit 0\n  fi\nfi\nif [[ -f "${source_root}/${relative_path}" ]]; then\n  cp "${source_root}/${relative_path}" "$output"\n  exit 0\nfi\nprintf "curl: (22) The requested URL returned error: 404\\n" >&2\nexit 22\n'
+	write_file "${bin_dir}/curl" $'#!/usr/bin/env bash\nset -euo pipefail\noutput=""\nurl=""\nwhile [[ $# -gt 0 ]]; do\n  case "$1" in\n    -o)\n      output="$2"\n      shift 2\n      ;;\n    -f|-s|-S|-L|-fsSL)\n      shift\n      ;;\n    *)\n      url="$1"\n      shift\n      ;;\n  esac\ndone\n[[ -n "$output" ]] || exit 1\nrepo_slug="$(printf "%s" "$url" | sed -n "s#^https://raw\\.githubusercontent\\.com/\\([^/]*/[^/]*\\)/[^/]*/.*#\\1#p")"\nrequested_ref="$(printf "%s" "$url" | sed -n "s#^https://raw\\.githubusercontent\\.com/[^/]*/[^/]*/\\([^/]*\\)/.*#\\1#p")"\nrelative_path="$(printf "%s" "$url" | sed -n "s#^https://raw\\.githubusercontent\\.com/[^/]*/[^/]*/[^/]*/##p")"\n[[ -n "$repo_slug" && -n "$requested_ref" && -n "$relative_path" ]] || exit 1\ncase "$repo_slug" in\n  bright-builds-llc/bright-builds-rules)\n    source_root="${FAKE_CURL_CURRENT_SOURCE_ROOT}"\n    ;;\n  bright-builds-llc/coding-and-architecture-requirements)\n    if [[ "$relative_path" == "scripts/manage-downstream.sh" ]]; then\n      source_root="${FAKE_CURL_LEGACY_SCRIPT_SOURCE_ROOT}"\n    else\n      source_root="${FAKE_CURL_LEGACY_SOURCE_ROOT}"\n    fi\n    ;;\n  *)\n    source_root=""\n    ;;\nesac\nif [[ -n "${FAKE_CURL_PRE_LOCAL_STANDARDS_REF:-}" && "$requested_ref" == "${FAKE_CURL_PRE_LOCAL_STANDARDS_REF}" && -n "${FAKE_CURL_PRE_LOCAL_STANDARDS_SOURCE_ROOT:-}" ]]; then\n  source_root="${FAKE_CURL_PRE_LOCAL_STANDARDS_SOURCE_ROOT}"\nfi\nif [[ -z "$source_root" ]]; then\n  printf "curl: (22) The requested URL returned error: 404\\n" >&2\n  exit 22\nfi\nif [[ -n "${FAKE_CURL_STALE_REF:-}" && "$repo_slug" == "bright-builds-llc/coding-and-architecture-requirements" && "$requested_ref" == "${FAKE_CURL_STALE_REF}" ]]; then\n  printf "curl: (22) The requested URL returned error: 404\\n" >&2\n  exit 22\nfi\nif "${REAL_GIT_PATH}" -C "$source_root" rev-parse --verify "${requested_ref}^{commit}" >/dev/null 2>&1; then\n  if "${REAL_GIT_PATH}" -C "$source_root" cat-file -e "${requested_ref}:${relative_path}" >/dev/null 2>&1; then\n    "${REAL_GIT_PATH}" -C "$source_root" show "${requested_ref}:${relative_path}" > "$output"\n    exit 0\n  fi\nfi\nif [[ -f "${source_root}/${relative_path}" ]]; then\n  cp "${source_root}/${relative_path}" "$output"\n  exit 0\nfi\nprintf "curl: (22) The requested URL returned error: 404\\n" >&2\nexit 22\n'
 	chmod +x "${bin_dir}/curl"
 	write_file "${bin_dir}/git" $'#!/usr/bin/env bash\nset -euo pipefail\nif [[ "${1:-}" == "ls-remote" && "${2:-}" == "https://github.com/bright-builds-llc/bright-builds-rules.git" ]]; then\n  ref="${3:-}"\n  [[ -n "$ref" ]] || exit 1\n  commit="$("${REAL_GIT_PATH}" -C "${FAKE_GIT_SOURCE_ROOT}" rev-parse "${ref}^{commit}")"\n  printf "%s\\t%s\\n" "$commit" "$ref"\n  exit 0\nfi\nexec "${REAL_GIT_PATH}" "$@"\n'
 	chmod +x "${bin_dir}/git"
@@ -269,12 +290,16 @@ create_fake_curl_bin() {
 	FAKE_CURL_LEGACY_SOURCE_ROOT="$legacy_source_root"
 	FAKE_CURL_LEGACY_SCRIPT_SOURCE_ROOT="$legacy_script_source_root"
 	FAKE_CURL_STALE_REF="$stale_ref"
+	FAKE_CURL_PRE_LOCAL_STANDARDS_REF="$pre_local_standards_ref"
+	FAKE_CURL_PRE_LOCAL_STANDARDS_SOURCE_ROOT="$pre_local_standards_source_root"
 	FAKE_GIT_SOURCE_ROOT="$current_source_root"
 	REAL_GIT_PATH="$real_git_path"
 	export FAKE_CURL_CURRENT_SOURCE_ROOT
 	export FAKE_CURL_LEGACY_SOURCE_ROOT
 	export FAKE_CURL_LEGACY_SCRIPT_SOURCE_ROOT
 	export FAKE_CURL_STALE_REF
+	export FAKE_CURL_PRE_LOCAL_STANDARDS_REF
+	export FAKE_CURL_PRE_LOCAL_STANDARDS_SOURCE_ROOT
 	export FAKE_GIT_SOURCE_ROOT
 	export REAL_GIT_PATH
 }
@@ -405,6 +430,50 @@ test_refreshes_managed_standards_files() {
 	assert_file_contains "${repo_path}/standards/languages/typescript-javascript.md" "Added auto-update standards marker." "auto-update should refresh the managed standards page"
 	latest_subject="$(git --git-dir="$remote_path" log --format=%s -1 refs/heads/main)"
 	assert_eq "$latest_subject" "chore: update Bright Builds Rules" "standards refresh should create the standard auto-update commit"
+}
+
+test_legacy_helper_without_standards_staging_commits_backfilled_standards() {
+	local old_bundle_root=""
+	local current_bundle_root=""
+	local repo_path=""
+	local remote_path=""
+	local fake_bin=""
+	local commit_count=""
+	local latest_subject=""
+
+	old_bundle_root="$(create_pre_local_standards_source_bundle legacy-standards-shim-old)"
+	current_bundle_root="$(create_source_bundle legacy-standards-shim-current)"
+	repo_path="$(create_repo legacy-standards-shim-repo)"
+	remote_path="$(create_bare_remote legacy-standards-shim-origin)"
+	fake_bin="${temp_root}/legacy-standards-shim-bin"
+
+	init_git_repo "$repo_path"
+	git -C "$repo_path" remote add origin "$remote_path"
+	install_auto_update_repo "$old_bundle_root" "$repo_path"
+	replace_markdown_value "${repo_path}/bright-builds-rules.audit.md" "Exact commit" "$pre_local_standards_ref"
+	replace_markdown_value "${repo_path}/AGENTS.bright-builds.md" "Exact commit" "$pre_local_standards_ref"
+	assert_file_not_contains "${repo_path}/scripts/bright-builds-auto-update.sh" "standards/languages/typescript-javascript.md" "fixture helper should lack standards staging"
+	[[ ! -f "${repo_path}/standards/languages/typescript-javascript.md" ]] || fail "old fixture should not install local standards"
+	commit_all "$repo_path" "Initial pre-local-standards managed install"
+	git -C "$repo_path" push -u origin main >/dev/null
+	create_fake_curl_bin "$fake_bin" "$current_bundle_root" "$old_bundle_root" "$current_bundle_root" "" "$old_bundle_root"
+
+	run_auto_update "$repo_path" "$fake_bin"
+	assert_eq "$run_status" "0" "legacy helper without standards staging should converge through the current manager"
+	assert_contains "$run_output" "Repo state: installed" "legacy helper should classify the old clean install as installed"
+	assert_contains "$run_output" "Staged managed standards for legacy auto-update helper compatibility." "current manager should stage standards for the old helper"
+	assert_contains "$run_output" "Pushed managed updates directly to main" "legacy helper should publish the converged update"
+	assert_file_exists "${repo_path}/standards/languages/typescript-javascript.md"
+	assert_file_contains "${repo_path}/CONTRIBUTING.md" "local managed standards pages" "update should refresh the old clean CONTRIBUTING block"
+	assert_file_contains "${repo_path}/scripts/bright-builds-auto-update.sh" "print_audit_manifest_paths" "updated helper should use manifest-based staging"
+	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "\`standards/languages/typescript-javascript.md\`" "updated audit should list managed standards"
+	if ! git --git-dir="$remote_path" ls-tree -r --name-only refs/heads/main | grep -Fxq "standards/languages/typescript-javascript.md"; then
+		fail "legacy helper update should commit the backfilled standards file"
+	fi
+	commit_count="$(git -C "$repo_path" rev-list --count HEAD)"
+	assert_eq "$commit_count" "2" "legacy helper standards convergence should create one update commit"
+	latest_subject="$(git --git-dir="$remote_path" log --format=%s -1 refs/heads/main)"
+	assert_eq "$latest_subject" "chore: update Bright Builds Rules" "legacy helper standards convergence should create the standard auto-update commit"
 }
 
 test_refreshes_old_managed_canonical_badge_to_flat_default_when_upstream_is_otherwise_unchanged() {
@@ -618,6 +687,7 @@ trap cleanup EXIT
 test_noop_when_no_changes_exist
 test_pushes_directly_when_push_succeeds
 test_refreshes_managed_standards_files
+test_legacy_helper_without_standards_staging_commits_backfilled_standards
 test_refreshes_old_managed_canonical_badge_to_flat_default_when_upstream_is_otherwise_unchanged
 test_legacy_helper_migrates_prerename_install_with_current_manager
 test_legacy_helper_falls_back_from_stale_exact_commit_during_status
