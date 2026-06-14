@@ -185,6 +185,42 @@ assert_file_contains_regex() {
 	grep -Eq "$pattern" "$file_path" || fail "${message}: missing pattern '${pattern}' in ${file_path}"
 }
 
+assert_managed_standards_exist() {
+	local repo_path="$1"
+	local standards_path=""
+
+	for standards_path in \
+		"standards/index.md" \
+		"standards/core/architecture.md" \
+		"standards/core/code-shape.md" \
+		"standards/core/local-guidance.md" \
+		"standards/core/operability.md" \
+		"standards/core/testing.md" \
+		"standards/core/verification.md" \
+		"standards/languages/rust.md" \
+		"standards/languages/typescript-javascript.md"; do
+		assert_file_exists "${repo_path}/${standards_path}"
+	done
+}
+
+assert_managed_standards_missing() {
+	local repo_path="$1"
+	local standards_path=""
+
+	for standards_path in \
+		"standards/index.md" \
+		"standards/core/architecture.md" \
+		"standards/core/code-shape.md" \
+		"standards/core/local-guidance.md" \
+		"standards/core/operability.md" \
+		"standards/core/testing.md" \
+		"standards/core/verification.md" \
+		"standards/languages/rust.md" \
+		"standards/languages/typescript-javascript.md"; do
+		assert_file_missing "${repo_path}/${standards_path}"
+	done
+}
+
 assert_command_succeeds() {
 	local message="$1"
 	shift
@@ -320,7 +356,15 @@ replace_markdown_value() {
     {
       print
     }
-  ' "$file_path" >"$updated_path"
+	' "$file_path" >"$updated_path"
+	mv "$updated_path" "$file_path"
+}
+
+remove_standards_entries_from_audit() {
+	local file_path="$1"
+	local updated_path="${file_path}.updated"
+
+	awk '$0 !~ /^- `standards\// { print }' "$file_path" >"$updated_path"
 	mv "$updated_path" "$file_path"
 }
 
@@ -498,9 +542,10 @@ create_standalone_installer_bundle() {
 	local name="$1"
 	local bundle_root="${temp_root}/${name}-bundle"
 
-	mkdir -p "${bundle_root}/scripts" "${bundle_root}/templates"
+	mkdir -p "${bundle_root}/scripts" "${bundle_root}/templates" "${bundle_root}/standards"
 	cp "$script_path" "${bundle_root}/scripts/manage-downstream.sh"
 	cp -R "${repo_root}/templates/." "${bundle_root}/templates/"
+	cp -R "${repo_root}/standards/." "${bundle_root}/standards/"
 	git -C "$bundle_root" init -b main >/dev/null 2>&1
 	git -C "$bundle_root" config user.name "Bundle User"
 	git -C "$bundle_root" config user.email "bundle@example.com"
@@ -590,6 +635,8 @@ test_fresh_install_and_reinstall() {
 	assert_file_exists "${repo_path}/.github/pull_request_template.md"
 	assert_file_exists "${repo_path}/bright-builds-rules.audit.md"
 	assert_file_exists "${repo_path}/standards-overrides.md"
+	assert_managed_standards_exist "$repo_path"
+	assert_file_contains "${repo_path}/standards/languages/typescript-javascript.md" "Do Not Add Python Scripts To Bun-Friendly JS/TS Repositories" "fresh install should copy the TypeScript/JavaScript standards page"
 	assert_file_missing "${repo_path}/README.md"
 	assert_file_missing "${repo_path}/scripts/bright-builds-auto-update.sh"
 	assert_file_missing "${repo_path}/.github/workflows/bright-builds-auto-update.yml"
@@ -600,7 +647,16 @@ test_fresh_install_and_reinstall() {
 		"${repo_path}/CONTRIBUTING.md" \
 		"${repo_path}/.github/pull_request_template.md" \
 		"${repo_path}/bright-builds-rules.audit.md" \
-		"${repo_path}/standards-overrides.md"
+		"${repo_path}/standards-overrides.md" \
+		"${repo_path}/standards/index.md" \
+		"${repo_path}/standards/core/architecture.md" \
+		"${repo_path}/standards/core/code-shape.md" \
+		"${repo_path}/standards/core/local-guidance.md" \
+		"${repo_path}/standards/core/operability.md" \
+		"${repo_path}/standards/core/testing.md" \
+		"${repo_path}/standards/core/verification.md" \
+		"${repo_path}/standards/languages/rust.md" \
+		"${repo_path}/standards/languages/typescript-javascript.md"
 
 	assert_file_contains "${repo_path}/AGENTS.md" "\`AGENTS.md\` is the entrypoint for repo-local instructions, not the complete Bright Builds Rules specification." "root AGENTS should define AGENTS as the local entrypoint rather than the full spec"
 	assert_file_contains "${repo_path}/AGENTS.md" "This managed block is owned upstream by \`bright-builds-rules\`." "root AGENTS managed block should direct fixes upstream"
@@ -608,9 +664,9 @@ test_fresh_install_and_reinstall() {
 	assert_file_contains "${repo_path}/AGENTS.md" "If you have not done that yet, stop and load those sources before continuing." "root AGENTS should require stop-and-load behavior before work"
 	assert_file_contains "${repo_path}/AGENTS.md" "Use this routing map when deciding what to load next:" "root AGENTS should include the compact routing map"
 	assert_file_contains "${repo_path}/AGENTS.md" "generated-file ownership, CI-only suites, or recurring workflow facts" "root AGENTS should route repo-local workflow questions back to local guidance"
-	assert_file_contains "${repo_path}/AGENTS.md" "canonical page \`standards/core/architecture.md\`" "root AGENTS should route architecture questions to the canonical architecture page"
-	assert_file_contains "${repo_path}/AGENTS.md" "canonical page \`standards/core/testing.md\`" "root AGENTS should route unit-test expectations to the canonical testing page"
-	assert_file_contains "${repo_path}/AGENTS.md" "matching canonical page under \`standards/languages/\`" "root AGENTS should route language-specific questions to the canonical language pages"
+	assert_file_contains "${repo_path}/AGENTS.md" "managed standards page \`standards/core/architecture.md\`" "root AGENTS should route architecture questions to the local standards page"
+	assert_file_contains "${repo_path}/AGENTS.md" "managed standards page \`standards/core/testing.md\`" "root AGENTS should route unit-test expectations to the local standards page"
+	assert_file_contains "${repo_path}/AGENTS.md" "matching managed standards page under \`standards/languages/\`" "root AGENTS should route language-specific questions to the local language pages"
 	assert_file_contains "${repo_path}/AGENTS.md" "Keep recurring repo-specific workflow facts, commands, and links in a \`## Repo-Local Guidance\` section elsewhere in this file." "root AGENTS should direct repos to keep local guidance in AGENTS"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Do not edit this file directly." "sidecar should contain the managed warning"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "installed from \`https://github.com/bright-builds-llc/bright-builds-rules\`" "sidecar should name the canonical source"
@@ -619,13 +675,13 @@ test_fresh_install_and_reinstall() {
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "$(managed_file_marker "AGENTS.bright-builds.md")" "sidecar should include the whole-file managed marker"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Record recurring repo-specific workflow facts in \`AGENTS.md\` under \`## Repo-Local Guidance\`" "sidecar should distinguish local guidance from standards overrides"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "\`AGENTS.md\` is the entrypoint for repo-local instructions, not a complete Bright Builds Rules spec." "sidecar should state that AGENTS is not the full Bright Builds Rules spec"
-	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "before plan, review, implementation, or audit work." "sidecar should require loading canonical sources before work"
-	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "In plan, review, and audit outputs, briefly acknowledge which local guidance, sidecar, overrides, or canonical standards pages materially informed the answer." "sidecar should require brief source acknowledgment for plan review and audit work"
+	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "before plan, review, implementation, or audit work." "sidecar should require loading standards sources before work"
+	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "In plan, review, and audit outputs, briefly acknowledge which local guidance, sidecar, overrides, or standards pages materially informed the answer." "sidecar should require brief source acknowledgment for plan review and audit work"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "## Routing hints" "sidecar should include the compact routing section"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Use this file, \`AGENTS.bright-builds.md\`, for the Bright Builds Rules default workflow" "sidecar should position itself as the detailed Bright Builds Rules layer"
-	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "canonical page \`standards/core/code-shape.md\`" "sidecar should route code-shape questions to the canonical code-shape page"
-	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "canonical page \`standards/core/verification.md\`" "sidecar should route verification questions to the canonical verification page"
-	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "matching canonical page under \`standards/languages/\`" "sidecar should route language-specific questions to the canonical language pages"
+	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "managed standards page \`standards/core/code-shape.md\`" "sidecar should route code-shape questions to the local code-shape page"
+	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "managed standards page \`standards/core/verification.md\`" "sidecar should route verification questions to the local verification page"
+	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "matching managed standards page under \`standards/languages/\`" "sidecar should route language-specific questions to the local language pages"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "internal nullable or optional names with \`maybe\`" "sidecar should include the expanded maybe-prefix naming guidance"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "copyable summary with the exact commit when available" "sidecar should include the UI provenance guidance"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "foreign-language logic inside strings" "sidecar should include the no-foreign-code-in-strings guidance"
@@ -643,7 +699,7 @@ test_fresh_install_and_reinstall() {
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "# Bright Builds Contribution Defaults" "CONTRIBUTING should include the managed contribution defaults heading"
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "This managed block is owned upstream by \`bright-builds-rules\`." "CONTRIBUTING should direct fixes upstream through the managed block notice"
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "Keep repo-local contribution guidance outside this managed block." "CONTRIBUTING should preserve local contribution guidance outside the managed block"
-	assert_file_contains "${repo_path}/CONTRIBUTING.md" "Before plan, review, implementation, or audit work, read local \`AGENTS.md\`, \`AGENTS.bright-builds.md\`, \`standards-overrides.md\` when present, and the pinned canonical standards pages relevant to the task; if that has not happened yet, stop and load them before continuing." "CONTRIBUTING should require the layered reading order"
+	assert_file_contains "${repo_path}/CONTRIBUTING.md" "Before plan, review, implementation, or audit work, read local \`AGENTS.md\`, \`AGENTS.bright-builds.md\`, \`standards-overrides.md\` when present, and the local managed standards pages relevant to the task; if that has not happened yet, stop and load them before continuing." "CONTRIBUTING should require the layered reading order"
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "internal nullable or optional names with \`maybe\`" "CONTRIBUTING should include the expanded maybe-prefix naming guidance"
 	assert_exact_line_count "${repo_path}/CONTRIBUTING.md" "$contributing_block_begin" "1"
 	assert_exact_line_count "${repo_path}/CONTRIBUTING.md" "$contributing_block_end" "1"
@@ -658,17 +714,18 @@ test_fresh_install_and_reinstall() {
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "bootstrap or dependency-sync step when dependencies or tools may be stale" "CONTRIBUTING should include dependency prep guidance"
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "Before committing, run the relevant repo-native verification steps for the changed paths, including Markdown or shell formatter checks when supported tools are already available and local guidance does not define a clearer workflow, and do not commit if they fail." "CONTRIBUTING should require pass-before-commit verification"
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "Heavy integration, end-to-end, or external-service suites may stay pre-push or CI-only" "CONTRIBUTING should allow documented CI-only heavy suites"
-	assert_file_contains "${repo_path}/CONTRIBUTING.md" "briefly name the local guidance, sidecar, overrides, or canonical standards pages that materially informed the work" "CONTRIBUTING should require brief source acknowledgment for standards-driven plan review and audit work"
+	assert_file_contains "${repo_path}/CONTRIBUTING.md" "briefly name the local guidance, sidecar, overrides, or standards pages that materially informed the work" "CONTRIBUTING should require brief source acknowledgment for standards-driven plan review and audit work"
 	assert_file_contains "${repo_path}/.github/pull_request_template.md" "Relevant repo-native verification ran and passed when applicable" "PR template should use flexible verification wording"
 	assert_file_contains "${repo_path}/.github/pull_request_template.md" "$(managed_file_marker ".github/pull_request_template.md")" "PR template should include the whole-file managed marker"
 	assert_file_contains "${repo_path}/.github/pull_request_template.md" "This template is managed upstream by \`bright-builds-rules\`." "PR template should direct fixes upstream"
 	assert_file_contains "${repo_path}/.github/pull_request_template.md" "Any CI-only or hook-owned verification exception is documented" "PR template should capture verification exceptions"
-	assert_file_contains "${repo_path}/.github/pull_request_template.md" "briefly names the local guidance, sidecar, overrides, or canonical standards pages that materially informed it" "PR template should require brief source acknowledgment when standards-driven plan review or audit work informed the change"
+	assert_file_contains "${repo_path}/.github/pull_request_template.md" "briefly names the local guidance, sidecar, overrides, or standards pages that materially informed it" "PR template should require brief source acknowledgment when standards-driven plan review or audit work informed the change"
 	assert_file_contains "${repo_path}/standards-overrides.md" "hook-owned or leaves heavy suites to CI" "overrides template should mention verification exceptions"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "Exact commit: \`${repo_exact_commit}\`" "audit trail should record the exact local commit"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "This audit trail is managed upstream by \`bright-builds-rules\`." "audit trail should direct fixes upstream"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "Auto-update: \`disabled\`" "audit trail should record the disabled auto-update setting"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "Auto-update reason: \`default disabled\`" "audit trail should record why auto-update stayed disabled"
+	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "\`standards/languages/typescript-javascript.md\`" "audit trail should list the managed standards corpus"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "$(managed_file_marker "bright-builds-rules.audit.md")" "audit trail should include the whole-file managed marker"
 
 	run_manage "$repo_path" install
@@ -954,6 +1011,50 @@ test_update_preserves_local_agents_and_overrides() {
 		"${repo_path}/AGENTS.md" \
 		"${repo_path}/AGENTS.bright-builds.md" \
 		"${repo_path}/CONTRIBUTING.md"
+}
+
+test_update_backfills_missing_local_standards() {
+	local repo_path=""
+
+	repo_path="$(create_repo backfill-standards)"
+
+	run_manage "$repo_path" install
+	assert_eq "$run_status" "0" "backfill setup install should succeed"
+
+	rm -rf "${repo_path}/standards"
+	remove_standards_entries_from_audit "${repo_path}/bright-builds-rules.audit.md"
+
+	run_manage "$repo_path" status
+	assert_eq "$run_status" "0" "status should succeed for a pre-standards installed repo"
+	assert_contains "$run_output" "Repo state: installed" "pre-standards installs should remain updateable"
+
+	run_manage "$repo_path" update
+	assert_eq "$run_status" "0" "update should backfill missing local standards"
+	assert_managed_standards_exist "$repo_path"
+	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "\`standards/languages/typescript-javascript.md\`" "update should add standards to the audit manifest"
+}
+
+test_existing_unmanaged_standards_file_blocks_install_until_force() {
+	local repo_path=""
+	local backup_file=""
+
+	repo_path="$(create_repo unmanaged-standards-conflict)"
+	write_file "${repo_path}/standards/languages/typescript-javascript.md" $'# Local TypeScript Rules\n\nKeep this local file.\n'
+
+	run_manage "$repo_path" status
+	assert_eq "$run_status" "0" "status should succeed with an unmanaged standards conflict"
+	assert_contains "$run_output" "Repo state: blocked" "unmanaged standards conflicts should block install"
+	assert_contains "$run_output" "Blocking paths: standards/languages/typescript-javascript.md" "status should list the conflicting standards path"
+
+	run_manage "$repo_path" install
+	assert_eq "$run_status" "1" "install should fail until the standards conflict is explicitly forced"
+
+	run_manage "$repo_path" install --force
+	assert_eq "$run_status" "0" "force install should replace conflicting standards files"
+	backup_file="$(find "${repo_path}/.bright-builds-rules-backups" -type f -path '*/standards/languages/typescript-javascript.md' | head -n 1)"
+	[[ -n "$backup_file" ]] || fail "expected force install to back up the conflicting standards file"
+	assert_file_contains "$backup_file" "Keep this local file." "backup should preserve the conflicting local standards content"
+	assert_file_contains "${repo_path}/standards/languages/typescript-javascript.md" "Do Not Add Python Scripts To Bun-Friendly JS/TS Repositories" "force install should write the managed TypeScript/JavaScript standards"
 }
 
 test_current_whole_file_contributing_install_is_installed_and_update_migrates() {
@@ -1289,6 +1390,34 @@ test_drifted_whole_file_managed_file_blocks_update_and_force_repairs() {
 	assert_exact_line_count "${repo_path}/CONTRIBUTING.md" "$contributing_block_begin" "1"
 	assert_exact_line_count "${repo_path}/CONTRIBUTING.md" "$contributing_block_end" "1"
 	assert_file_not_contains "${repo_path}/CONTRIBUTING.md" "Local downstream change." "force install should remove the drifted local edit"
+}
+
+test_drifted_managed_standards_file_blocks_update_and_force_repairs() {
+	local repo_path=""
+	local backup_file=""
+
+	repo_path="$(create_repo drifted-managed-standards)"
+
+	run_manage "$repo_path" install
+	assert_eq "$run_status" "0" "managed standards drift setup install should succeed"
+
+	append_file "${repo_path}/standards/languages/typescript-javascript.md" $'\nLocal downstream standards drift.\n'
+
+	run_manage "$repo_path" status
+	assert_eq "$run_status" "0" "drifted standards status should succeed"
+	assert_contains "$run_output" "Repo state: blocked" "drifted standards files should block the repo"
+	assert_contains "$run_output" "Blocking paths: standards/languages/typescript-javascript.md" "status should list the drifted standards file"
+
+	run_manage "$repo_path" update
+	assert_eq "$run_status" "1" "update should fail when a managed standards file has downstream edits"
+
+	run_manage "$repo_path" install --force
+	assert_eq "$run_status" "0" "force install should repair drifted standards files"
+	backup_file="$(find "${repo_path}/.bright-builds-rules-backups" -type f -path '*/standards/languages/typescript-javascript.md' | head -n 1)"
+	[[ -n "$backup_file" ]] || fail "expected force install to back up the drifted standards file"
+	assert_file_contains "$backup_file" "Local downstream standards drift." "backup should preserve the drifted standards content"
+	assert_file_not_contains "${repo_path}/standards/languages/typescript-javascript.md" "Local downstream standards drift." "force install should restore the managed standards content"
+	assert_file_contains "${repo_path}/standards/languages/typescript-javascript.md" "Do Not Add Python Scripts To Bun-Friendly JS/TS Repositories" "force install should restore the TypeScript/JavaScript standards"
 }
 
 test_readme_badges_insert_after_h1_and_refresh() {
@@ -1636,6 +1765,7 @@ test_uninstall_preserves_local_agents_and_overrides() {
 	assert_file_missing "${repo_path}/CONTRIBUTING.md"
 	assert_file_missing "${repo_path}/.github/pull_request_template.md"
 	assert_file_missing "${repo_path}/bright-builds-rules.audit.md"
+	assert_managed_standards_missing "$repo_path"
 	assert_file_exists "${repo_path}/standards-overrides.md"
 	assert_file_contains "${repo_path}/standards-overrides.md" "| \`custom\` | \`still here\` | \`local\` | \`owner\` | \`2026-03-13\` |" "uninstall should preserve overrides"
 }
@@ -1661,6 +1791,7 @@ test_uninstall_preserves_drifted_whole_file_managed_files() {
 	assert_file_missing "${repo_path}/.github/pull_request_template.md"
 	assert_file_missing "${repo_path}/bright-builds-rules.audit.md"
 	assert_file_missing "${repo_path}/.github/workflows/bright-builds-auto-update.yml"
+	assert_managed_standards_missing "$repo_path"
 	assert_file_exists "${repo_path}/CONTRIBUTING.md"
 	assert_file_exists "${repo_path}/scripts/bright-builds-auto-update.sh"
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "Keep this downstream change inside the managed block." "uninstall should preserve drifted CONTRIBUTING content"
@@ -1681,6 +1812,7 @@ test_uninstall_removes_agents_when_only_managed_block_remains() {
 	assert_file_missing "${repo_path}/AGENTS.md"
 	assert_file_missing "${repo_path}/scripts/bright-builds-auto-update.sh"
 	assert_file_missing "${repo_path}/.github/workflows/bright-builds-auto-update.yml"
+	assert_managed_standards_missing "$repo_path"
 	assert_file_exists "${repo_path}/standards-overrides.md"
 }
 
@@ -1741,6 +1873,8 @@ test_blocked_conflicts_and_force_install
 test_explicit_auto_update_disable_persists_across_update
 test_auto_update_enabled_files_are_restored_on_update
 test_update_preserves_local_agents_and_overrides
+test_update_backfills_missing_local_standards
+test_existing_unmanaged_standards_file_blocks_install_until_force
 test_current_whole_file_contributing_install_is_installed_and_update_migrates
 test_legacy_exact_match_install_is_still_installed_and_update_migrates_markers
 test_drifted_contributing_block_blocks_update_and_force_repairs
@@ -1752,6 +1886,7 @@ test_stdin_install_uses_remote_rendering
 test_stdin_update_uses_remote_rendering
 test_stdin_force_install_repairs_drifted_managed_file
 test_drifted_whole_file_managed_file_blocks_update_and_force_repairs
+test_drifted_managed_standards_file_blocks_update_and_force_repairs
 test_readme_badges_insert_after_h1_and_refresh
 test_update_replaces_old_managed_canonical_badge_with_flat_default
 test_readme_badges_create_skeleton_and_uninstall_removes_it

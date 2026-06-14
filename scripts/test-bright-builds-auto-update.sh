@@ -177,9 +177,10 @@ create_source_bundle() {
 	local name="$1"
 	local bundle_root="${temp_root}/${name}-bundle"
 
-	mkdir -p "${bundle_root}/scripts" "${bundle_root}/templates"
+	mkdir -p "${bundle_root}/scripts" "${bundle_root}/templates" "${bundle_root}/standards"
 	cp "$script_path" "${bundle_root}/scripts/manage-downstream.sh"
 	cp -R "${repo_root}/templates/." "${bundle_root}/templates/"
+	cp -R "${repo_root}/standards/." "${bundle_root}/standards/"
 	git -C "$bundle_root" init -b main >/dev/null 2>&1
 	git -C "$bundle_root" config user.name "Bundle User"
 	git -C "$bundle_root" config user.email "bundle@example.com"
@@ -374,6 +375,36 @@ test_pushes_directly_when_push_succeeds() {
 	assert_eq "$latest_author_email" "41898282+github-actions[bot]@users.noreply.github.com" "direct push should author the auto-update commit with the GitHub Actions bot email"
 	latest_subject="$(git --git-dir="$remote_path" log --format=%s -1 refs/heads/main)"
 	assert_eq "$latest_subject" "chore: update Bright Builds Rules" "direct push should update the remote default branch"
+}
+
+test_refreshes_managed_standards_files() {
+	local bundle_root=""
+	local repo_path=""
+	local remote_path=""
+	local fake_bin=""
+	local latest_subject=""
+
+	bundle_root="$(create_source_bundle standards-refresh)"
+	repo_path="$(create_repo standards-refresh-repo)"
+	remote_path="$(create_bare_remote standards-refresh-origin)"
+	fake_bin="${temp_root}/standards-refresh-bin"
+
+	init_git_repo "$repo_path"
+	git -C "$repo_path" remote add origin "$remote_path"
+	install_auto_update_repo "$bundle_root" "$repo_path"
+	commit_all "$repo_path" "Initial managed install"
+	git -C "$repo_path" push -u origin main >/dev/null
+	printf '\n- Added auto-update standards marker.\n' >>"${bundle_root}/standards/languages/typescript-javascript.md"
+	git -C "$bundle_root" add -A
+	git -C "$bundle_root" commit -m "Standards update" >/dev/null
+	create_fake_curl_bin "$fake_bin" "$bundle_root"
+
+	run_auto_update "$repo_path" "$fake_bin"
+	assert_eq "$run_status" "0" "standards auto-update should succeed"
+	assert_contains "$run_output" "Pushed managed updates directly to main" "standards auto-update should use the direct push path"
+	assert_file_contains "${repo_path}/standards/languages/typescript-javascript.md" "Added auto-update standards marker." "auto-update should refresh the managed standards page"
+	latest_subject="$(git --git-dir="$remote_path" log --format=%s -1 refs/heads/main)"
+	assert_eq "$latest_subject" "chore: update Bright Builds Rules" "standards refresh should create the standard auto-update commit"
 }
 
 test_refreshes_old_managed_canonical_badge_to_flat_default_when_upstream_is_otherwise_unchanged() {
@@ -586,6 +617,7 @@ trap cleanup EXIT
 
 test_noop_when_no_changes_exist
 test_pushes_directly_when_push_succeeds
+test_refreshes_managed_standards_files
 test_refreshes_old_managed_canonical_badge_to_flat_default_when_upstream_is_otherwise_unchanged
 test_legacy_helper_migrates_prerename_install_with_current_manager
 test_legacy_helper_falls_back_from_stale_exact_commit_during_status

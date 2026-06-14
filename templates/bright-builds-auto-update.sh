@@ -104,6 +104,15 @@ stage_managed_paths() {
 		bright-builds-rules.audit.md \
 		coding-and-architecture-requirements.audit.md \
 		.github/pull_request_template.md \
+		standards/index.md \
+		standards/core/architecture.md \
+		standards/core/code-shape.md \
+		standards/core/local-guidance.md \
+		standards/core/operability.md \
+		standards/core/testing.md \
+		standards/core/verification.md \
+		standards/languages/rust.md \
+		standards/languages/typescript-javascript.md \
 		.github/workflows/bright-builds-auto-update.yml \
 		scripts/bright-builds-auto-update.sh; do
 		if [[ -e "$relative_path" ]] || git ls-files --error-unmatch "$relative_path" >/dev/null 2>&1; then
@@ -134,6 +143,15 @@ restore_audit_if_only_runtime_changed() {
 		CONTRIBUTING.md \
 		README.md \
 		.github/pull_request_template.md \
+		standards/index.md \
+		standards/core/architecture.md \
+		standards/core/code-shape.md \
+		standards/core/local-guidance.md \
+		standards/core/operability.md \
+		standards/core/testing.md \
+		standards/core/verification.md \
+		standards/languages/rust.md \
+		standards/languages/typescript-javascript.md \
 		.github/workflows/bright-builds-auto-update.yml \
 		scripts/bright-builds-auto-update.sh; do
 		if managed_path_has_changes "$relative_path"; then

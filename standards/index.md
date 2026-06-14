@@ -11,10 +11,10 @@ This repository uses a tiered rules model so preferences and hard requirements d
 ## How to use this corpus
 
 1. Start with the core standards.
-2. Read any language-specific guidance that applies to the repository or task.
-3. Copy the thin local templates into the downstream repo.
-4. Capture recurring repo-local workflow facts in `AGENTS.md` under `## Repo-Local Guidance`.
-5. Document repo-specific exceptions in `standards-overrides.md` instead of silently drifting.
+1. Read any language-specific guidance that applies to the repository or task.
+1. Use the downstream manager to install the local templates and managed standards corpus.
+1. Capture recurring repo-local workflow facts in `AGENTS.md` under `## Repo-Local Guidance`.
+1. Document repo-specific exceptions in `standards-overrides.md` instead of silently drifting.
 
 ## Core standards
 

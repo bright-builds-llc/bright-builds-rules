@@ -25,8 +25,8 @@ Use this decision rule:
 9. Treat `README.md` as part of the managed surface when the installer can verify default badges from the downstream repo or when a Peter-owned GitHub repo qualifies for the owner-specific OpenLinks badge. If `status` reports a blocked README badge state, stop unless the user explicitly wants `install --force`; after repair, keep the managed badge block immediately after the first H1 and only reinsert prior top-of-file badges or content below it when that does not recreate badge ambiguity.
 10. Let the installer resolve downstream auto-update to `disabled` unless the downstream GitHub repo owner or current GitHub user is trusted. Trusted identities are `pRizz` and `bright-builds-llc`. Respect `--auto-update enabled|disabled` when the user asks for an override.
 11. When the downstream GitHub repo owner normalizes to `pRizz` or `peterryszkiewicz` (Peter Ryszkiewicz), let the managed sidecar require the `openlinks-identity-presence` skill for README/docs, UI chrome, profile/about/footer, and metadata/discovery surfaces, and let the managed README badge block append a subtle `OpenLinks profile` badge linked to `https://openlinks.us/` after any project badges. Keep the placement subtle and keep the host brand primary.
-12. After install or update, report the files written and point the user to `bright-builds-rules.audit.md` as the paper trail, including the source URL, requested ref, exact resolved commit when available, whether a managed README badge block was installed or refreshed, whether owner-specific OpenLinks guidance was included, whether the owner-specific OpenLinks README badge applied, and whether auto-update ended up enabled or disabled.
-13. After install or update, treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds Rules spec. Before plan, review, implementation, or audit work, load `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md` when present, and the pinned canonical standards pages relevant to the task; if that has not happened yet, stop and do it first.
+12. After install or update, report the files written and point the user to `bright-builds-rules.audit.md` as the paper trail, including the source URL, requested ref, exact resolved commit when available, whether the local managed standards corpus was installed or refreshed, whether a managed README badge block was installed or refreshed, whether owner-specific OpenLinks guidance was included, whether the owner-specific OpenLinks README badge applied, and whether auto-update ended up enabled or disabled.
+13. After install or update, treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds Rules spec. Before plan, review, implementation, or audit work, load `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md` when present, and the local managed standards pages relevant to the task; if that has not happened yet, stop and do it first.
 14. For plan, review, and audit work in the downstream repo, briefly acknowledge which of those sources materially informed the answer.
 15. When the downstream repo is pre-existing rather than greenfield, mention that the optional `bright-builds-rules` skill can run a read-only `audit` baseline or an `audit-and-fix` cleanup wave after adoption to surface or start remediating standards drift.
 
@@ -84,6 +84,7 @@ Expected downstream files after a successful install or update:
 - `AGENTS.bright-builds.md`
 - `CONTRIBUTING.md`
 - `.github/pull_request_template.md`
+- `standards/index.md` and the managed standards pages under `standards/core/` and `standards/languages/`
 - `bright-builds-rules.audit.md`
 - `README.md` when the downstream repo has at least one verified default badge or the owner-specific OpenLinks badge applies and the installer adds or refreshes the managed badge block
 - `standards-overrides.md` when it did not already exist
@@ -94,7 +95,7 @@ After install or update, the downstream instruction contract is layered:
 1. `AGENTS.md` is the local entrypoint, not the full Bright Builds Rules spec.
 2. `AGENTS.bright-builds.md` carries the managed Bright Builds Rules workflow and high-signal rules.
 3. `standards-overrides.md` records deliberate repo-specific exceptions when it exists.
-4. The pinned canonical standards pages remain the source of truth for task-relevant rules.
+4. The local managed standards pages under `standards/` are the source of truth for task-relevant rules, with source provenance recorded in the sidecar and audit trail.
 
 Before plan, review, implementation, or audit work, load those sources in that order. If that has not happened yet, stop and do it first. For plan, review, and audit outputs, briefly acknowledge which of those sources materially informed the answer.
 
@@ -117,6 +118,7 @@ Interpret those states this way:
 - a repo with the managed AGENTS marker block plus `AGENTS.bright-builds.md` reports `installed`
 - a repo with an exact-match legacy install of the fully managed files but without the new whole-file marker headers still reports `installed`, and `update` migrates those files into the marked format
 - a repo with conflicting managed files such as `.github/pull_request_template.md`, `AGENTS.bright-builds.md`, or `bright-builds-rules.audit.md` reports `blocked`
+- a repo with existing conflicting files at the managed standards paths under `standards/` reports `blocked`
 - a repo whose marked whole-file managed outputs have downstream edits also reports `blocked` and lists the drifted paths in `Blocking paths:`
 - a repo whose managed `CONTRIBUTING.md` block is partial or has downstream edits inside the managed block also reports `blocked` and includes `CONTRIBUTING.md` in `Blocking paths:`
 - a repo with an existing unmarked local `CONTRIBUTING.md` and no other managed conflicts remains `installable`; `install` preserves that file and appends the managed CONTRIBUTING block
@@ -194,5 +196,5 @@ After a successful install or update, mention:
 - whether `AGENTS.bright-builds.md` included the owner-specific `openlinks-identity-presence` rule for a Peter-owned repo
 - whether auto-update was enabled or disabled, and whether that came from an explicit override or a trust-based default
 - that `bright-builds-rules.audit.md` records the source URL, pinned ref, exact commit when resolved, auto-update state, and managed files
-- that the standards corpus starts at `https://github.com/bright-builds-llc/bright-builds-rules/blob/main/standards/index.md`
+- that the local managed standards corpus starts at `standards/index.md` and records canonical provenance from `https://github.com/bright-builds-llc/bright-builds-rules/blob/main/standards/index.md`
 - for pre-existing repos, that the optional `bright-builds-rules` skill can run a whole-repo `audit` or a bounded `audit-and-fix` cleanup wave after adoption

@@ -16,8 +16,8 @@ Use this skill when the user wants to:
 
 ## Workflow
 
-1. For downstream repos with Bright Builds Rules installed, the required reading order is: local `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md` when present, then the pinned canonical standards pages relevant to the task. Treat `AGENTS.md` as the local entrypoint, not the complete Bright Builds Rules spec, and stop to load the missing sources before continuing if that has not happened yet.
-2. Read `../../standards/index.md` when working in this canonical repository, or otherwise load the pinned canonical standards entrypoint referenced by the downstream Bright Builds Rules files.
+1. For downstream repos with Bright Builds Rules installed, the required reading order is: local `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md` when present, then the local managed standards pages relevant to the task. Treat `AGENTS.md` as the local entrypoint, not the complete Bright Builds Rules spec, and stop to load the missing sources before continuing if that has not happened yet.
+2. Read `../../standards/index.md` when working in this canonical repository, or otherwise load the local managed `standards/index.md` entrypoint referenced by the downstream Bright Builds Rules files.
 3. Load the standards pages that match the task, including language-specific guidance when it is relevant.
 4. Treat `../../standards/` as canonical when working in this repository. Do not duplicate or invent rules that are not present there.
 5. Resolve intent before choosing a mode:
@@ -47,6 +47,7 @@ Use this skill when the user wants to:
     - otherwise use the `manage-downstream.sh` commands documented in `../../AI-ADOPTION.md`
     - use `install` when status reports `Repo state: installable`
     - use `update` when status reports `Repo state: installed`
+    - expect install/update to copy the managed standards corpus under downstream `standards/`
     - stop and explain blocking files when status reports `Repo state: blocked`
     - never choose `install --force` automatically
     - if the user explicitly opts into replacement, treat `install --force` as a backup-first merge-assisted path: inspect `.bright-builds-rules-backups/<UTC-timestamp>/`, compare the backups with the fresh managed outputs, and reapply only clearly portable downstream-specific logic or content into safe local extension points
@@ -55,7 +56,7 @@ Use this skill when the user wants to:
     - if `README.md` is the blocking path, keep the managed badge block immediately after the first H1 and only restore prior top-of-file badges or content below it when that does not recreate ambiguity
 
 11. Use `../../templates/` as source material only when editing the managed downstream assets in this repository. Do not bypass the manager flow by manually copying template files into a downstream repo unless the user explicitly wants that lower-level maintenance work.
-12. For review, audit, and audit-and-fix work, apply the downstream reading order before evaluating the work: local `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md` when present, then the relevant canonical pages.
+12. For review, audit, and audit-and-fix work, apply the downstream reading order before evaluating the work: local `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md` when present, then the relevant local managed standards pages.
 13. For review and audit work, classify deviations according to the standards' `must`, `should`, and `may` levels.
 14. Apply documented local guidance and overrides before reporting a deviation.
 15. For `audit`, default to a whole-repo baseline unless the user asks for a narrower scope. If the audit is narrowed, state the audited scope explicitly.
@@ -85,7 +86,7 @@ Use this skill when the user wants to:
 - When using the blocked merge-assisted path, state that explicit user approval was required for `install --force`, then summarize what was safely folded back in and what still needs user judgment.
 - When no clear context is available, offer the short action menu instead of failing or inventing intent.
 - When reviewing, focus findings on standards violations and note any documented exception.
-- For plan, review, and audit outputs, briefly name the local guidance, sidecar, overrides, or canonical standards pages that materially informed the result.
+- For plan, review, and audit outputs, briefly name the local guidance, sidecar, overrides, or local managed standards pages that materially informed the result.
 - When auditing, produce findings-first output. Treat `must` violations as findings unless a local override exists, `should` deviations as strong refactor recommendations, and `may` guidance as optional improvements.
 - When auditing, treat missing repo-local guidance as a `should` recommendation only when there is concrete evidence of recurring undocumented local workflow knowledge or a repeated local confusion point.
 - When audit scope is partial, say so explicitly and avoid implying whole-repo coverage.

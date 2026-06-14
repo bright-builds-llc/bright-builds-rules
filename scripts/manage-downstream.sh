@@ -62,6 +62,17 @@ base_managed_pairs=(
 	"${sidecar_source}|${sidecar_destination}"
 	"templates/pull_request_template.md|.github/pull_request_template.md"
 )
+managed_standards_paths=(
+	"standards/index.md"
+	"standards/core/architecture.md"
+	"standards/core/code-shape.md"
+	"standards/core/local-guidance.md"
+	"standards/core/operability.md"
+	"standards/core/testing.md"
+	"standards/core/verification.md"
+	"standards/languages/rust.md"
+	"standards/languages/typescript-javascript.md"
+)
 base_whole_file_managed_pairs=(
 	"${sidecar_source}|${sidecar_destination}"
 	"templates/pull_request_template.md|.github/pull_request_template.md"
@@ -173,24 +184,25 @@ Run `status` first to classify the repo as `installable`, `installed`, or
 
 Commands:
   install     Install the managed AGENTS block, AGENTS.bright-builds.md,
-              a managed CONTRIBUTING block, PR template, audit trail, and
-              default README badge block when managed README badges apply,
-              plus the managed auto-update workflow and helper script when
-              auto-update resolves to enabled. Pre-existing unmarked
-              AGENTS.md and CONTRIBUTING.md files are preserved and receive
-              the managed block at the end. Blocked repos stop unless
+              a managed CONTRIBUTING block, PR template, local standards
+              corpus, audit trail, and default README badge block when managed
+              README badges apply, plus the managed auto-update workflow and
+              helper script when auto-update resolves to enabled. Pre-existing
+              unmarked AGENTS.md and CONTRIBUTING.md files are preserved and
+              receive the managed block at the end. Blocked repos stop unless
               --force is passed.
   update      Refresh the managed AGENTS block, AGENTS.bright-builds.md, the
-              managed CONTRIBUTING block, other managed files, README badge
-              block, audit trail, and managed auto-update files for repos
-              already using the marker-based layout.
+              managed CONTRIBUTING block, local standards corpus, other managed
+              files, README badge block, audit trail, and managed auto-update
+              files for repos already using the marker-based layout.
   status      Show which managed files are present, classify the repo state,
               print the recommended next action, and report README badge state
               plus the resolved auto-update mode and reason.
   uninstall   Remove the managed AGENTS block, AGENTS.bright-builds.md, the
               managed CONTRIBUTING block or legacy clean CONTRIBUTING file,
-              the PR template, audit trail, managed README badges, and
-              managed auto-update files. Keeps standards-overrides.md.
+              the PR template, local standards corpus, audit trail, managed
+              README badges, and managed auto-update files. Keeps
+              standards-overrides.md.
 
 Options:
   --ref <git-ref>          Source ref to pin in downstream files. Defaults to
@@ -744,6 +756,11 @@ rewrite_rendered_file_for_legacy_identity() {
 				if [[ "$line" == '# If this helper needs a fix, open an upstream PR or issue instead of editing the downstream managed copy.' ]]; then
 					continue
 				fi
+				case "$line" in
+				*"standards/"*" \\")
+					continue
+					;;
+				esac
 				if [[ "$line" == 'legacy_audit_path="coding-and-architecture-requirements.audit.md"' ]]; then
 					continue
 				fi
@@ -2500,9 +2517,18 @@ ensure_overrides_file() {
 	write_rendered_file "$overrides_source" "$overrides_destination"
 }
 
+write_managed_standards_files() {
+	local standards_path=""
+
+	for standards_path in "${managed_standards_paths[@]}"; do
+		write_rendered_file "$standards_path" "$standards_path"
+	done
+}
+
 build_current_managed_status_paths() {
 	local effective_audit_destination=""
 	local entries=()
+	local standards_path=""
 
 	effective_audit_destination="$(resolve_effective_audit_destination)"
 	entries=(
@@ -2513,6 +2539,10 @@ build_current_managed_status_paths() {
 		"${effective_audit_destination}"
 		"${overrides_destination}"
 	)
+
+	for standards_path in "${managed_standards_paths[@]}"; do
+		entries+=("$standards_path")
+	done
 
 	if auto_update_files_are_relevant; then
 		entries+=("${auto_update_script_destination}" "${auto_update_workflow_destination}")
@@ -2525,6 +2555,8 @@ build_managed_files_markdown_for_state() {
 	local current_readme_badge_state="$1"
 	local current_auto_update_mode="$2"
 	local current_audit_relative_destination="${3:-$audit_destination}"
+	local include_standards="${4:-enabled}"
+	local standards_path=""
 	local entries=(
 		"${agents_destination} (managed block)"
 		"${sidecar_destination}"
@@ -2532,6 +2564,12 @@ build_managed_files_markdown_for_state() {
 		".github/pull_request_template.md"
 		"${current_audit_relative_destination}"
 	)
+
+	if [[ "$include_standards" == "enabled" ]]; then
+		for standards_path in "${managed_standards_paths[@]}"; do
+			entries+=("$standards_path")
+		done
+	fi
 
 	if [[ "$current_readme_badge_state" == "present" ]]; then
 		entries+=("${readme_destination} (managed badges block)")
@@ -2545,15 +2583,19 @@ build_managed_files_markdown_for_state() {
 }
 
 build_current_managed_files_markdown() {
-	build_managed_files_markdown_for_state "$readme_badge_state" "$auto_update_mode" "$audit_destination"
+	build_managed_files_markdown_for_state "$readme_badge_state" "$auto_update_mode" "$audit_destination" "enabled"
 }
 
 build_installed_managed_files_markdown() {
-	build_managed_files_markdown_for_state "$readme_badge_state" "${current_auto_update:-$auto_update_mode}" "$(resolve_effective_audit_destination)"
+	build_managed_files_markdown_for_state "$readme_badge_state" "${current_auto_update:-$auto_update_mode}" "$(resolve_effective_audit_destination)" "enabled"
+}
+
+build_current_pre_standards_managed_files_markdown() {
+	build_managed_files_markdown_for_state "$readme_badge_state" "${current_auto_update:-$auto_update_mode}" "$(resolve_effective_audit_destination)" "disabled"
 }
 
 build_current_whole_file_contributing_compat_managed_files_markdown() {
-	build_managed_files_markdown_for_state "$readme_badge_state" "${current_auto_update:-$auto_update_mode}" "$(resolve_effective_audit_destination)" | sed "s#\`${contributing_destination} (managed block)\`#\`${contributing_destination}\`#"
+	build_current_pre_standards_managed_files_markdown | sed "s#\`${contributing_destination} (managed block)\`#\`${contributing_destination}\`#"
 }
 
 remove_auto_update_files() {
@@ -2573,6 +2615,11 @@ remove_auto_update_files() {
 build_whole_file_managed_pairs_for_mode() {
 	local current_auto_update_mode="$1"
 	local entries=("${base_whole_file_managed_pairs[@]}")
+	local standards_path=""
+
+	for standards_path in "${managed_standards_paths[@]}"; do
+		entries+=("${standards_path}|${standards_path}")
+	done
 
 	if [[ "$current_auto_update_mode" == "enabled" ]]; then
 		entries+=(
@@ -2730,6 +2777,9 @@ resolve_whole_file_managed_state() {
 	local current_compat_legacy_path=""
 	local prerename_compat_marked_path=""
 	local prerename_compat_unmarked_path=""
+	local pre_standards_managed_files_markdown=""
+	local pre_standards_marked_path=""
+	local pre_standards_legacy_path=""
 
 	if [[ "$relative_destination" == "$audit_destination" && ! -f "$destination_path" && -f "${repo_root}/${legacy_audit_destination}" ]]; then
 		destination_path="${repo_root}/${legacy_audit_destination}"
@@ -2753,6 +2803,25 @@ resolve_whole_file_managed_state() {
 	if marked_candidate_path_matches_destination_as_legacy_exact_match "$destination_path" "$marked_path" "$actual_relative_destination"; then
 		printf 'legacy\n'
 		return
+	fi
+
+	if [[ "$actual_relative_destination" == "$audit_destination" || "$actual_relative_destination" == "$legacy_audit_destination" ]]; then
+		pre_standards_managed_files_markdown="$(build_current_pre_standards_managed_files_markdown)"
+		pre_standards_marked_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").pre-standards.marked" "$relative_destination" "$pre_standards_managed_files_markdown" "enabled")"
+		if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$pre_standards_marked_path" "$actual_relative_destination"; then
+			printf 'legacy\n'
+			return
+		fi
+		if marked_candidate_path_matches_destination_as_legacy_exact_match "$destination_path" "$pre_standards_marked_path" "$actual_relative_destination"; then
+			printf 'legacy\n'
+			return
+		fi
+
+		pre_standards_legacy_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").pre-standards.legacy" "$relative_destination" "$pre_standards_managed_files_markdown" "disabled")"
+		if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$pre_standards_legacy_path" "$actual_relative_destination"; then
+			printf 'legacy\n'
+			return
+		fi
 	fi
 
 	legacy_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").legacy" "$relative_destination" "$managed_files_markdown" "disabled")"
@@ -2941,6 +3010,18 @@ append_drifted_installed_whole_file_paths() {
 			append_unique_blocking_path "$relative_destination"
 		fi
 	done < <(build_whole_file_managed_pairs_for_mode "${current_auto_update:-$auto_update_mode}")
+}
+
+append_conflicting_existing_standards_paths() {
+	local standards_path=""
+	local state=""
+
+	for standards_path in "${managed_standards_paths[@]}"; do
+		state="$(resolve_whole_file_managed_state "$standards_path" "$standards_path")"
+		if [[ "$state" == "drifted" ]]; then
+			append_unique_blocking_path "$standards_path"
+		fi
+	done
 }
 
 remove_clean_installed_whole_file() {
@@ -3367,6 +3448,8 @@ determine_repo_state() {
 
 	if [[ "$installed_signal" -eq 1 ]]; then
 		append_drifted_installed_whole_file_paths
+	else
+		append_conflicting_existing_standards_paths
 	fi
 
 	if [[ "$installed_signal" -eq 1 ]]; then
@@ -3488,6 +3571,7 @@ install_or_update() {
 		write_rendered_file "$source_path" "$relative_destination"
 	done
 
+	write_managed_standards_files
 	ensure_overrides_file
 	write_or_update_readme_file
 	sync_auto_update_files
@@ -3627,6 +3711,9 @@ uninstall() {
 		remove_clean_installed_whole_file "$source_path" "$relative_destination" "$managed_files_markdown"
 	done < <(build_whole_file_managed_pairs_for_mode "disabled")
 
+	rmdir "${repo_root}/standards/core" 2>/dev/null || true
+	rmdir "${repo_root}/standards/languages" 2>/dev/null || true
+	rmdir "${repo_root}/standards" 2>/dev/null || true
 	rmdir "${repo_root}/.github/workflows" 2>/dev/null || true
 	rmdir "${repo_root}/.github" 2>/dev/null || true
 }

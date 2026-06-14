@@ -30,10 +30,10 @@ npx --yes markdown-link-check@3.14.1 -c .markdown-link-check.json --ignore .git,
 
 rg -Fq 'Before plan, review, implementation, or audit work:' templates/AGENTS.md
 rg -Fq 'Use this routing map when deciding what to load next:' templates/AGENTS.md
-rg -Fq 'use the canonical page `standards/core/verification.md`' templates/AGENTS.md
+rg -Fq 'use the managed standards page `standards/core/verification.md`' templates/AGENTS.md
 rg -Fq '`AGENTS.md` is the entrypoint for repo-local instructions, not a complete Bright Builds Rules spec.' templates/AGENTS.bright-builds.md
 rg -Fq '## Routing hints' templates/AGENTS.bright-builds.md
-rg -Fq 'Use the canonical page `standards/core/testing.md` for unit-test expectations.' templates/AGENTS.bright-builds.md
+rg -Fq 'Use the managed standards page `standards/core/testing.md` for unit-test expectations.' templates/AGENTS.bright-builds.md
 rg -Fq 'Before you start substantive implementation or other repo-changing work, sync first:' standards/core/verification.md
 rg -Fq '`git pull --rebase` when that matches local guidance' standards/core/verification.md
 rg -Fq 'Before substantive implementation work, sync first: fetch remote state before editing;' templates/AGENTS.bright-builds.md
