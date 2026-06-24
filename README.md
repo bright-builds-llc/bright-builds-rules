@@ -138,6 +138,7 @@ When auto-update is enabled, the downstream repo gets a managed GitHub Actions w
 - it tries to commit managed-file changes directly to the default branch first
 - if that direct push is rejected, it falls back to the fixed branch `bright-builds/auto-update` and opens or reuses a pull request
 - it never uses `install --force`; if `status` stops reporting `Repo state: installed`, the helper script exits without mutating the repo
+- if the workflow job fails after it starts, it prints a copyable upstream repair prompt that points agents back to this repository to investigate and prepare a PR for managed workflow, helper, template, or installer fixes
 - it also self-heals exact legacy Bright Builds README badge snippets during `update`, so already-installed downstream repos can repair old `coding-and-architecture-requirements` badge links without a separate workflow
 - it tracks the currently installed ref exactly, so `main` keeps moving while immutable tags and full SHAs effectively stay frozen
 
@@ -283,6 +284,7 @@ Behavior by command:
 - `install --force` first backs up blocked managed files into `.bright-builds-rules-backups/<UTC-timestamp>/` before replacing them, then the agent should compare the backup with the fresh managed outputs and fold back only clearly portable downstream-specific logic or content into safe local extension points
 - if that merge review would require re-drifting a fully managed file or making a non-obvious semantic choice, the agent should stop and ask the user
 - `update` refreshes the managed AGENTS block, sidecar, managed `CONTRIBUTING.md` block, remaining managed files including the local `standards/` corpus, managed README badge block, audit manifest, and any enabled auto-update files, and also repairs exact legacy Bright Builds README badge snippets, but only when the installed managed files are either exact current renders or exact legacy unmarked renders
+- enabled auto-update workflows print a copyable upstream repair prompt on job failure so managed workflow, helper, template, or installer defects can be fixed in this repository for future downstream runs
 - `status` uses the managed AGENTS marker block plus `AGENTS.bright-builds.md` as the install signal
 - `status` also reports explicit README badge state plus the resolved auto-update mode and reason
 - `status` blocks when a whole-file managed output has downstream edits or when the managed `CONTRIBUTING.md` block has downstream edits, but still accepts exact-match legacy installs without the new marker headers

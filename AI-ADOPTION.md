@@ -133,6 +133,7 @@ Auto-update defaults behave this way:
 - fresh installs also default to `enabled` when the current GitHub user is trusted and the repo owner is not
 - once installed, later `update` runs reuse the persisted auto-update setting from the audit trail unless `--auto-update` is passed again
 - when enabled, auto-update tracks the currently pinned ref exactly, runs on the fixed UTC schedule `0 14 * * *`, pushes to the default branch when possible, and falls back to the branch `bright-builds/auto-update` plus a pull request when direct push is rejected
+- when enabled, the auto-update workflow prints a copyable upstream repair prompt on job failure so managed workflow, helper, template, or installer defects can be fixed in this repository for future downstream runs
 - when enabled, that same `update` path also repairs the exact legacy Bright Builds README badge snippets this repo previously documented, so already-installed downstream repos can self-heal old `coding-and-architecture-requirements` badge markdown without a separate job
 
 The installer also tailors the managed sidecar when the downstream GitHub owner matches Peter Ryszkiewicz or `pRizz` after normalization:

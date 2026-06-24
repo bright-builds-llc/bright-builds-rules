@@ -376,6 +376,12 @@ test_pushes_directly_when_push_succeeds() {
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'token: ${{ secrets.BRIGHT_BUILDS_PUSH_TOKEN || github.token }}' "managed workflow should pass the dedicated token to checkout"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'GH_TOKEN: ${{ env.BRIGHT_BUILDS_PUSH_TOKEN }}' "managed workflow should export GH_TOKEN for the helper"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'GITHUB_TOKEN: ${{ env.BRIGHT_BUILDS_PUSH_TOKEN }}' "managed workflow should export GITHUB_TOKEN for the helper"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'if: ${{ failure() }}' "managed workflow should print the repair prompt only on failure"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "https://github.com/bright-builds-llc/bright-builds-rules" "managed workflow should point the repair prompt to the upstream repo"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}' "managed workflow should include the downstream run URL expression"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "Managed workflow: .github/workflows/bright-builds-auto-update.yml" "managed workflow should name the managed workflow path"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "Managed helper: scripts/bright-builds-auto-update.sh" "managed workflow should name the managed helper path"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "prepare a pull request against https://github.com/bright-builds-llc/bright-builds-rules" "managed workflow should direct upstream managed fixes to an upstream PR"
 	commit_all "$repo_path" "Initial managed install"
 	git -C "$repo_path" push -u origin main >/dev/null
 	printf '\n- Added direct-push update marker.\n' >>"${bundle_root}/templates/AGENTS.bright-builds.md"

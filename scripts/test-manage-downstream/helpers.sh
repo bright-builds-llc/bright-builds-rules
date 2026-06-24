@@ -149,6 +149,18 @@ assert_file_not_contains() {
 	fi
 }
 
+assert_auto_update_workflow_contains_repair_prompt() {
+	local repo_path="$1"
+	local workflow_path="${repo_path}/.github/workflows/bright-builds-auto-update.yml"
+
+	assert_file_contains "$workflow_path" 'if: ${{ failure() }}' "auto-update workflow should print the repair prompt only on failure"
+	assert_file_contains "$workflow_path" "https://github.com/bright-builds-llc/bright-builds-rules" "auto-update workflow should point the repair prompt to the upstream repo"
+	assert_file_contains "$workflow_path" 'Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}' "auto-update workflow should include the downstream run URL expression"
+	assert_file_contains "$workflow_path" "Managed workflow: .github/workflows/bright-builds-auto-update.yml" "auto-update workflow should name the managed workflow path"
+	assert_file_contains "$workflow_path" "Managed helper: scripts/bright-builds-auto-update.sh" "auto-update workflow should name the managed helper path"
+	assert_file_contains "$workflow_path" "prepare a pull request against https://github.com/bright-builds-llc/bright-builds-rules" "auto-update workflow should direct upstream managed fixes to an upstream PR"
+}
+
 assert_file_contains_regex() {
 	local file_path="$1"
 	local pattern="$2"

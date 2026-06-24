@@ -182,6 +182,7 @@ test_trusted_repo_owner_enables_auto_update_by_default() {
 	assert_file_contains "${repo_path}/README.md" "OpenLinks profile" "matching owners should receive the owner-specific OpenLinks README badge"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "cron: '0 14 * * *'" "workflow should use the fixed UTC schedule"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "bash ./scripts/bright-builds-auto-update.sh" "workflow should invoke the managed helper script"
+	assert_auto_update_workflow_contains_repair_prompt "$repo_path"
 }
 
 test_trusted_github_user_enables_auto_update_by_default() {
@@ -360,6 +361,7 @@ test_auto_update_enabled_files_are_restored_on_update() {
 	assert_eq "$run_status" "0" "update should restore missing managed auto-update files"
 	assert_file_exists "${repo_path}/scripts/bright-builds-auto-update.sh"
 	assert_file_exists "${repo_path}/.github/workflows/bright-builds-auto-update.yml"
+	assert_auto_update_workflow_contains_repair_prompt "$repo_path"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "Auto-update: \`enabled\`" "audit should keep the enabled state"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "Auto-update reason: \`explicit\`" "audit should keep the explicit enable reason"
 }
@@ -461,6 +463,31 @@ test_pre_local_standards_contributing_block_remains_updateable() {
 	assert_contains "$run_output" "Blocking paths: CONTRIBUTING.md" "status should list the edited old CONTRIBUTING block"
 }
 
+test_pre_prompt_auto_update_workflow_remains_updateable() {
+	local installer_path=""
+	local repo_path=""
+
+	installer_path="$(create_pre_local_standards_installer_bundle pre-prompt-auto-update)"
+	repo_path="$(create_repo pre-prompt-auto-update)"
+
+	run_manage_with_script "$installer_path" "$repo_path" install --auto-update enabled
+	assert_eq "$run_status" "0" "pre-prompt auto-update fixture install should succeed"
+	replace_markdown_value "${repo_path}/bright-builds-rules.audit.md" "Exact commit" "$pre_local_standards_ref"
+	replace_markdown_value "${repo_path}/AGENTS.bright-builds.md" "Exact commit" "$pre_local_standards_ref"
+	assert_file_exists "${repo_path}/.github/workflows/bright-builds-auto-update.yml"
+	assert_file_not_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'if: ${{ failure() }}' "fixture workflow should not yet include the failure repair prompt"
+
+	run_manage "$repo_path" status
+	assert_eq "$run_status" "0" "status should succeed for a clean pre-prompt auto-update workflow"
+	assert_contains "$run_output" "Repo state: installed" "clean pre-prompt auto-update workflows should remain updateable"
+	assert_not_contains "$run_output" "Repo state: blocked" "clean pre-prompt auto-update workflows should not be blocked"
+	assert_not_contains "$run_output" "Blocking paths: .github/workflows/bright-builds-auto-update.yml" "clean pre-prompt auto-update workflows should not be treated as drift"
+
+	run_manage "$repo_path" update
+	assert_eq "$run_status" "0" "update should refresh a clean pre-prompt auto-update workflow"
+	assert_auto_update_workflow_contains_repair_prompt "$repo_path"
+}
+
 test_existing_unmanaged_standards_file_blocks_install_until_force() {
 	local repo_path=""
 	local backup_file=""
@@ -535,6 +562,7 @@ test_legacy_exact_match_install_is_still_installed_and_update_migrates_markers()
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "$(managed_file_marker "bright-builds-rules.audit.md")" "update should restore the audit whole-file marker"
 	assert_line_equals "${repo_path}/scripts/bright-builds-auto-update.sh" "2" "$(managed_file_marker "scripts/bright-builds-auto-update.sh")" "update should restore the auto-update helper whole-file marker"
 	assert_line_equals "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "1" "$(managed_file_marker ".github/workflows/bright-builds-auto-update.yml")" "update should restore the auto-update workflow whole-file marker"
+	assert_auto_update_workflow_contains_repair_prompt "$repo_path"
 }
 
 test_drifted_contributing_block_blocks_update_and_force_repairs() {
