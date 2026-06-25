@@ -34,10 +34,14 @@ rg -Fq 'use the managed standards page `standards/core/frontend-ui.md`' template
 rg -Fq 'use the managed standards page `standards/core/verification.md`' templates/AGENTS.md
 rg -Fq '`AGENTS.md` is the entrypoint for repo-local instructions, not a complete Bright Builds Rules spec.' templates/AGENTS.bright-builds.md
 rg -Fq '## Routing hints' templates/AGENTS.bright-builds.md
-rg -Fq 'Use the managed standards page `standards/core/frontend-ui.md` for frontend visual defaults, theme defaults, and dark-mode decisions.' templates/AGENTS.bright-builds.md
+rg -Fq 'Use the managed standards page `standards/core/frontend-ui.md` for frontend visual defaults, theme defaults, dark-mode decisions, and public open-source source/FOSS/maintainer disclosure.' templates/AGENTS.bright-builds.md
 rg -Fq 'Use the managed standards page `standards/core/testing.md` for unit-test expectations.' templates/AGENTS.bright-builds.md
 rg -Fq 'Frontend experiences should default to dark mode' templates/AGENTS.bright-builds.md
 rg -Fq 'New TypeScript/JavaScript web frontends should default to SolidJS' templates/AGENTS.bright-builds.md
+rg -Fq 'Public open-source web apps and sites must expose source repository access in stable product chrome' templates/AGENTS.bright-builds.md
+rg -Fq 'Disclose Public Open-Source Project Identity In Product Chrome' standards/core/frontend-ui.md
+rg -Fq 'Only describe the project as `free and open source` when the repository and license actually support that claim.' standards/core/frontend-ui.md
+rg -Fq 'mention Peter Ryszkiewicz and link to `https://openlinks.us/`' standards/core/frontend-ui.md
 rg -Fq 'link public GitHub commits and CI run-backed build times when URLs are available' templates/AGENTS.bright-builds.md
 rg -Fq 'open external provenance links in new tabs safely' templates/AGENTS.bright-builds.md
 rg -Fq 'copyable summaries as optional support affordances' templates/AGENTS.bright-builds.md
