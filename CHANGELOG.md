@@ -4,6 +4,8 @@ This repository uses a simple release-notes model instead of a heavyweight chang
 
 ## Unreleased
 
+- Added `should` guidance for frontend experiences to default to dark mode unless a documented product constraint requires otherwise, plus matching downstream managed template routing.
+- Relaxed app provenance guidance so copyable build-info summaries are optional support affordances instead of required UI.
 - Added downstream installation of the managed local `standards/` corpus so routing hints resolve to files inside adopted repositories while retaining source and exact-commit provenance in the sidecar and audit trail
 - Breaking skill rename: renamed the optional Codex skill from `Personal Coding Standards` to `Bright Builds Rules` so the slug, path, and UI label align with `Bright Builds Rules`
 - Breaking rename: standardized the canonical project identity, downstream installer contract, audit trail name, markers, backup paths, badge assets, and docs around `Bright Builds Rules`

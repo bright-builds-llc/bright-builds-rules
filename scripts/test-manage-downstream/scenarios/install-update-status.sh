@@ -36,6 +36,7 @@ test_fresh_install_and_reinstall() {
 		"${repo_path}/standards/index.md" \
 		"${repo_path}/standards/core/architecture.md" \
 		"${repo_path}/standards/core/code-shape.md" \
+		"${repo_path}/standards/core/frontend-ui.md" \
 		"${repo_path}/standards/core/local-guidance.md" \
 		"${repo_path}/standards/core/operability.md" \
 		"${repo_path}/standards/core/testing.md" \
@@ -50,6 +51,7 @@ test_fresh_install_and_reinstall() {
 	assert_file_contains "${repo_path}/AGENTS.md" "Use this routing map when deciding what to load next:" "root AGENTS should include the compact routing map"
 	assert_file_contains "${repo_path}/AGENTS.md" "generated-file ownership, CI-only suites, or recurring workflow facts" "root AGENTS should route repo-local workflow questions back to local guidance"
 	assert_file_contains "${repo_path}/AGENTS.md" "managed standards page \`standards/core/architecture.md\`" "root AGENTS should route architecture questions to the local standards page"
+	assert_file_contains "${repo_path}/AGENTS.md" "managed standards page \`standards/core/frontend-ui.md\`" "root AGENTS should route frontend UI questions to the local standards page"
 	assert_file_contains "${repo_path}/AGENTS.md" "managed standards page \`standards/core/testing.md\`" "root AGENTS should route unit-test expectations to the local standards page"
 	assert_file_contains "${repo_path}/AGENTS.md" "matching managed standards page under \`standards/languages/\`" "root AGENTS should route language-specific questions to the local language pages"
 	assert_file_contains "${repo_path}/AGENTS.md" "Keep recurring repo-specific workflow facts, commands, and links in a \`## Repo-Local Guidance\` section elsewhere in this file." "root AGENTS should direct repos to keep local guidance in AGENTS"
@@ -65,10 +67,12 @@ test_fresh_install_and_reinstall() {
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "## Routing hints" "sidecar should include the compact routing section"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Use this file, \`AGENTS.bright-builds.md\`, for the Bright Builds Rules default workflow" "sidecar should position itself as the detailed Bright Builds Rules layer"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "managed standards page \`standards/core/code-shape.md\`" "sidecar should route code-shape questions to the local code-shape page"
+	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "managed standards page \`standards/core/frontend-ui.md\`" "sidecar should route frontend UI questions to the local frontend UI page"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "managed standards page \`standards/core/verification.md\`" "sidecar should route verification questions to the local verification page"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "matching managed standards page under \`standards/languages/\`" "sidecar should route language-specific questions to the local language pages"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "internal nullable or optional names with \`maybe\`" "sidecar should include the expanded maybe-prefix naming guidance"
-	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "copyable summary with the exact commit when available" "sidecar should include the UI provenance guidance"
+	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Frontend experiences should default to dark mode" "sidecar should include the frontend UI dark-mode guidance"
+	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "copyable summaries as optional support affordances" "sidecar should include the UI provenance guidance"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "foreign-language logic inside strings" "sidecar should include the no-foreign-code-in-strings guidance"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "rerunnable when sensible" "sidecar should include the rerunnable script guidance"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "repo-defined gitignored location" "sidecar should point scripts at a repo-defined gitignored log location"
@@ -391,7 +395,8 @@ test_update_preserves_local_agents_and_overrides() {
 	assert_exact_line_count "${repo_path}/CONTRIBUTING.md" "$contributing_block_begin" "1"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Version pin: \`integration-test-ref\`" "update should refresh managed files"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Exact commit: \`${repo_exact_commit}\`" "update should preserve exact local provenance"
-	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "copyable summary with the exact commit when available" "update should keep the UI provenance guidance"
+	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Frontend experiences should default to dark mode" "update should keep the frontend UI guidance"
+	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "copyable summaries as optional support affordances" "update should keep the UI provenance guidance"
 	assert_file_contains "${repo_path}/standards-overrides.md" "| \`custom\` | \`keep it\` | \`local\` | \`owner\` | \`2026-03-13\` |" "update should preserve local overrides"
 	assert_markdown_is_mdformat_clean \
 		"update should keep downstream AGENTS and CONTRIBUTING markdown mdformat-clean" \
