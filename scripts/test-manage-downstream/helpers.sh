@@ -177,6 +177,7 @@ assert_managed_standards_exist() {
 		"standards/index.md" \
 		"standards/core/architecture.md" \
 		"standards/core/code-shape.md" \
+		"standards/core/frontend-ui.md" \
 		"standards/core/local-guidance.md" \
 		"standards/core/operability.md" \
 		"standards/core/testing.md" \
@@ -195,6 +196,7 @@ assert_managed_standards_missing() {
 		"standards/index.md" \
 		"standards/core/architecture.md" \
 		"standards/core/code-shape.md" \
+		"standards/core/frontend-ui.md" \
 		"standards/core/local-guidance.md" \
 		"standards/core/operability.md" \
 		"standards/core/testing.md" \

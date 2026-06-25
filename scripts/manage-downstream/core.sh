@@ -63,6 +63,7 @@ managed_standards_paths=(
 	"standards/index.md"
 	"standards/core/architecture.md"
 	"standards/core/code-shape.md"
+	"standards/core/frontend-ui.md"
 	"standards/core/local-guidance.md"
 	"standards/core/operability.md"
 	"standards/core/testing.md"
