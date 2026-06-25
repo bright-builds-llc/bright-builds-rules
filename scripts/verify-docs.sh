@@ -39,8 +39,11 @@ rg -Fq 'Use the managed standards page `standards/core/testing.md` for unit-test
 rg -Fq 'Frontend experiences should default to dark mode' templates/AGENTS.bright-builds.md
 rg -Fq 'New TypeScript/JavaScript web frontends should default to SolidJS' templates/AGENTS.bright-builds.md
 rg -Fq 'link public GitHub commits and CI run-backed build times when URLs are available' templates/AGENTS.bright-builds.md
+rg -Fq 'open external provenance links in new tabs safely' templates/AGENTS.bright-builds.md
 rg -Fq 'copyable summaries as optional support affordances' templates/AGENTS.bright-builds.md
 rg -Fq 'short commit hash, usually 7-12 characters' standards/core/operability.md
+rg -Fq 'external source and CI provenance links should open in a new tab or window' standards/core/operability.md
+rg -Fq 'rel="noopener noreferrer"' standards/core/operability.md
 rg -Fq 'https://github.com/example/admin/actions/runs/123456789' standards/core/operability.md
 rg -Fq 'Before you start substantive implementation or other repo-changing work, sync first:' standards/core/verification.md
 rg -Fq '`git pull --rebase` when that matches local guidance' standards/core/verification.md

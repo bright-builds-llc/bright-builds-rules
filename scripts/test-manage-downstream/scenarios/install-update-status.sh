@@ -74,6 +74,7 @@ test_fresh_install_and_reinstall() {
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Frontend experiences should default to dark mode" "sidecar should include the frontend UI dark-mode guidance"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "New TypeScript/JavaScript web frontends should default to SolidJS" "sidecar should include the SolidJS frontend framework guidance"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "link public GitHub commits and CI run-backed build times when URLs are available" "sidecar should include linked UI provenance guidance"
+	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "open external provenance links in new tabs safely" "sidecar should include safe new-tab provenance link guidance"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "copyable summaries as optional support affordances" "sidecar should include the UI provenance guidance"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "foreign-language logic inside strings" "sidecar should include the no-foreign-code-in-strings guidance"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "rerunnable when sensible" "sidecar should include the rerunnable script guidance"
@@ -400,6 +401,7 @@ test_update_preserves_local_agents_and_overrides() {
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Frontend experiences should default to dark mode" "update should keep the frontend UI guidance"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "New TypeScript/JavaScript web frontends should default to SolidJS" "update should keep the SolidJS frontend framework guidance"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "link public GitHub commits and CI run-backed build times when URLs are available" "update should keep linked UI provenance guidance"
+	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "open external provenance links in new tabs safely" "update should keep safe new-tab provenance link guidance"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "copyable summaries as optional support affordances" "update should keep the UI provenance guidance"
 	assert_file_contains "${repo_path}/standards-overrides.md" "| \`custom\` | \`keep it\` | \`local\` | \`owner\` | \`2026-03-13\` |" "update should preserve local overrides"
 	assert_markdown_is_mdformat_clean \
