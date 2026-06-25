@@ -48,6 +48,7 @@ Record recurring repo-specific workflow facts in `AGENTS.md` under `## Repo-Loca
 - Prefer early returns over nesting.
 - Prefix internal nullable or optional names with `maybe`, including functions, bindings, and internal fields, and use `MaybeX` aliases only when they materially clarify a repeated nullable surface.
 - Frontend experiences should default to dark mode unless a documented brand, accessibility, embedding, or product constraint requires a different default.
+- New TypeScript/JavaScript web frontends should default to SolidJS unless a documented constraint makes another framework the better fit.
 - In user-facing, app-like websites and apps, expose version, commit, and build provenance in a normal visible product surface, show `Unavailable` for missing fields, and treat copyable summaries as optional support affordances.
 - Treat functions over roughly 161 lines as refactor triggers; use `floor(100 * phi)` as the mnemonic, not a hard cap.
 - Do not hide substantial foreign-language logic inside strings; keep orchestration thin, move scripts, queries, and similar artifacts into repo-owned or language-aware files, and make checked-in scripts rerunnable when sensible with breadcrumb-heavy logs and summaries in a repo-defined gitignored location.

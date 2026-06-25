@@ -37,6 +37,7 @@ rg -Fq '## Routing hints' templates/AGENTS.bright-builds.md
 rg -Fq 'Use the managed standards page `standards/core/frontend-ui.md` for frontend visual defaults, theme defaults, and dark-mode decisions.' templates/AGENTS.bright-builds.md
 rg -Fq 'Use the managed standards page `standards/core/testing.md` for unit-test expectations.' templates/AGENTS.bright-builds.md
 rg -Fq 'Frontend experiences should default to dark mode' templates/AGENTS.bright-builds.md
+rg -Fq 'New TypeScript/JavaScript web frontends should default to SolidJS' templates/AGENTS.bright-builds.md
 rg -Fq 'copyable summaries as optional support affordances' templates/AGENTS.bright-builds.md
 rg -Fq 'Before you start substantive implementation or other repo-changing work, sync first:' standards/core/verification.md
 rg -Fq '`git pull --rebase` when that matches local guidance' standards/core/verification.md
@@ -48,8 +49,10 @@ rg -Fq 'After install or update, treat downstream `AGENTS.md` as the local entry
 rg -Fq 'Treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds Rules spec.' README.md
 rg -Fq 'Do Not Add Python Scripts To Bun-Friendly JS/TS Repositories' standards/languages/typescript-javascript.md
 rg -Fq 'do not add new Python scripts for repo-owned automation' standards/languages/typescript-javascript.md
+rg -Fq 'Prefer SolidJS For New Web Frontends' standards/languages/typescript-javascript.md
+rg -Fq 'For new TypeScript or JavaScript web frontend experiences, default to SolidJS' standards/languages/typescript-javascript.md
 rg -Fq 'Prefer Stack-Aligned UI Libraries For TS/JS Frontends' standards/languages/typescript-javascript.md
-rg -Fq 'prefer [MysticUI](https://github.com/pRizz/mystic-ui) for SolidJS apps and [MagicUI](https://github.com/magicuidesign/magicui) for React-based apps' standards/languages/typescript-javascript.md
+rg -Fq 'Because new TypeScript and JavaScript web frontends should default to SolidJS, prefer [MysticUI](https://github.com/pRizz/mystic-ui)' standards/languages/typescript-javascript.md
 rg -Fq 'pin the GitHub dependency to the latest available commit SHA at the time of adoption or update' standards/languages/typescript-javascript.md
 rg -Fq 'Use the [MysticUI README](https://github.com/pRizz/mystic-ui/blob/main/README.md) as the source of truth' standards/languages/typescript-javascript.md
 rg -Fq 'This repository uses Bun and TypeScript for repo-owned scripting.' AGENTS.md

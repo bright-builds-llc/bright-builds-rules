@@ -4,6 +4,7 @@ This repository uses a simple release-notes model instead of a heavyweight chang
 
 ## Unreleased
 
+- Added `should` guidance for new TypeScript/JavaScript web frontends to default to SolidJS unless a documented constraint requires another stack, plus matching managed template wording.
 - Added `should` guidance for frontend experiences to default to dark mode unless a documented product constraint requires otherwise, plus matching downstream managed template routing.
 - Relaxed app provenance guidance so copyable build-info summaries are optional support affordances instead of required UI.
 - Added downstream installation of the managed local `standards/` corpus so routing hints resolve to files inside adopted repositories while retaining source and exact-commit provenance in the sidecar and audit trail
