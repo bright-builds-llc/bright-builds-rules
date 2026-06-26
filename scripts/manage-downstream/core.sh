@@ -50,6 +50,7 @@ bright_builds_badges_base_url="https://raw.githubusercontent.com/${default_repo_
 legacy_bright_builds_repo_slug="bright-builds-llc/coding-and-architecture-requirements"
 legacy_bright_builds_url="https://github.com/${legacy_bright_builds_repo_slug}"
 legacy_bright_builds_raw_base_url="https://raw.githubusercontent.com/${legacy_bright_builds_repo_slug}/main"
+managed_markdown_mdformat_version="1.0.0"
 trusted_auto_update_identities=(
 	"prizz"
 	"bright-builds-llc"
@@ -244,6 +245,34 @@ ensure_tmp_dir() {
 	if [[ -z "$tmp_dir" || ! -d "$tmp_dir" ]]; then
 		tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/bright-builds-rules.XXXXXX")"
 	fi
+}
+
+ensure_managed_markdown_mdformat() {
+	local python_bin=""
+	local venv_path=""
+
+	if command -v mdformat >/dev/null 2>&1; then
+		return 0
+	fi
+
+	[[ "${GITHUB_ACTIONS:-}" == "true" ]] || return 1
+
+	ensure_tmp_dir
+	venv_path="${tmp_dir}/mdformat-venv"
+
+	if [[ ! -x "${venv_path}/bin/mdformat" ]]; then
+		python_bin="$(command -v python3 2>/dev/null || command -v python 2>/dev/null || true)"
+		[[ -n "$python_bin" ]] || die "mdformat is required for managed Markdown compatibility checks, but python is unavailable to install it"
+
+		"$python_bin" -m venv "$venv_path" >/dev/null 2>&1 ||
+			die "mdformat is required for managed Markdown compatibility checks, but creating a temporary Python venv failed"
+		"${venv_path}/bin/python" -m pip install --disable-pip-version-check --no-input "mdformat==${managed_markdown_mdformat_version}" >/dev/null 2>&1 ||
+			die "mdformat is required for managed Markdown compatibility checks, but installing mdformat==${managed_markdown_mdformat_version} failed"
+	fi
+
+	export PATH="${venv_path}/bin:${PATH}"
+	command -v mdformat >/dev/null 2>&1 ||
+		die "mdformat is required for managed Markdown compatibility checks, but bootstrap did not put it on PATH"
 }
 
 build_managed_files_markdown() {

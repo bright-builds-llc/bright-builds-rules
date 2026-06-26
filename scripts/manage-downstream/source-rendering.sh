@@ -186,7 +186,7 @@ maybe_mdformat_whole_file_managed_markdown() {
 
 	[[ "$relative_destination" == *.md ]] || return 0
 	should_mdformat_whole_file_managed_markdown "$relative_destination" || return 0
-	command -v mdformat >/dev/null 2>&1 || return 0
+	ensure_managed_markdown_mdformat || return 0
 
 	mdformat "$file_path" >/dev/null 2>&1 || die "mdformat failed for ${relative_destination}"
 }
