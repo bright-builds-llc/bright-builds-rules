@@ -420,6 +420,7 @@ rewrite_rendered_file_for_legacy_identity() {
 					printf '\n'
 					line='git commit -m "$commit_message" >/dev/null'
 				fi
+				line="${line//git add -f -A --/git add -A --}"
 				line="${line//Automated Bright Builds Rules update./Automated Bright Builds requirements update.}"
 				;;
 			esac

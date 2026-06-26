@@ -456,6 +456,7 @@ test_legacy_helper_without_standards_staging_commits_backfilled_standards() {
 	init_git_repo "$repo_path"
 	git -C "$repo_path" remote add origin "$remote_path"
 	install_auto_update_repo "$old_bundle_root" "$repo_path"
+	write_file "${repo_path}/.gitignore" $'core\n'
 	replace_markdown_value "${repo_path}/bright-builds-rules.audit.md" "Exact commit" "$pre_local_standards_ref"
 	replace_markdown_value "${repo_path}/AGENTS.bright-builds.md" "Exact commit" "$pre_local_standards_ref"
 	assert_file_not_contains "${repo_path}/scripts/bright-builds-auto-update.sh" "standards/languages/typescript-javascript.md" "fixture helper should lack standards staging"
@@ -475,6 +476,9 @@ test_legacy_helper_without_standards_staging_commits_backfilled_standards() {
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "\`standards/languages/typescript-javascript.md\`" "updated audit should list managed standards"
 	if ! git --git-dir="$remote_path" ls-tree -r --name-only refs/heads/main | grep -Fxq "standards/languages/typescript-javascript.md"; then
 		fail "legacy helper update should commit the backfilled standards file"
+	fi
+	if ! git --git-dir="$remote_path" ls-tree -r --name-only refs/heads/main | grep -Fxq "standards/core/frontend-ui.md"; then
+		fail "legacy helper update should force-add ignored managed standards/core files"
 	fi
 	commit_count="$(git -C "$repo_path" rev-list --count HEAD)"
 	assert_eq "$commit_count" "2" "legacy helper standards convergence should create one update commit"

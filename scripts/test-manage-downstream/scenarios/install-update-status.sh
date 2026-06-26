@@ -432,6 +432,30 @@ test_update_backfills_missing_local_standards() {
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "\`standards/languages/typescript-javascript.md\`" "update should add standards to the audit manifest"
 }
 
+test_pre_frontend_ui_audit_manifest_remains_updateable() {
+	local repo_path=""
+
+	repo_path="$(create_repo pre-frontend-ui)"
+	init_git_repo_with_origin "$repo_path" "git@github.com:bright-builds-llc/pre-frontend-ui.git"
+	write_file "${repo_path}/package.json" $'{\n  "devDependencies": {\n    "typescript": "5.9.2"\n  }\n}\n'
+
+	run_manage "$repo_path" install --auto-update enabled
+	assert_eq "$run_status" "0" "pre-frontend-ui setup install should succeed"
+
+	rm -f "${repo_path}/standards/core/frontend-ui.md"
+	remove_audit_entry "${repo_path}/bright-builds-rules.audit.md" "standards/core/frontend-ui.md"
+
+	run_manage "$repo_path" status
+	assert_eq "$run_status" "0" "status should succeed for a pre-frontend-ui audit manifest"
+	assert_contains "$run_output" "Repo state: installed" "pre-frontend-ui audit manifests should remain updateable"
+	assert_not_contains "$run_output" "Blocking paths: bright-builds-rules.audit.md" "pre-frontend-ui audit manifests should not be treated as drift"
+
+	run_manage "$repo_path" update
+	assert_eq "$run_status" "0" "update should backfill the frontend UI standards page"
+	assert_file_exists "${repo_path}/standards/core/frontend-ui.md"
+	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "\`standards/core/frontend-ui.md\`" "update should add frontend UI standards to the audit manifest"
+}
+
 test_pre_local_standards_contributing_block_remains_updateable() {
 	local installer_path=""
 	local repo_path=""

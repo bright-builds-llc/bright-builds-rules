@@ -180,6 +180,37 @@ build_current_pre_standards_managed_files_markdown() {
 	build_managed_files_markdown_for_state "$readme_badge_state" "${current_auto_update:-$auto_update_mode}" "$(resolve_effective_audit_destination)" "disabled"
 }
 
+build_current_pre_frontend_ui_managed_files_markdown() {
+	local current_audit_relative_destination=""
+	local current_auto_update_mode=""
+	local standards_path=""
+	local entries=(
+		"${agents_destination} (managed block)"
+		"${sidecar_destination}"
+		"${contributing_destination} (managed block)"
+		".github/pull_request_template.md"
+	)
+
+	current_audit_relative_destination="$(resolve_effective_audit_destination)"
+	current_auto_update_mode="${current_auto_update:-$auto_update_mode}"
+	entries+=("${current_audit_relative_destination}")
+
+	for standards_path in "${managed_standards_paths[@]}"; do
+		[[ "$standards_path" == "standards/core/frontend-ui.md" ]] && continue
+		entries+=("$standards_path")
+	done
+
+	if [[ "$readme_badge_state" == "present" ]]; then
+		entries+=("${readme_destination} (managed badges block)")
+	fi
+
+	if [[ "$current_auto_update_mode" == "enabled" ]]; then
+		entries+=("${auto_update_script_destination}" "${auto_update_workflow_destination}")
+	fi
+
+	build_managed_files_markdown "${entries[@]}"
+}
+
 build_current_whole_file_contributing_compat_managed_files_markdown() {
 	build_current_pre_standards_managed_files_markdown | sed "s#\`${contributing_destination} (managed block)\`#\`${contributing_destination}\`#"
 }

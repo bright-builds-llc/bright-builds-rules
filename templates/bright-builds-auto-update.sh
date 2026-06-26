@@ -129,7 +129,7 @@ stage_managed_paths() {
 
 	while IFS= read -r relative_path; do
 		if [[ -e "$relative_path" ]] || git ls-files --error-unmatch "$relative_path" >/dev/null 2>&1; then
-			git add -A -- "$relative_path"
+			git add -f -A -- "$relative_path"
 		fi
 	done < <(print_audit_manifest_paths)
 
@@ -154,7 +154,7 @@ stage_managed_paths() {
 		.github/workflows/bright-builds-auto-update.yml \
 		scripts/bright-builds-auto-update.sh; do
 		if [[ -e "$relative_path" ]] || git ls-files --error-unmatch "$relative_path" >/dev/null 2>&1; then
-			git add -A -- "$relative_path"
+			git add -f -A -- "$relative_path"
 		fi
 	done
 }

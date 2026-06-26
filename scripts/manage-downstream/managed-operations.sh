@@ -81,7 +81,7 @@ stage_legacy_auto_update_standards_for_github_actions() {
 		return 0
 	fi
 
-	git -C "$repo_root" add -A -- "${managed_standards_paths[@]}"
+	git -C "$repo_root" add -f -A -- "${managed_standards_paths[@]}"
 	note "Staged managed standards for legacy auto-update helper compatibility."
 }
 

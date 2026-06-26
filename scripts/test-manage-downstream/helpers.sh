@@ -353,3 +353,12 @@ remove_standards_entries_from_audit() {
 	awk '$0 !~ /^- `standards\// { print }' "$file_path" >"$updated_path"
 	mv "$updated_path" "$file_path"
 }
+
+remove_audit_entry() {
+	local file_path="$1"
+	local relative_path="$2"
+	local updated_path="${file_path}.updated"
+
+	awk -v entry="- \`${relative_path}\`" '$0 != entry { print }' "$file_path" >"$updated_path"
+	mv "$updated_path" "$file_path"
+}
