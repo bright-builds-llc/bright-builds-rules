@@ -154,6 +154,9 @@ assert_auto_update_workflow_contains_repair_prompt() {
 	local workflow_path="${repo_path}/.github/workflows/bright-builds-auto-update.yml"
 
 	assert_file_contains "$workflow_path" 'if: ${{ failure() }}' "auto-update workflow should print the repair prompt only on failure"
+	assert_file_contains "$workflow_path" "actions/setup-python@v6" "auto-update workflow should set up Python for mdformat"
+	assert_file_contains "$workflow_path" "python-version: '3.13'" "auto-update workflow should pin the Python version used for mdformat"
+	assert_file_contains "$workflow_path" "mdformat==1.0.0" "auto-update workflow should install the pinned mdformat version"
 	assert_file_contains "$workflow_path" "https://github.com/bright-builds-llc/bright-builds-rules" "auto-update workflow should point the repair prompt to the upstream repo"
 	assert_file_contains "$workflow_path" 'Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}' "auto-update workflow should include the downstream run URL expression"
 	assert_file_contains "$workflow_path" "Managed workflow: .github/workflows/bright-builds-auto-update.yml" "auto-update workflow should name the managed workflow path"
@@ -220,6 +223,89 @@ assert_markdown_is_mdformat_clean() {
 
 	command -v mdformat >/dev/null 2>&1 || fail "mdformat must be available on PATH for markdown cleanliness assertions"
 	mdformat --check "$@" >/dev/null 2>&1 || fail "${message}: mdformat --check failed for $*"
+}
+
+path_without_command_dir() {
+	local command_name="$1"
+	local entry=""
+	local result=""
+
+	while IFS= read -r entry; do
+		[[ -n "$entry" ]] || continue
+		[[ -x "${entry}/${command_name}" ]] && continue
+		result="${result:+${result}:}${entry}"
+	done < <(printf '%s' "$PATH" | tr ':' '\n')
+
+	printf '%s\n' "$result"
+}
+
+create_fake_python_mdformat_bootstrap_bin() {
+	local bin_dir="$1"
+	local log_path="$2"
+
+	mkdir -p "$bin_dir"
+	cat >"${bin_dir}/python3" <<'PYTHON3_SH'
+#!/usr/bin/env bash
+set -euo pipefail
+
+printf 'python3 %s\n' "$*" >>"${FAKE_PYTHON_BOOTSTRAP_LOG}"
+
+if [[ "${1:-}" == "-m" && "${2:-}" == "venv" && -n "${3:-}" ]]; then
+	venv_path="$3"
+	mkdir -p "${venv_path}/bin"
+	cat >"${venv_path}/bin/python" <<'VENV_PYTHON_SH'
+#!/usr/bin/env bash
+set -euo pipefail
+
+printf 'venv-python %s\n' "$*" >>"${FAKE_PYTHON_BOOTSTRAP_LOG}"
+if [[ "${1:-}" == "-m" && "${2:-}" == "pip" && "${3:-}" == "install" ]]; then
+	exit 0
+fi
+
+printf 'unsupported fake venv python invocation: %s\n' "$*" >&2
+exit 1
+VENV_PYTHON_SH
+	cat >"${venv_path}/bin/mdformat" <<'MDFORMAT_SH'
+#!/usr/bin/env bash
+set -euo pipefail
+
+for file_path in "$@"; do
+	case "$file_path" in
+	--*)
+		continue
+		;;
+	esac
+
+	[[ -f "$file_path" ]] || continue
+	tmp_path="${file_path}.fake-mdformat"
+	awk '
+		{
+			sub(/\r$/, "")
+			sub(/[ \t]+$/, "")
+			if ($0 == "") {
+				if (previous_blank == 0) {
+					print ""
+					previous_blank = 1
+				}
+				next
+			}
+			print
+			previous_blank = 0
+		}
+	' "$file_path" >"$tmp_path"
+	mv "$tmp_path" "$file_path"
+done
+MDFORMAT_SH
+	chmod +x "${venv_path}/bin/python" "${venv_path}/bin/mdformat"
+	exit 0
+fi
+
+printf 'unsupported fake python invocation: %s\n' "$*" >&2
+exit 1
+PYTHON3_SH
+	chmod +x "${bin_dir}/python3"
+	FAKE_PYTHON_BOOTSTRAP_LOG="$log_path"
+	export FAKE_PYTHON_BOOTSTRAP_LOG
 }
 
 assert_line_equals() {

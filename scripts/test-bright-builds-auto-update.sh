@@ -101,6 +101,89 @@ write_file() {
 	printf '%s' "$content" >"$file_path"
 }
 
+path_without_command_dir() {
+	local command_name="$1"
+	local entry=""
+	local result=""
+
+	while IFS= read -r entry; do
+		[[ -n "$entry" ]] || continue
+		[[ -x "${entry}/${command_name}" ]] && continue
+		result="${result:+${result}:}${entry}"
+	done < <(printf '%s' "$PATH" | tr ':' '\n')
+
+	printf '%s\n' "$result"
+}
+
+create_fake_python_mdformat_bootstrap_bin() {
+	local bin_dir="$1"
+	local log_path="$2"
+
+	mkdir -p "$bin_dir"
+	cat >"${bin_dir}/python3" <<'PYTHON3_SH'
+#!/usr/bin/env bash
+set -euo pipefail
+
+printf 'python3 %s\n' "$*" >>"${FAKE_PYTHON_BOOTSTRAP_LOG}"
+
+if [[ "${1:-}" == "-m" && "${2:-}" == "venv" && -n "${3:-}" ]]; then
+	venv_path="$3"
+	mkdir -p "${venv_path}/bin"
+	cat >"${venv_path}/bin/python" <<'VENV_PYTHON_SH'
+#!/usr/bin/env bash
+set -euo pipefail
+
+printf 'venv-python %s\n' "$*" >>"${FAKE_PYTHON_BOOTSTRAP_LOG}"
+if [[ "${1:-}" == "-m" && "${2:-}" == "pip" && "${3:-}" == "install" ]]; then
+	exit 0
+fi
+
+printf 'unsupported fake venv python invocation: %s\n' "$*" >&2
+exit 1
+VENV_PYTHON_SH
+	cat >"${venv_path}/bin/mdformat" <<'MDFORMAT_SH'
+#!/usr/bin/env bash
+set -euo pipefail
+
+for file_path in "$@"; do
+	case "$file_path" in
+	--*)
+		continue
+		;;
+	esac
+
+	[[ -f "$file_path" ]] || continue
+	tmp_path="${file_path}.fake-mdformat"
+	awk '
+		{
+			sub(/\r$/, "")
+			sub(/[ \t]+$/, "")
+			if ($0 == "") {
+				if (previous_blank == 0) {
+					print ""
+					previous_blank = 1
+				}
+				next
+			}
+			print
+			previous_blank = 0
+		}
+	' "$file_path" >"$tmp_path"
+	mv "$tmp_path" "$file_path"
+done
+MDFORMAT_SH
+	chmod +x "${venv_path}/bin/python" "${venv_path}/bin/mdformat"
+	exit 0
+fi
+
+printf 'unsupported fake python invocation: %s\n' "$*" >&2
+exit 1
+PYTHON3_SH
+	chmod +x "${bin_dir}/python3"
+	FAKE_PYTHON_BOOTSTRAP_LOG="$log_path"
+	export FAKE_PYTHON_BOOTSTRAP_LOG
+}
+
 legacy_bright_builds_canonical_badge() {
 	printf '[![Bright Builds Requirements](%s/public/badges/bright-builds.svg)](%s)\n' "$legacy_bright_builds_raw_base_url" "$legacy_bright_builds_url"
 }
@@ -350,6 +433,45 @@ test_noop_when_no_changes_exist() {
 	assert_eq "$commit_count" "1" "no-op auto-update should not create a new commit"
 }
 
+test_noop_when_mdformat_is_absent() {
+	local bootstrap_log=""
+	local bundle_root=""
+	local repo_path=""
+	local fake_bin=""
+	local commit_count=""
+	local path_without_mdformat=""
+
+	bundle_root="$(create_source_bundle noop-no-mdformat)"
+	repo_path="$(create_repo noop-no-mdformat-repo)"
+	fake_bin="${temp_root}/noop-no-mdformat-bin"
+
+	init_git_repo "$repo_path"
+	install_auto_update_repo "$bundle_root" "$repo_path"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "actions/setup-python@v6" "managed workflow should set up Python for mdformat"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "python-version: '3.13'" "managed workflow should pin the Python version used for mdformat"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "mdformat==1.0.0" "managed workflow should install the pinned mdformat version"
+	commit_all "$repo_path" "Initial managed install"
+	create_fake_curl_bin "$fake_bin" "$bundle_root"
+	bootstrap_log="${temp_root}/noop-no-mdformat-python.log"
+	create_fake_python_mdformat_bootstrap_bin "$fake_bin" "$bootstrap_log"
+	path_without_mdformat="${fake_bin}:$(path_without_command_dir mdformat)"
+	if env PATH="$path_without_mdformat" "$BASH" -c 'command -v mdformat >/dev/null 2>&1'; then
+		fail "test setup failed to remove mdformat from PATH"
+	fi
+
+	set +e
+	run_output="$(env GITHUB_ACTIONS=true PATH="$path_without_mdformat" "$BASH" "${repo_path}/scripts/bright-builds-auto-update.sh" 2>&1)"
+	run_status=$?
+	set -e
+
+	assert_eq "$run_status" "0" "auto-update no-op should succeed without mdformat"
+	assert_contains "$run_output" "Repo state: installed" "auto-update should classify clean managed Markdown as installed without mdformat"
+	assert_contains "$run_output" "No managed-file changes detected." "auto-update should report no changes without mdformat"
+	assert_file_contains "$bootstrap_log" "mdformat==1.0.0" "auto-update manager fallback should install the pinned mdformat version"
+	commit_count="$(git -C "$repo_path" rev-list --count HEAD)"
+	assert_eq "$commit_count" "1" "no-mdformat auto-update should not create a new commit"
+}
+
 test_pushes_directly_when_push_succeeds() {
 	local bundle_root=""
 	local repo_path=""
@@ -377,6 +499,9 @@ test_pushes_directly_when_push_succeeds() {
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'GH_TOKEN: ${{ env.BRIGHT_BUILDS_PUSH_TOKEN }}' "managed workflow should export GH_TOKEN for the helper"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'GITHUB_TOKEN: ${{ env.BRIGHT_BUILDS_PUSH_TOKEN }}' "managed workflow should export GITHUB_TOKEN for the helper"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'if: ${{ failure() }}' "managed workflow should print the repair prompt only on failure"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "actions/setup-python@v6" "managed workflow should set up Python for mdformat"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "python-version: '3.13'" "managed workflow should pin the Python version used for mdformat"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "mdformat==1.0.0" "managed workflow should install the pinned mdformat version"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "https://github.com/bright-builds-llc/bright-builds-rules" "managed workflow should point the repair prompt to the upstream repo"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}' "managed workflow should include the downstream run URL expression"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "Managed workflow: .github/workflows/bright-builds-auto-update.yml" "managed workflow should name the managed workflow path"
@@ -695,6 +820,7 @@ test_fails_when_repo_state_is_blocked_by_managed_file_drift() {
 trap cleanup EXIT
 
 test_noop_when_no_changes_exist
+test_noop_when_mdformat_is_absent
 test_pushes_directly_when_push_succeeds
 test_refreshes_managed_standards_files
 test_legacy_helper_without_standards_staging_commits_backfilled_standards

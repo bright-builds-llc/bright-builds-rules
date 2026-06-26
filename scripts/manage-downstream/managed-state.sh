@@ -50,7 +50,7 @@ candidate_path_matches_destination_or_mdformat_variant() {
 	fi
 
 	should_mdformat_whole_file_managed_markdown "$relative_destination" || return 1
-	command -v mdformat >/dev/null 2>&1 || return 1
+	ensure_managed_markdown_mdformat || return 1
 
 	ensure_tmp_dir
 	formatted_candidate_path="${tmp_dir}/$(basename "$candidate_path").mdformat"
@@ -75,7 +75,7 @@ marked_candidate_path_matches_destination_as_legacy_exact_match() {
 	local stripped_candidate_path=""
 
 	should_mdformat_whole_file_managed_markdown "$relative_destination" || return 1
-	command -v mdformat >/dev/null 2>&1 || return 1
+	ensure_managed_markdown_mdformat || return 1
 
 	ensure_tmp_dir
 	formatted_candidate_path="${tmp_dir}/$(basename "$candidate_path").marked.mdformat"
