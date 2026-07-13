@@ -4,8 +4,8 @@ Use this file to record deliberate deviations from the canonical coding and arch
 
 ## Active overrides
 
-| Standard | Local decision | Rationale | Owner | Review date |
-| --- | --- | --- | --- | --- |
+| Standard                | Local decision                | Rationale             | Owner                | Review date         |
+| ----------------------- | ----------------------------- | --------------------- | -------------------- | ------------------- |
 | `REPLACE_WITH_STANDARD` | `REPLACE_WITH_LOCAL_DECISION` | `REPLACE_WITH_REASON` | `REPLACE_WITH_OWNER` | `REPLACE_WITH_DATE` |
 
 ## Notes
