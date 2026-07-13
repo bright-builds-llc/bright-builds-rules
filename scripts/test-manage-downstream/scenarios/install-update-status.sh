@@ -84,7 +84,7 @@ test_fresh_install_and_reinstall() {
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "if a worktree starts detached, assume the repo default branch, often \`main\`" "sidecar should include the detached-worktree default-branch hint"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "resolve any sync conflicts before proceeding" "sidecar should require conflict resolution before work"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "bootstrap or dependency-sync step when dependencies or tools may be stale" "sidecar should include dependency prep guidance"
-	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Before committing, run the relevant repo-native verification steps for the changed paths, including Markdown or shell formatter checks when supported tools are already available and local guidance does not define a clearer workflow, and do not commit if they fail." "sidecar should include the pass-before-commit verification rule"
+	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Before committing, run the relevant repo-native verification steps for the changed paths, including repository-compatible Markdown or shell formatter checks when supported tools are already available and local guidance does not define a clearer workflow, and do not commit if they fail." "sidecar should include the pass-before-commit verification rule"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Prefer the repo's own verify/check/validate entrypoint when it exists" "sidecar should prefer repo-owned verification entrypoints"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "If hook-managed verification is detected and local docs are silent, ask before duplicating it manually." "sidecar should include the hook-aware prompting rule"
 	assert_file_not_contains "${repo_path}/AGENTS.bright-builds.md" "openlinks-identity-presence" "non-matching owners should not receive the OpenLinks identity guidance"
@@ -104,7 +104,7 @@ test_fresh_install_and_reinstall() {
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "if a worktree starts detached, assume the repo default branch, often \`main\`" "CONTRIBUTING should include the detached-worktree default-branch hint"
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "resolve any sync conflicts before proceeding" "CONTRIBUTING should require conflict resolution before work"
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "bootstrap or dependency-sync step when dependencies or tools may be stale" "CONTRIBUTING should include dependency prep guidance"
-	assert_file_contains "${repo_path}/CONTRIBUTING.md" "Before committing, run the relevant repo-native verification steps for the changed paths, including Markdown or shell formatter checks when supported tools are already available and local guidance does not define a clearer workflow, and do not commit if they fail." "CONTRIBUTING should require pass-before-commit verification"
+	assert_file_contains "${repo_path}/CONTRIBUTING.md" "Before committing, run the relevant repo-native verification steps for the changed paths, including repository-compatible Markdown or shell formatter checks when supported tools are already available and local guidance does not define a clearer workflow, and do not commit if they fail." "CONTRIBUTING should require pass-before-commit verification"
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "Heavy integration, end-to-end, or external-service suites may stay pre-push or CI-only" "CONTRIBUTING should allow documented CI-only heavy suites"
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "briefly name the local guidance, sidecar, overrides, or standards pages that materially informed the work" "CONTRIBUTING should require brief source acknowledgment for standards-driven plan review and audit work"
 	assert_file_contains "${repo_path}/.github/pull_request_template.md" "Relevant repo-native verification ran and passed when applicable" "PR template should use flexible verification wording"
@@ -483,6 +483,8 @@ test_managed_markdown_status_and_update_bootstrap_mdformat_in_github_actions() {
 	assert_contains "$run_output" "Repo state: installed" "clean managed Markdown should remain installed after bootstrapping mdformat"
 	assert_not_contains "$run_output" "Blocking paths: AGENTS.bright-builds.md" "clean sidecar should not block after bootstrapping mdformat"
 	assert_file_contains "$bootstrap_log" "mdformat==1.0.0" "manager bootstrap should install the pinned mdformat version"
+	assert_file_contains "$bootstrap_log" "mdformat-frontmatter==2.1.2" "manager bootstrap should install the pinned frontmatter extension"
+	assert_file_contains "$bootstrap_log" "mdformat-gfm==1.0.0" "manager bootstrap should install the pinned GFM extension"
 
 	set +e
 	run_output="$(env GITHUB_ACTIONS=true PATH="$path_without_mdformat" "$BASH" "$script_path" update --repo-root "$repo_path" 2>&1)"

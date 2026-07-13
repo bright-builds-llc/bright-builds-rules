@@ -51,18 +51,49 @@ Dirty worktree with local commits and no documented sync command
 - Review questions: Was remote state fetched before substantive work when a remote exists? Was the local branch rebased onto the latest upstream or synced through the repo's documented equivalent before implementation began? If the checkout was a detached-HEAD worktree, was the repo's default branch inferred correctly? Were sync conflicts resolved before new work started? Does the repository expect a bootstrap or dependency-sync step before implementation? Did the synced revision or a command failure indicate stale dependencies or tools?
 - Automation potential: Tooling can detect clean worktrees, upstream tracking, and some stale dependency signals, but deciding whether a sync is safe and which bootstrap path is canonical still depends on repository context.
 
+## Honor Markdown Dialects and Formatter Contracts
+
+- Level: `must`
+- Intent: Prevent a generic Markdown formatter from corrupting repository-specific syntax such as YAML frontmatter, GFM tables, or parser-owned marker elements.
+- Rule: Before formatting Markdown, inspect repo-local guidance and formatter configuration and use the repository's documented formatter contract. Do not fall back to bare `mdformat` or another generic formatter when the repository requires syntax extensions or plugins that are unavailable. Preserve existing formatter configuration, use repository-owned setup or migration commands before broad formatting when they exist, and run the formatter in check mode before write mode. Scope write-mode formatting to files the task is authorized to change; do not format arbitrary repository Markdown as a side effect of installing or updating unrelated tooling.
+- Rationale: Markdown repositories commonly contain extension syntax that is valid only when the formatter loads the matching parser plugin. Treating that content as plain CommonMark can rewrite frontmatter delimiters, damage YAML, escape marker elements, or create broad unrelated diffs. The repository's own configuration and migration tooling define the safe dialect boundary.
+- Good example:
+
+```text
+Repository contains `.mdformat.toml` with GFM and frontmatter extensions
+- inspect the config and local guidance
+- confirm the required plugins are installed
+- run the repo-owned check command
+- use the repo-owned migration command before a requested broad normalization
+- format only the intended files after the check succeeds
+```
+
+- Bad example:
+
+```text
+Repository contains YAML frontmatter and parser-owned marker elements
+- find bare `mdformat` on PATH
+- ignore the repository config and missing plugins
+- format every Markdown file during an unrelated installer update
+- discover later that frontmatter and marker syntax changed
+```
+
+- Exceptions or escape hatches: If the repository has no formatter contract and its Markdown uses only syntax supported by an available formatter, a targeted check-mode invocation remains acceptable. If required extensions are missing, report the exact repo-documented installation or setup command and leave Markdown unchanged. Do not invent a migration for repository-owned syntax; defer to that repository's tooling or maintainers.
+- Review questions: What Markdown dialect does this repository declare? Are all required extensions available? Does the repository own a setup or migration command? Is write mode authorized and scoped to intended files? Will existing formatter configuration and unrelated Markdown remain unchanged?
+- Automation potential: CI can pin formatter and extension versions, probe required syntax support, and enforce check mode. Determining whether a broad migration is authorized remains a repository-level decision.
+
 ## Run Relevant Repo-Native Verification Before Commit
 
 - Level: `must`
 - Intent: Catch regressions before they land while keeping the verification burden proportional to the actual change.
-- Rule: Before committing, run the repository's relevant verification steps for the changed paths and do not commit if those checks fail. Determine the verification surface in this order: repo-local guidance first, then a repo-owned aggregate command such as `verify`, `check`, `validate`, or `ci`, then framework-native commands, then individual tool commands only when needed. Scope the run to the affected files, packages, workspaces, or services when the repository supports that. If a change spans multiple language or runtime surfaces, run the relevant verification for each affected surface. For changed Markdown or shell-script paths, treat a locally available formatter check as part of the relevant surface when the repository does not already define a clearer formatter workflow. Only use tools that are already available on `PATH` or through the repository's normal runner or dependencies, scope them to the changed Markdown or shell paths, and use check, diff, or list modes instead of write-in-place modes.
+- Rule: Before committing, run the repository's relevant verification steps for the changed paths and do not commit if those checks fail. Determine the verification surface in this order: repo-local guidance first, then a repo-owned aggregate command such as `verify`, `check`, `validate`, or `ci`, then framework-native commands, then individual tool commands only when needed. Scope the run to the affected files, packages, workspaces, or services when the repository supports that. If a change spans multiple language or runtime surfaces, run the relevant verification for each affected surface. For changed Markdown or shell-script paths, treat a locally available formatter check as part of the relevant surface when the repository does not already define a clearer formatter workflow. Only use tools that are already available on `PATH` or through the repository's normal runner or dependencies, honor the Markdown dialect and formatter contract above, scope checks to the changed Markdown or shell paths, and use check, diff, or list modes instead of write-in-place modes.
 - Rationale: Requiring passed verification before commit catches common regressions early, but a durable standard also has to respect monorepos, mixed-language repositories, and ecosystems with different default tooling. Using the repository's own verification entrypoints preserves local intent and avoids turning policy into guesswork, while conditional formatter checks cover common documentation and script surfaces without turning the standard into a hidden install requirement.
 - Good example:
 
 ```text
 Change: docs, one shell script, and one Rust crate
 - run the repo's docs check for the changed Markdown
-- run `mdformat --check` or `prettier --check` for the changed Markdown when that formatter is already available and local docs do not define a clearer path
+- run the configured `mdformat --check` or `prettier --check` command for the changed Markdown when its required plugins are available and local docs do not define a clearer path
 - run `shfmt -l -d` or `beautysh --check` for the changed shell script when that formatter is already available and local docs do not define a clearer path
 - run the crate-scoped Rust verify/check command used by the repo
 - skip unrelated frontend or end-to-end suites
@@ -77,7 +108,7 @@ Change: one package in a monorepo plus one Markdown file
 - skip the available package-scoped checks and commit anyway after a failing typecheck
 ```
 
-- Exceptions or escape hatches: Do not invent missing verification categories. A repository that has tests but no linter, or a build step but no typecheck, should run what it actually has. Do not install new tooling just to satisfy this rule, and do not treat adjacent rewrite or hardening tools as mandatory formatters. Acceptable targeted formatter checks include `mdformat --check`, `prettier --check`, and `dprint check` for Markdown, plus `shfmt -l -d`, `beautysh --check`, and `prettier --check` when `prettier-plugin-sh` is already part of the available setup for shell paths. If Markdown formatting already relies on `mdformat`, `mdformat-shfmt` is also a valid example for shell code fences embedded in Markdown. `shellharden` is not part of this core formatter rule because it is a transforming hardening tool, not a plain formatting check. Heavy integration, browser, end-to-end, or external-service suites may remain pre-push or CI-only when the repo's local guidance says so. If local verification is blocked by missing secrets, required services, containers, browsers, network access, or similar prerequisites, stop and ask or document a local exception instead of silently skipping the check.
+- Exceptions or escape hatches: Do not invent missing verification categories. A repository that has tests but no linter, or a build step but no typecheck, should run what it actually has. Do not install new tooling just to satisfy this rule, and do not treat adjacent rewrite or hardening tools as mandatory formatters. Acceptable targeted formatter checks include a repository-compatible `mdformat --check`, `prettier --check`, and `dprint check` for Markdown, plus `shfmt -l -d`, `beautysh --check`, and `prettier --check` when `prettier-plugin-sh` is already part of the available setup for shell paths. If Markdown formatting already relies on `mdformat`, `mdformat-shfmt` is also a valid example for shell code fences embedded in Markdown. `shellharden` is not part of this core formatter rule because it is a transforming hardening tool, not a plain formatting check. Heavy integration, browser, end-to-end, or external-service suites may remain pre-push or CI-only when the repo's local guidance says so. If local verification is blocked by missing syntax extensions, secrets, required services, containers, browsers, network access, or similar prerequisites, stop and ask or document a local exception instead of silently skipping the check.
 - Review questions: What are the repo's documented verification entrypoints for these changed paths? Is there an affected-package or changed-path mode that avoids whole-repo work? For changed Markdown or shell paths, is there already a repo-defined formatter workflow or a locally available check-mode formatter that should be used? Does the change touch more than one verification surface?
 - Automation potential: Scripts and CI can enforce parts of this rule, but judging what is relevant still depends on changed-path and repository context.
 

@@ -136,7 +136,7 @@ assert_file_contains() {
 	local needle="$2"
 	local message="$3"
 
-	grep -Fq "$needle" "$file_path" || fail "${message}: missing '${needle}' in ${file_path}"
+	grep -Fq -- "$needle" "$file_path" || fail "${message}: missing '${needle}' in ${file_path}"
 }
 
 assert_file_not_contains() {
@@ -144,7 +144,7 @@ assert_file_not_contains() {
 	local needle="$2"
 	local message="$3"
 
-	if grep -Fq "$needle" "$file_path"; then
+	if grep -Fq -- "$needle" "$file_path"; then
 		fail "${message}: unexpectedly found '${needle}' in ${file_path}"
 	fi
 }
@@ -157,6 +157,8 @@ assert_auto_update_workflow_contains_repair_prompt() {
 	assert_file_contains "$workflow_path" "actions/setup-python@v6" "auto-update workflow should set up Python for mdformat"
 	assert_file_contains "$workflow_path" "python-version: '3.13'" "auto-update workflow should pin the Python version used for mdformat"
 	assert_file_contains "$workflow_path" "mdformat==1.0.0" "auto-update workflow should install the pinned mdformat version"
+	assert_file_contains "$workflow_path" "mdformat-frontmatter==2.1.2" "auto-update workflow should install the pinned frontmatter extension"
+	assert_file_contains "$workflow_path" "mdformat-gfm==1.0.0" "auto-update workflow should install the pinned GFM extension"
 	assert_file_contains "$workflow_path" "https://github.com/bright-builds-llc/bright-builds-rules" "auto-update workflow should point the repair prompt to the upstream repo"
 	assert_file_contains "$workflow_path" 'Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}' "auto-update workflow should include the downstream run URL expression"
 	assert_file_contains "$workflow_path" "Managed workflow: .github/workflows/bright-builds-auto-update.yml" "auto-update workflow should name the managed workflow path"
@@ -222,7 +224,14 @@ assert_markdown_is_mdformat_clean() {
 	shift
 
 	command -v mdformat >/dev/null 2>&1 || fail "mdformat must be available on PATH for markdown cleanliness assertions"
-	mdformat --check "$@" >/dev/null 2>&1 || fail "${message}: mdformat --check failed for $*"
+	mdformat \
+		--check \
+		--extensions gfm \
+		--extensions frontmatter \
+		--no-codeformatters \
+		--wrap keep \
+		--end-of-line lf \
+		"$@" >/dev/null 2>&1 || fail "${message}: mdformat --check failed for $*"
 }
 
 path_without_command_dir() {
@@ -269,6 +278,11 @@ VENV_PYTHON_SH
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ "${1:-}" == "--version" ]]; then
+	printf 'mdformat 1.0.0 (mdformat-gfm 1.0.0, mdformat_frontmatter 2.1.2)\n'
+	exit 0
+fi
+
 for file_path in "$@"; do
 	case "$file_path" in
 	--*)
@@ -306,6 +320,42 @@ PYTHON3_SH
 	chmod +x "${bin_dir}/python3"
 	FAKE_PYTHON_BOOTSTRAP_LOG="$log_path"
 	export FAKE_PYTHON_BOOTSTRAP_LOG
+}
+
+create_fake_mdformat_bin() {
+	local bin_dir="$1"
+	local mode="$2"
+	local log_path="$3"
+
+	mkdir -p "$bin_dir"
+	printf '%s\n' "$mode" >"${bin_dir}/mdformat.mode"
+	printf '%s\n' "$log_path" >"${bin_dir}/mdformat.log-path"
+	cat >"${bin_dir}/mdformat" <<'MDFORMAT_SH'
+#!/usr/bin/env bash
+set -euo pipefail
+
+bin_dir="$(cd "$(dirname "$0")" && pwd)"
+mode="$(<"${bin_dir}/mdformat.mode")"
+log_path="$(<"${bin_dir}/mdformat.log-path")"
+printf '%s\n' "$*" >>"$log_path"
+
+if [[ "${1:-}" == "--version" ]]; then
+	if [[ "$mode" == "wrong-version" ]]; then
+		printf 'mdformat 0.7.22\n'
+	else
+		printf 'mdformat 1.0.0 (mdformat-gfm 1.0.0, mdformat_frontmatter 2.1.2)\n'
+	fi
+	exit 0
+fi
+
+if [[ "$mode" == "missing-extension" ]]; then
+	printf 'UsageError: Plugin not installed: frontmatter\n' >&2
+	exit 2
+fi
+
+exit 0
+MDFORMAT_SH
+	chmod +x "${bin_dir}/mdformat"
 }
 
 assert_line_equals() {

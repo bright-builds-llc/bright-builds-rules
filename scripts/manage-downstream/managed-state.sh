@@ -55,7 +55,7 @@ candidate_path_matches_destination_or_mdformat_variant() {
 	ensure_tmp_dir
 	formatted_candidate_path="${tmp_dir}/$(basename "$candidate_path").mdformat"
 	cp "$candidate_path" "$formatted_candidate_path"
-	mdformat "$formatted_candidate_path" >/dev/null 2>&1 || die "mdformat failed while matching ${relative_destination}"
+	run_managed_markdown_mdformat "$formatted_candidate_path" >/dev/null 2>&1 || die "mdformat failed while matching ${relative_destination}"
 
 	candidate_path_matches_destination "$destination_path" "$formatted_candidate_path"
 }
@@ -81,7 +81,7 @@ marked_candidate_path_matches_destination_as_legacy_exact_match() {
 	formatted_candidate_path="${tmp_dir}/$(basename "$candidate_path").marked.mdformat"
 	stripped_candidate_path="${tmp_dir}/$(basename "$candidate_path").marked.stripped"
 	cp "$candidate_path" "$formatted_candidate_path"
-	mdformat "$formatted_candidate_path" >/dev/null 2>&1 || die "mdformat failed while matching ${relative_destination}"
+	run_managed_markdown_mdformat "$formatted_candidate_path" >/dev/null 2>&1 || die "mdformat failed while matching ${relative_destination}"
 	strip_managed_file_marker_line "$formatted_candidate_path" "$stripped_candidate_path"
 
 	candidate_path_matches_destination "$destination_path" "$stripped_candidate_path"

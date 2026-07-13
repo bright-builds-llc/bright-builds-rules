@@ -1,0 +1,16 @@
+# Canonical toolchain: Python 3.13+, mdformat 1.0.0,
+# mdformat-frontmatter 2.1.2, and mdformat-gfm 1.0.0.
+wrap = "keep"
+number = false
+end_of_line = "lf"
+validate = true
+extensions = ["gfm", "frontmatter"]
+codeformatters = []
+exclude = [
+  "**/node_modules/**",
+  "**/.venv/**",
+  "**/venv/**",
+  "**/vendor/**",
+  "**/.bright-builds-rules-backups/**",
+  "templates/compat/**",
+]

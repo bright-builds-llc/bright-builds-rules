@@ -389,6 +389,7 @@ manage_downstream_main() {
 	resolve_downstream_badges
 	resolve_owner_specific_guidance
 	resolve_auto_update_state
+	prepare_managed_markdown_mdformat
 	determine_repo_state
 
 	case "$command_name" in

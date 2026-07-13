@@ -78,6 +78,22 @@ assert_file_not_contains() {
 	fi
 }
 
+write_markdown_dialect_fixture() {
+	local repo_path="$1"
+
+	write_file "${repo_path}/.mdformat.toml" $'wrap = "keep"\nnumber = false\nend_of_line = "lf"\nvalidate = true\nextensions = ["gfm", "frontmatter"]\n'
+	write_file "${repo_path}/docs/PLAN.md" $'---\ntitle: GSD compatibility fixture\nphase: 7\n---\n\n# Plan\n\n| Contract | Value |\n| --- | --- |\n| Marker | canonical and legacy |\n\n<execution-context>\nCanonical wrapper.\n</execution-context>\n\n<execution_context>\nLegacy wrapper remains repository-owned content.\n</execution_context>\n'
+}
+
+assert_markdown_dialect_fixture_hashes() {
+	local repo_path="$1"
+	local expected_config_hash="$2"
+	local expected_document_hash="$3"
+
+	assert_eq "$(git -C "$repo_path" hash-object .mdformat.toml)" "$expected_config_hash" "auto-update should preserve downstream .mdformat.toml bytes"
+	assert_eq "$(git -C "$repo_path" hash-object docs/PLAN.md)" "$expected_document_hash" "auto-update should preserve arbitrary downstream Markdown bytes"
+}
+
 assert_ref_exists() {
 	local git_dir="$1"
 	local ref_name="$2"
@@ -144,6 +160,11 @@ VENV_PYTHON_SH
 	cat >"${venv_path}/bin/mdformat" <<'MDFORMAT_SH'
 #!/usr/bin/env bash
 set -euo pipefail
+
+if [[ "${1:-}" == "--version" ]]; then
+	printf 'mdformat 1.0.0 (mdformat-gfm 1.0.0, mdformat_frontmatter 2.1.2)\n'
+	exit 0
+fi
 
 for file_path in "$@"; do
 	case "$file_path" in
@@ -413,9 +434,11 @@ create_fake_gh_bin() {
 
 test_noop_when_no_changes_exist() {
 	local bundle_root=""
+	local config_hash=""
 	local repo_path=""
 	local fake_bin=""
 	local commit_count=""
+	local document_hash=""
 
 	bundle_root="$(create_source_bundle noop)"
 	repo_path="$(create_repo noop-repo)"
@@ -423,12 +446,16 @@ test_noop_when_no_changes_exist() {
 
 	init_git_repo "$repo_path"
 	install_auto_update_repo "$bundle_root" "$repo_path"
+	write_markdown_dialect_fixture "$repo_path"
+	config_hash="$(git -C "$repo_path" hash-object .mdformat.toml)"
+	document_hash="$(git -C "$repo_path" hash-object docs/PLAN.md)"
 	commit_all "$repo_path" "Initial managed install"
 	create_fake_curl_bin "$fake_bin" "$bundle_root"
 
 	run_auto_update "$repo_path" "$fake_bin"
 	assert_eq "$run_status" "0" "auto-update no-op should succeed"
 	assert_contains "$run_output" "No managed-file changes detected." "auto-update should report the no-op case"
+	assert_markdown_dialect_fixture_hashes "$repo_path" "$config_hash" "$document_hash"
 	commit_count="$(git -C "$repo_path" rev-list --count HEAD)"
 	assert_eq "$commit_count" "1" "no-op auto-update should not create a new commit"
 }
@@ -450,6 +477,8 @@ test_noop_when_mdformat_is_absent() {
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "actions/setup-python@v6" "managed workflow should set up Python for mdformat"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "python-version: '3.13'" "managed workflow should pin the Python version used for mdformat"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "mdformat==1.0.0" "managed workflow should install the pinned mdformat version"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "mdformat-frontmatter==2.1.2" "managed workflow should install the pinned frontmatter extension"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "mdformat-gfm==1.0.0" "managed workflow should install the pinned GFM extension"
 	commit_all "$repo_path" "Initial managed install"
 	create_fake_curl_bin "$fake_bin" "$bundle_root"
 	bootstrap_log="${temp_root}/noop-no-mdformat-python.log"
@@ -468,12 +497,15 @@ test_noop_when_mdformat_is_absent() {
 	assert_contains "$run_output" "Repo state: installed" "auto-update should classify clean managed Markdown as installed without mdformat"
 	assert_contains "$run_output" "No managed-file changes detected." "auto-update should report no changes without mdformat"
 	assert_file_contains "$bootstrap_log" "mdformat==1.0.0" "auto-update manager fallback should install the pinned mdformat version"
+	assert_file_contains "$bootstrap_log" "mdformat-frontmatter==2.1.2" "auto-update manager fallback should install the pinned frontmatter extension"
+	assert_file_contains "$bootstrap_log" "mdformat-gfm==1.0.0" "auto-update manager fallback should install the pinned GFM extension"
 	commit_count="$(git -C "$repo_path" rev-list --count HEAD)"
 	assert_eq "$commit_count" "1" "no-mdformat auto-update should not create a new commit"
 }
 
 test_pushes_directly_when_push_succeeds() {
 	local bundle_root=""
+	local config_hash=""
 	local repo_path=""
 	local remote_path=""
 	local fake_bin=""
@@ -484,6 +516,8 @@ test_pushes_directly_when_push_succeeds() {
 	local local_email_after=""
 	local latest_author_name=""
 	local latest_author_email=""
+	local document_hash=""
+	local changed_paths=""
 
 	bundle_root="$(create_source_bundle direct-push)"
 	repo_path="$(create_repo direct-push-repo)"
@@ -494,6 +528,9 @@ test_pushes_directly_when_push_succeeds() {
 	git -C "$repo_path" remote add origin "$remote_path"
 	write_file "${repo_path}/package.json" $'{\n  "devDependencies": {\n    "typescript": "5.9.2"\n  }\n}\n'
 	install_auto_update_repo "$bundle_root" "$repo_path"
+	write_markdown_dialect_fixture "$repo_path"
+	config_hash="$(git -C "$repo_path" hash-object .mdformat.toml)"
+	document_hash="$(git -C "$repo_path" hash-object docs/PLAN.md)"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'BRIGHT_BUILDS_PUSH_TOKEN: ${{ secrets.BRIGHT_BUILDS_PUSH_TOKEN || github.token }}' "managed workflow should expose the optional dedicated push token"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'token: ${{ secrets.BRIGHT_BUILDS_PUSH_TOKEN || github.token }}' "managed workflow should pass the dedicated token to checkout"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'GH_TOKEN: ${{ env.BRIGHT_BUILDS_PUSH_TOKEN }}' "managed workflow should export GH_TOKEN for the helper"
@@ -502,6 +539,8 @@ test_pushes_directly_when_push_succeeds() {
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "actions/setup-python@v6" "managed workflow should set up Python for mdformat"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "python-version: '3.13'" "managed workflow should pin the Python version used for mdformat"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "mdformat==1.0.0" "managed workflow should install the pinned mdformat version"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "mdformat-frontmatter==2.1.2" "managed workflow should install the pinned frontmatter extension"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "mdformat-gfm==1.0.0" "managed workflow should install the pinned GFM extension"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "https://github.com/bright-builds-llc/bright-builds-rules" "managed workflow should point the repair prompt to the upstream repo"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}' "managed workflow should include the downstream run URL expression"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "Managed workflow: .github/workflows/bright-builds-auto-update.yml" "managed workflow should name the managed workflow path"
@@ -521,6 +560,10 @@ test_pushes_directly_when_push_succeeds() {
 	run_auto_update "$repo_path" "$fake_bin"
 	assert_eq "$run_status" "0" "direct-push auto-update should succeed"
 	assert_contains "$run_output" "Pushed managed updates directly to main" "auto-update should report the direct push path"
+	assert_markdown_dialect_fixture_hashes "$repo_path" "$config_hash" "$document_hash"
+	changed_paths="$(git -C "$repo_path" diff --name-only HEAD^)"
+	assert_not_contains "$changed_paths" ".mdformat.toml" "auto-update commit should not stage downstream formatter configuration"
+	assert_not_contains "$changed_paths" "docs/PLAN.md" "auto-update commit should not stage arbitrary downstream Markdown"
 	local_name_after="$(git -C "$repo_path" config --local user.name)"
 	local_email_after="$(git -C "$repo_path" config --local user.email)"
 	assert_eq "$local_name_after" "Test User" "direct-push auto-update should preserve the repo-local user.name"

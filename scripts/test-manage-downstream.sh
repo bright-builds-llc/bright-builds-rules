@@ -32,6 +32,7 @@ for test_module in \
 	"${test_module_dir}/helpers.sh" \
 	"${test_module_dir}/fixtures.sh" \
 	"${test_module_dir}/scenarios/install-update-status.sh" \
+	"${test_module_dir}/scenarios/markdown-dialects.sh" \
 	"${test_module_dir}/scenarios/compatibility-stdin.sh" \
 	"${test_module_dir}/scenarios/readme-badges.sh" \
 	"${test_module_dir}/scenarios/uninstall.sh"; do
@@ -58,6 +59,10 @@ test_update_preserves_local_agents_and_overrides
 test_update_backfills_missing_local_standards
 test_pre_frontend_ui_audit_manifest_remains_updateable
 test_managed_markdown_status_and_update_bootstrap_mdformat_in_github_actions
+test_install_status_and_update_preserve_downstream_markdown_dialect
+test_local_formatter_contract_variants
+test_local_missing_formatter_uses_conservative_fallback
+test_github_actions_replaces_incompatible_path_formatter
 test_pre_local_standards_contributing_block_remains_updateable
 test_pre_prompt_auto_update_workflow_remains_updateable
 test_existing_unmanaged_standards_file_blocks_install_until_force
