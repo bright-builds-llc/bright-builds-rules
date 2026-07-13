@@ -51,6 +51,10 @@ legacy_bright_builds_repo_slug="bright-builds-llc/coding-and-architecture-requir
 legacy_bright_builds_url="https://github.com/${legacy_bright_builds_repo_slug}"
 legacy_bright_builds_raw_base_url="https://raw.githubusercontent.com/${legacy_bright_builds_repo_slug}/main"
 managed_markdown_mdformat_version="1.0.0"
+managed_markdown_frontmatter_version="2.1.2"
+managed_markdown_gfm_version="1.0.0"
+managed_markdown_mdformat_bin=""
+managed_markdown_mdformat_warning_emitted=0
 trusted_auto_update_identities=(
 	"prizz"
 	"bright-builds-llc"
@@ -247,15 +251,72 @@ ensure_tmp_dir() {
 	fi
 }
 
-ensure_managed_markdown_mdformat() {
+write_managed_markdown_mdformat_config() {
+	local config_path="${tmp_dir}/.mdformat.toml"
+
+	[[ -f "$config_path" ]] && return 0
+
+	printf '%s\n' \
+		'wrap = "keep"' \
+		'number = false' \
+		'end_of_line = "lf"' \
+		'validate = true' \
+		'extensions = ["gfm", "frontmatter"]' \
+		'codeformatters = []' >"$config_path"
+}
+
+managed_markdown_mdformat_is_compatible() {
+	local candidate_bin="$1"
+	local probe_path=""
+	local version_output=""
+
+	version_output="$("$candidate_bin" --version 2>/dev/null)" || return 1
+	[[ "$version_output" == "mdformat ${managed_markdown_mdformat_version}" || "$version_output" == "mdformat ${managed_markdown_mdformat_version} ("* ]] || return 1
+
+	ensure_tmp_dir
+	write_managed_markdown_mdformat_config
+	probe_path="${tmp_dir}/mdformat-capability-probe.md"
+	printf '%s\n' '# Capability probe' >"$probe_path"
+
+	"$candidate_bin" \
+		--check \
+		--extensions gfm \
+		--extensions frontmatter \
+		--no-codeformatters \
+		--wrap keep \
+		--end-of-line lf \
+		"$probe_path" >/dev/null 2>&1
+}
+
+warn_incompatible_managed_markdown_mdformat() {
+	[[ "$managed_markdown_mdformat_warning_emitted" -eq 0 ]] || return 0
+	managed_markdown_mdformat_warning_emitted=1
+
+	printf '%s\n' \
+		"Managed Markdown compatibility checks require mdformat==${managed_markdown_mdformat_version}, mdformat-frontmatter==${managed_markdown_frontmatter_version}, and mdformat-gfm==${managed_markdown_gfm_version}; no compatible PATH formatter is available." \
+		"Install with: pipx install 'mdformat==${managed_markdown_mdformat_version}' --python python3.13" \
+		"Then run: pipx inject mdformat 'mdformat-frontmatter==${managed_markdown_frontmatter_version}' 'mdformat-gfm==${managed_markdown_gfm_version}'" >&2
+}
+
+prepare_managed_markdown_mdformat() {
+	local candidate_bin=""
 	local python_bin=""
 	local venv_path=""
 
-	if command -v mdformat >/dev/null 2>&1; then
+	if [[ -n "$managed_markdown_mdformat_bin" ]]; then
 		return 0
 	fi
 
-	[[ "${GITHUB_ACTIONS:-}" == "true" ]] || return 1
+	candidate_bin="$(command -v mdformat 2>/dev/null || true)"
+	if [[ -n "$candidate_bin" ]] && managed_markdown_mdformat_is_compatible "$candidate_bin"; then
+		managed_markdown_mdformat_bin="$candidate_bin"
+		return 0
+	fi
+
+	if [[ "${GITHUB_ACTIONS:-}" != "true" ]]; then
+		warn_incompatible_managed_markdown_mdformat
+		return 0
+	fi
 
 	ensure_tmp_dir
 	venv_path="${tmp_dir}/mdformat-venv"
@@ -266,13 +327,38 @@ ensure_managed_markdown_mdformat() {
 
 		"$python_bin" -m venv "$venv_path" >/dev/null 2>&1 ||
 			die "mdformat is required for managed Markdown compatibility checks, but creating a temporary Python venv failed"
-		"${venv_path}/bin/python" -m pip install --disable-pip-version-check --no-input "mdformat==${managed_markdown_mdformat_version}" >/dev/null 2>&1 ||
-			die "mdformat is required for managed Markdown compatibility checks, but installing mdformat==${managed_markdown_mdformat_version} failed"
+		"${venv_path}/bin/python" -m pip install --disable-pip-version-check --no-input \
+			"mdformat==${managed_markdown_mdformat_version}" \
+			"mdformat-frontmatter==${managed_markdown_frontmatter_version}" \
+			"mdformat-gfm==${managed_markdown_gfm_version}" >/dev/null 2>&1 ||
+			die "managed Markdown compatibility checks could not install the pinned mdformat stack"
 	fi
 
-	export PATH="${venv_path}/bin:${PATH}"
-	command -v mdformat >/dev/null 2>&1 ||
-		die "mdformat is required for managed Markdown compatibility checks, but bootstrap did not put it on PATH"
+	candidate_bin="${venv_path}/bin/mdformat"
+	managed_markdown_mdformat_is_compatible "$candidate_bin" ||
+		die "managed Markdown bootstrap did not provide the required mdformat frontmatter/GFM capabilities"
+	managed_markdown_mdformat_bin="$candidate_bin"
+}
+
+ensure_managed_markdown_mdformat() {
+	[[ -n "$managed_markdown_mdformat_bin" ]]
+}
+
+run_managed_markdown_mdformat() {
+	local file_path="$1"
+
+	ensure_tmp_dir
+	[[ -n "$managed_markdown_mdformat_bin" ]] || return 1
+	[[ "$file_path" == "${tmp_dir}/"* ]] || die "refusing to format Markdown outside the temporary managed-file workspace"
+	write_managed_markdown_mdformat_config
+
+	"$managed_markdown_mdformat_bin" \
+		--extensions gfm \
+		--extensions frontmatter \
+		--no-codeformatters \
+		--wrap keep \
+		--end-of-line lf \
+		"$file_path"
 }
 
 build_managed_files_markdown() {

@@ -15,20 +15,21 @@ If you have shell access and a downstream repository working directory, run `sta
 Use this decision rule:
 
 1. Confirm you are in the root of the repository that should adopt Bright Builds Rules.
-2. Run `status`.
-3. If `status` reports `Repo state: installable`, run `install`.
-4. If `status` reports `Repo state: installed`, run `update`.
-5. If `status` reports `Repo state: blocked`, stop and explain the blocking files instead of forcing an overwrite automatically. Treat downstream edits inside marked whole-file managed outputs and downstream edits inside the managed `CONTRIBUTING.md` block as blocking drift, not as content to overwrite silently.
-6. Use `install --force` only when the user explicitly wants to replace blocked managed files. Frame that choice as a backup-first, merge-assisted path rather than a blind overwrite; the command first writes `.bright-builds-rules-backups/<UTC-timestamp>/`.
-7. After `install --force`, inspect the timestamped backup, diff each backed-up file against the fresh managed output, and reapply only clearly portable downstream-specific logic or content into safe local extension points such as repo-local `AGENTS.md` content outside the managed block, `standards-overrides.md`, existing non-managed project docs, and `README.md` content outside the managed badge block.
-8. If preserving prior behavior would require re-drifting a fully managed file, inventing a new contract, or making a non-obvious semantic choice, stop and ask the user instead of guessing.
-9. Treat `README.md` as part of the managed surface when the installer can verify default badges from the downstream repo or when a Peter-owned GitHub repo qualifies for the owner-specific OpenLinks badge. If `status` reports a blocked README badge state, stop unless the user explicitly wants `install --force`; after repair, keep the managed badge block immediately after the first H1 and only reinsert prior top-of-file badges or content below it when that does not recreate badge ambiguity.
-10. Let the installer resolve downstream auto-update to `disabled` unless the downstream GitHub repo owner or current GitHub user is trusted. Trusted identities are `pRizz` and `bright-builds-llc`. Respect `--auto-update enabled|disabled` when the user asks for an override.
-11. When the downstream GitHub repo owner normalizes to `pRizz` or `peterryszkiewicz` (Peter Ryszkiewicz), let the managed sidecar require the `openlinks-identity-presence` skill for README/docs, UI chrome, profile/about/footer, and metadata/discovery surfaces, and let the managed README badge block append a subtle `OpenLinks profile` badge linked to `https://openlinks.us/` after any project badges. Keep the placement subtle and keep the host brand primary.
-12. After install or update, report the files written and point the user to `bright-builds-rules.audit.md` as the paper trail, including the source URL, requested ref, exact resolved commit when available, whether the local managed standards corpus was installed or refreshed, whether a managed README badge block was installed or refreshed, whether owner-specific OpenLinks guidance was included, whether the owner-specific OpenLinks README badge applied, and whether auto-update ended up enabled or disabled.
-13. After install or update, treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds Rules spec. Before plan, review, implementation, or audit work, load `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md` when present, and the local managed standards pages relevant to the task; if that has not happened yet, stop and do it first.
-14. For plan, review, and audit work in the downstream repo, briefly acknowledge which of those sources materially informed the answer.
-15. When the downstream repo is pre-existing rather than greenfield, mention that the optional `bright-builds-rules` skill can run a read-only `audit` baseline or an `audit-and-fix` cleanup wave after adoption to surface or start remediating standards drift.
+1. Run `status`.
+1. If `status` reports `Repo state: installable`, run `install`.
+1. If `status` reports `Repo state: installed`, run `update`.
+1. If `status` reports `Repo state: blocked`, stop and explain the blocking files instead of forcing an overwrite automatically. Treat downstream edits inside marked whole-file managed outputs and downstream edits inside the managed `CONTRIBUTING.md` block as blocking drift, not as content to overwrite silently.
+1. Use `install --force` only when the user explicitly wants to replace blocked managed files. Frame that choice as a backup-first, merge-assisted path rather than a blind overwrite; the command first writes `.bright-builds-rules-backups/<UTC-timestamp>/`.
+1. After `install --force`, inspect the timestamped backup, diff each backed-up file against the fresh managed output, and reapply only clearly portable downstream-specific logic or content into safe local extension points such as repo-local `AGENTS.md` content outside the managed block, `standards-overrides.md`, existing non-managed project docs, and `README.md` content outside the managed badge block.
+1. If preserving prior behavior would require re-drifting a fully managed file, inventing a new contract, or making a non-obvious semantic choice, stop and ask the user instead of guessing.
+1. Treat `README.md` as part of the managed surface when the installer can verify default badges from the downstream repo or when a Peter-owned GitHub repo qualifies for the owner-specific OpenLinks badge. If `status` reports a blocked README badge state, stop unless the user explicitly wants `install --force`; after repair, keep the managed badge block immediately after the first H1 and only reinsert prior top-of-file badges or content below it when that does not recreate badge ambiguity.
+1. Let the installer resolve downstream auto-update to `disabled` unless the downstream GitHub repo owner or current GitHub user is trusted. Trusted identities are `pRizz` and `bright-builds-llc`. Respect `--auto-update enabled|disabled` when the user asks for an override.
+1. When the downstream GitHub repo owner normalizes to `pRizz` or `peterryszkiewicz` (Peter Ryszkiewicz), let the managed sidecar require the `openlinks-identity-presence` skill for README/docs, UI chrome, profile/about/footer, and metadata/discovery surfaces, and let the managed README badge block append a subtle `OpenLinks profile` badge linked to `https://openlinks.us/` after any project badges. Keep the placement subtle and keep the host brand primary.
+1. After install or update, report the files written and point the user to `bright-builds-rules.audit.md` as the paper trail, including the source URL, requested ref, exact resolved commit when available, whether the local managed standards corpus was installed or refreshed, whether a managed README badge block was installed or refreshed, whether owner-specific OpenLinks guidance was included, whether the owner-specific OpenLinks README badge applied, and whether auto-update ended up enabled or disabled.
+1. After install or update, treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds Rules spec. Before plan, review, implementation, or audit work, load `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md` when present, and the local managed standards pages relevant to the task; if that has not happened yet, stop and do it first.
+1. For plan, review, and audit work in the downstream repo, briefly acknowledge which of those sources materially informed the answer.
+1. When the downstream repo is pre-existing rather than greenfield, mention that the optional `bright-builds-rules` skill can run a read-only `audit` baseline or an `audit-and-fix` cleanup wave after adoption to surface or start remediating standards drift.
+1. Preserve any downstream `.mdformat.toml` and arbitrary user-authored Markdown. Bright Builds formats only temporary candidates for files it manages; it does not install or merge downstream formatter configuration. Repository-specific Markdown migrations, including GSD marker migration, remain owned by that repository's native tooling.
 
 ## Commands
 
@@ -93,11 +94,13 @@ Expected downstream files after a successful install or update:
 After install or update, the downstream instruction contract is layered:
 
 1. `AGENTS.md` is the local entrypoint, not the full Bright Builds Rules spec.
-2. `AGENTS.bright-builds.md` carries the managed Bright Builds Rules workflow and high-signal rules.
-3. `standards-overrides.md` records deliberate repo-specific exceptions when it exists.
-4. The local managed standards pages under `standards/` are the source of truth for task-relevant rules, with source provenance recorded in the sidecar and audit trail.
+1. `AGENTS.bright-builds.md` carries the managed Bright Builds Rules workflow and high-signal rules.
+1. `standards-overrides.md` records deliberate repo-specific exceptions when it exists.
+1. The local managed standards pages under `standards/` are the source of truth for task-relevant rules, with source provenance recorded in the sidecar and audit trail.
 
 Before plan, review, implementation, or audit work, load those sources in that order. If that has not happened yet, stop and do it first. For plan, review, and audit outputs, briefly acknowledge which of those sources materially informed the answer.
+
+The downstream repository retains ownership of its Markdown dialect. Install and update do not create, merge, or overwrite `.mdformat.toml`, and they do not format arbitrary downstream documents. When a downstream repository uses GSD, run any marker migration through GSD's repo-native tooling rather than adding GSD-specific rewriting to Bright Builds Rules.
 
 ## Inspection hints
 

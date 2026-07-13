@@ -119,3 +119,16 @@ Residual risks:
 - Verification: `rg -n --no-heading 'sync first|git pull --rebase|fetch remote state before editing|that matches local guidance' standards/core/verification.md templates/AGENTS.bright-builds.md templates/CONTRIBUTING.md`
 - Completion review: This pass stayed bounded to the sync-first wording, the mirrored managed templates, and regression coverage. It kept fetch-plus-rebase as the default policy, framed `git pull --rebase` only as a local-guidance-dependent example, and aligned a stale README badge assertion in `scripts/verify-docs.sh` so the requested verification now passes against the checked-in docs.
 - Residual risk: Downstream repositories will not receive the clarified sync wording until they next run Bright Builds install or update, and future edits should keep the `git pull --rebase` mention framed as an example rather than silently hardening it into a universal command.
+
+## task-mdformat-dialect-awareness | 2026-07-13 14:45 CDT | Make Markdown formatting dialect-aware
+
+- [ ] Add the canonical frontmatter/GFM mdformat contract and downstream policy guidance.
+- [ ] Harden managed formatter discovery, capability checks, bootstrap pins, and isolated invocation.
+- [ ] Preserve downstream formatter configs and user Markdown across install, status, update, and auto-update.
+- [ ] Add regression coverage for compatible, missing, wrong-version, and missing-extension formatters.
+- [ ] Normalize non-compatibility Markdown separately with the pinned formatter stack.
+- [ ] Run the full repository verification surface and review the final diff.
+- [ ] Publish a ready PR with semantic and mechanical commits.
+- Verification: Pending.
+- Completion review: Pending.
+- Residual risk: Pending.

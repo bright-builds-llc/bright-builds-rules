@@ -339,6 +339,8 @@ If the repository already had substantial code before adoption, you can also use
 
 The intended downstream footprint includes a local `AGENTS.md` that stays the entrypoint for repo-local guidance plus a managed Bright Builds Rules block, a local `AGENTS.bright-builds.md` sidecar, a local `CONTRIBUTING.md` with a managed Bright Builds block, an optional managed README badge block, a managed local standards corpus under `standards/`, an overrides file, a PR template, and the audit trail file. The canonical source remains this repository, and the remaining whole-file managed files still carry explicit markers so drift is visible instead of implicit.
 
+Bright Builds owns only its managed Markdown. Install and update preserve downstream `.mdformat.toml` files and arbitrary user-authored Markdown; they never create or merge a downstream formatter configuration or broadly format downstream documents. Repository-specific migrations remain repo-native, so GSD marker migration belongs to GSD tooling rather than the Bright Builds installer.
+
 ## Uninstall
 
 Remove the managed AGENTS block and the managed Bright Builds Rules files from a downstream repository while preserving the local override history:
@@ -370,7 +372,14 @@ Run the docs hygiene checks with:
 ./scripts/verify-docs.sh
 ```
 
-`./scripts/verify-docs.sh` also runs `mdformat --check` against the current downstream Markdown templates, so keep `mdformat` available on `PATH` when running it.
+`./scripts/verify-docs.sh` requires Python 3.13+ with `mdformat==1.0.0`, `mdformat-frontmatter==2.1.2`, and `mdformat-gfm==1.0.0`. One isolated installation path is:
+
+```bash
+pipx install 'mdformat==1.0.0' --python python3.13
+pipx inject mdformat 'mdformat-frontmatter==2.1.2' 'mdformat-gfm==1.0.0'
+```
+
+The script verifies the core version and both extension capabilities before running the repository's frontmatter/GFM-aware managed-template check. CI additionally checks all non-compatibility Markdown through the canonical `.mdformat.toml`. Bare mdformat is intentionally unsupported.
 
 Run the managed shell template checks with:
 

@@ -4,10 +4,51 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
+print_mdformat_install_instructions() {
+  cat >&2 <<'EOF'
+Install the required Markdown formatter stack with Python 3.13+:
+  pipx install 'mdformat==1.0.0' --python python3.13
+  pipx inject mdformat 'mdformat-frontmatter==2.1.2' 'mdformat-gfm==1.0.0'
+EOF
+}
+
 command -v mdformat >/dev/null 2>&1 || {
-  echo "mdformat must be available on PATH for downstream Markdown verification" >&2
+  echo "mdformat 1.0.0 with the frontmatter 2.1.2 and GFM 1.0.0 extensions must be available on PATH" >&2
+  print_mdformat_install_instructions
   exit 1
 }
+
+mdformat_version="$(mdformat --version)"
+if [[ "$mdformat_version" != "mdformat 1.0.0" && "$mdformat_version" != "mdformat 1.0.0 ("* ]]; then
+  echo "incompatible mdformat core version: expected 1.0.0, found '$mdformat_version'" >&2
+  print_mdformat_install_instructions
+  exit 1
+fi
+
+mdformat_probe_dir="$(mktemp -d)"
+trap 'rm -rf "$mdformat_probe_dir"' EXIT
+mdformat_probe="$mdformat_probe_dir/extension-probe.md"
+printf '%s\n' \
+  '---' \
+  'title: Markdown extension probe' \
+  '---' \
+  '' \
+  '| Extension           | Enabled |' \
+  '| ------------------- | ------- |' \
+  '| frontmatter and GFM | true    |' >"$mdformat_probe"
+
+if ! mdformat \
+  --check \
+  --extensions gfm \
+  --extensions frontmatter \
+  --no-codeformatters \
+  --wrap keep \
+  --end-of-line lf \
+  "$mdformat_probe" >/dev/null 2>&1; then
+  echo "mdformat cannot load the required frontmatter and GFM extensions" >&2
+  print_mdformat_install_instructions
+  exit 1
+fi
 
 npx --yes markdownlint-cli2@0.18.1 \
   "AGENTS.md" \
@@ -18,13 +59,14 @@ npx --yes markdownlint-cli2@0.18.1 \
   "skills/**/*.md" \
   "standards/**/*.md" \
   "templates/**/*.md"
-mdformat --check \
-  "templates/AGENTS.md" \
-  "templates/AGENTS.bright-builds.md" \
-  "templates/CONTRIBUTING.md" \
-  "templates/pull_request_template.md" \
-  "templates/bright-builds-rules.audit.md" \
-  "templates/standards-overrides.md"
+mdformat \
+  --check \
+  --extensions gfm \
+  --extensions frontmatter \
+  --no-codeformatters \
+  --wrap keep \
+  --end-of-line lf \
+  .
 # Run one recursive link-check pass instead of spawning a fresh npx process per file.
 npx --yes markdown-link-check@3.14.1 -c .markdown-link-check.json --ignore .git,node_modules .
 
@@ -51,12 +93,33 @@ rg -Fq 'rel="noopener noreferrer"' standards/core/operability.md
 rg -Fq 'https://github.com/example/admin/actions/runs/123456789' standards/core/operability.md
 rg -Fq 'Before you start substantive implementation or other repo-changing work, sync first:' standards/core/verification.md
 rg -Fq '`git pull --rebase` when that matches local guidance' standards/core/verification.md
+rg -Fq '## Honor Markdown Dialects and Formatter Contracts' standards/core/verification.md
+rg -Fq 'Do not fall back to bare `mdformat` or another generic formatter when the repository requires syntax extensions or plugins that are unavailable.' standards/core/verification.md
 rg -Fq 'Before substantive implementation work, sync first: fetch remote state before editing;' templates/AGENTS.bright-builds.md
 rg -Fq '`git pull --rebase` when local guidance uses it' templates/AGENTS.bright-builds.md
+rg -Fq 'Never fall back to bare `mdformat` when required plugins are unavailable.' templates/AGENTS.bright-builds.md
 rg -Fq 'Before substantive implementation work, sync first: fetch remote state before editing;' templates/CONTRIBUTING.md
 rg -Fq '`git pull --rebase` when local guidance uses it' templates/CONTRIBUTING.md
+rg -Fq 'Never fall back to bare `mdformat` when required plugins are unavailable.' templates/CONTRIBUTING.md
 rg -Fq 'After install or update, treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds Rules spec.' AI-ADOPTION.md
+rg -Fq 'Preserve any downstream `.mdformat.toml` and arbitrary user-authored Markdown.' AI-ADOPTION.md
 rg -Fq 'Treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds Rules spec.' README.md
+rg -Fq 'Bright Builds owns only its managed Markdown.' README.md
+rg -Fq 'mdformat 1.0.0' .mdformat.toml
+rg -Fq 'mdformat-frontmatter 2.1.2' .mdformat.toml
+rg -Fq 'mdformat-gfm 1.0.0' .mdformat.toml
+rg -Fq 'mdformat-frontmatter==2.1.2' README.md
+rg -Fq 'mdformat-gfm==1.0.0' README.md
+rg -Fq "'mdformat==1.0.0'" scripts/verify-docs.sh
+rg -Fq "'mdformat-frontmatter==2.1.2'" scripts/verify-docs.sh
+rg -Fq "'mdformat-gfm==1.0.0'" scripts/verify-docs.sh
+rg -Fq 'mdformat==1.0.0' .github/workflows/markdown.yml
+rg -Fq 'mdformat-frontmatter==2.1.2' .github/workflows/markdown.yml
+rg -Fq 'mdformat-gfm==1.0.0' .github/workflows/markdown.yml
+rg -Fq 'sudo apt-get install --yes ripgrep' .github/workflows/markdown.yml
+rg -Fq 'mdformat --check' .github/workflows/markdown.yml
+rg -Fq 'extensions = ["gfm", "frontmatter"]' .mdformat.toml
+rg -Fq 'templates/compat/**' .mdformat.toml
 rg -Fq 'Do Not Add Python Scripts To Bun-Friendly JS/TS Repositories' standards/languages/typescript-javascript.md
 rg -Fq 'do not add new Python scripts for repo-owned automation' standards/languages/typescript-javascript.md
 rg -Fq 'Prefer SolidJS For New Web Frontends' standards/languages/typescript-javascript.md

@@ -33,7 +33,10 @@ jobs:
         shell: bash
         run: |
           python -m venv "${RUNNER_TEMP}/bright-builds-mdformat"
-          "${RUNNER_TEMP}/bright-builds-mdformat/bin/python" -m pip install --disable-pip-version-check --no-input mdformat==1.0.0
+          "${RUNNER_TEMP}/bright-builds-mdformat/bin/python" -m pip install --disable-pip-version-check --no-input \
+            mdformat==1.0.0 \
+            mdformat-frontmatter==2.1.2 \
+            mdformat-gfm==1.0.0
           echo "${RUNNER_TEMP}/bright-builds-mdformat/bin" >> "$GITHUB_PATH"
 
       - name: Run Bright Builds auto-update
