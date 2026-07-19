@@ -140,6 +140,9 @@ rg -Fq 'Because new TypeScript and JavaScript web frontends should default to So
 rg -Fq 'pin the GitHub dependency to the latest available commit SHA at the time of adoption or update' standards/languages/typescript-javascript.md
 rg -Fq 'Use the [MysticUI README](https://github.com/pRizz/mystic-ui/blob/main/README.md) as the source of truth' standards/languages/typescript-javascript.md
 rg -Fq 'This repository uses Bun and TypeScript for repo-owned scripting.' AGENTS.md
+rg -Fq 'Treat `.codex/tasks/lessons.md` as this repository'\''s active lesson ledger.' AGENTS.md
+rg -Fq 'This append-only log is operational metadata and is not part of normal startup lesson context.' .codex/tasks/lesson-audits.md
+rg -Fq '## lesson-audit-baseline-20260719 | 2026-07-19 13:19 CDT' .codex/tasks/lesson-audits.md
 rg -Fq '[![GitHub Stars](https://img.shields.io/github/stars/bright-builds-llc/bright-builds-rules)](https://github.com/bright-builds-llc/bright-builds-rules) [![Bright Builds: Rules](public/badges/bright-builds-rules-flat.svg)](https://github.com/bright-builds-llc/bright-builds-rules)' README.md
 rg -Fq 'https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/public/badges/bright-builds-rules.svg' README.md
 rg -Fq 'https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/public/badges/bright-builds-rules-flat.svg' README.md
@@ -157,3 +160,46 @@ if rg -n -F "$old_skill_slug" .; then
   echo "stale legacy skill references remain"
   exit 1
 fi
+
+lesson_count="$(rg -c '^## lesson-[^ |]+ \|' .codex/tasks/lessons.md)"
+unique_lesson_count="$(
+  sed -nE 's/^## (lesson-[^ |]+) \|.*$/\1/p' .codex/tasks/lessons.md |
+    sort -u |
+    wc -l |
+    tr -d ' '
+)"
+
+if [[ "$lesson_count" != "$unique_lesson_count" ]]; then
+  echo "active lesson IDs must be unique" >&2
+  exit 1
+fi
+
+awk '
+  function verify_block() {
+    if (in_block && (date_fields != 1 || wrong_fields != 1 || rule_fields != 1 || trigger_fields != 1)) {
+      exit 1
+    }
+  }
+
+  /^## lesson-[^ |]+ \|/ {
+    verify_block()
+    in_block = 1
+    date_fields = 0
+    wrong_fields = 0
+    rule_fields = 0
+    trigger_fields = 0
+    next
+  }
+
+  in_block && /^- Date: / { date_fields += 1 }
+  in_block && /^- What went wrong: / { wrong_fields += 1 }
+  in_block && /^- Preventive rule: / { rule_fields += 1 }
+  in_block && /^- Trigger signal: / { trigger_fields += 1 }
+
+  END {
+    verify_block()
+  }
+' .codex/tasks/lessons.md || {
+  echo "every active lesson must contain exactly one Date, What went wrong, Preventive rule, and Trigger signal field" >&2
+  exit 1
+}
