@@ -332,10 +332,27 @@ rewrite_rendered_file_for_legacy_identity() {
 	local skip_legacy_helper_fallback_block=0
 	local skip_legacy_helper_manifest_function=0
 	local skip_legacy_helper_manifest_loop=0
+	local skip_legacy_helper_token_block=0
+	local skip_legacy_helper_token_function=0
+	local skip_legacy_helper_token_fallback_depth=0
+	local skip_legacy_workflow_repair_prompt=0
+	local skip_next_legacy_workflow_blank=0
 	local previous_auto_update_line_blank=0
 
+	# Legacy state matching renders current sources backward, so new token-only
+	# sections must disappear without weakening exact-match drift detection.
 	{
 		while IFS= read -r line || [[ -n "$line" ]]; do
+			if [[ "$relative_destination" == "$auto_update_workflow_destination" && "$skip_next_legacy_workflow_blank" -eq 1 ]]; then
+				skip_next_legacy_workflow_blank=0
+				[[ -n "$line" ]] || continue
+			fi
+			if [[ "$relative_destination" == "$auto_update_workflow_destination" && "$skip_legacy_workflow_repair_prompt" -eq 1 ]]; then
+				if [[ "$line" == "          Never print or paste the token value. External adopters should replace the token-file path with their own secure local path." ]]; then
+					skip_legacy_workflow_repair_prompt=0
+				fi
+				continue
+			fi
 			if [[ "$relative_destination" == "$auto_update_script_destination" && "$skip_legacy_helper_fallback_block" -eq 1 ]]; then
 				if [[ "$line" == "fi" ]]; then
 					skip_legacy_helper_fallback_block=0
@@ -351,6 +368,26 @@ rewrite_rendered_file_for_legacy_identity() {
 			if [[ "$relative_destination" == "$auto_update_script_destination" && "$skip_legacy_helper_manifest_loop" -eq 1 ]]; then
 				if [[ "$line" == *'done < <(print_audit_manifest_paths)' ]]; then
 					skip_legacy_helper_manifest_loop=0
+				fi
+				continue
+			fi
+			if [[ "$relative_destination" == "$auto_update_script_destination" && "$skip_legacy_helper_token_function" -eq 1 ]]; then
+				if [[ "$line" == "}" ]]; then
+					skip_legacy_helper_token_function=0
+				fi
+				continue
+			fi
+			if [[ "$relative_destination" == "$auto_update_script_destination" && "$skip_legacy_helper_token_block" -eq 1 ]]; then
+				if [[ "$line" == "fi" ]]; then
+					skip_legacy_helper_token_block=0
+				fi
+				continue
+			fi
+			if [[ "$relative_destination" == "$auto_update_script_destination" && "$skip_legacy_helper_token_fallback_depth" -gt 0 ]]; then
+				if [[ "$line" =~ ^[[:space:]]*if\ .* ]]; then
+					skip_legacy_helper_token_fallback_depth=$((skip_legacy_helper_token_fallback_depth + 1))
+				elif [[ "$line" =~ ^[[:space:]]*fi$ ]]; then
+					skip_legacy_helper_token_fallback_depth=$((skip_legacy_helper_token_fallback_depth - 1))
 				fi
 				continue
 			fi
@@ -376,11 +413,37 @@ rewrite_rendered_file_for_legacy_identity() {
 				line="${line//# Bright Builds Rules Audit Trail/# Coding and Architecture Requirements Audit Trail}"
 				line="${line//This file records that this repository is using the Bright Builds Rules and shows where the managed adoption files came from./This file records that this repository is using the Bright Builds coding and architecture requirements and shows where the managed adoption files came from.}"
 				;;
+			"${auto_update_workflow_destination}")
+				if [[ "$line" == *"BRIGHT_BUILDS_PUSH_TOKEN_CONFIGURED:"* ]]; then
+					continue
+				fi
+				if [[ "$line" == "          4. If downstream drift/configuration caused it, report the downstream fix and do not hand-edit fully managed files." ]]; then
+					skip_next_legacy_workflow_blank=1
+				fi
+				if [[ "$line" == "          If the failure mentions BRIGHT_BUILDS_PUSH_TOKEN, repository access, or \"without workflows permission\", run this repair flow from the Bright Builds operator workstation:" ]]; then
+					skip_legacy_workflow_repair_prompt=1
+					continue
+				fi
+				;;
 			"${auto_update_script_destination}")
 				if [[ "$line" == '# Managed upstream by bright-builds-rules.' ]]; then
 					continue
 				fi
 				if [[ "$line" == '# If this helper needs a fix, open an upstream PR or issue instead of editing the downstream managed copy.' ]]; then
+					continue
+				fi
+				if [[ "$line" == 'auto_update_workflow_path=".github/workflows/bright-builds-auto-update.yml"' ||
+					"$line" == 'bright_builds_push_token_file="/Users/peterryszkiewicz/Repos/BRIGHT_BUILDS_PUSH_TOKEN.txt"' ||
+					"$line" == 'direct_push_output_path="${tmp_dir}/direct-push.output"' ||
+					"$line" == 'fallback_push_output_path="${tmp_dir}/fallback-push.output"' ]]; then
+					continue
+				fi
+				if [[ "$line" == "print_push_token_repair() {" ||
+					"$line" == "push_failure_requires_token_repair() {" ||
+					"$line" == "run_git_push() {" ||
+					"$line" == "workflow_update_is_staged() {" ||
+					"$line" == "fail_for_push_token() {" ]]; then
+					skip_legacy_helper_token_function=1
 					continue
 				fi
 				if [[ "$line" == 'print_audit_manifest_paths() {' ]]; then
@@ -406,6 +469,19 @@ rewrite_rendered_file_for_legacy_identity() {
 				fi
 				if [[ "$line" == 'if [[ ! -f "$audit_path" && -f "$legacy_audit_path" ]]; then' ]]; then
 					skip_legacy_helper_fallback_block=1
+					continue
+				fi
+				if [[ "$line" == 'if workflow_update_is_staged && [[ "${BRIGHT_BUILDS_PUSH_TOKEN_CONFIGURED:-}" == "false" ]]; then' ||
+					"$line" == 'if push_failure_requires_token_repair "$direct_push_output_path"; then' ]]; then
+					skip_legacy_helper_token_block=1
+					continue
+				fi
+				if [[ "$line" == 'if run_git_push "$direct_push_output_path" origin HEAD:"${default_branch}"; then' ]]; then
+					line='if git push origin HEAD:"${default_branch}" >/dev/null 2>&1; then'
+				fi
+				if [[ "$line" == 'if ! run_git_push "$fallback_push_output_path" --force-with-lease origin HEAD:"${update_branch}"; then' ]]; then
+					printf '%s\n' 'git push --force-with-lease origin HEAD:"${update_branch}" >/dev/null'
+					skip_legacy_helper_token_fallback_depth=1
 					continue
 				fi
 				if [[ "$line" == 'status_output="$(bash "$installer_path" status --repo "$repo_slug" --ref "$ref" --repo-root "$repo_root" 2>&1)"' ]]; then

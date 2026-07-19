@@ -161,6 +161,7 @@ install_or_update() {
 	ensure_overrides_file
 	write_or_update_readme_file
 	sync_auto_update_files
+	print_legacy_auto_update_token_repair_advisory
 	write_audit_manifest "$operation"
 	remove_legacy_audit_manifest_if_migrated
 	stage_legacy_audit_migration_for_github_actions

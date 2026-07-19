@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BRIGHT_BUILDS_PUSH_TOKEN: ${{ secrets.BRIGHT_BUILDS_PUSH_TOKEN || github.token }}
+      BRIGHT_BUILDS_PUSH_TOKEN_CONFIGURED: ${{ secrets.BRIGHT_BUILDS_PUSH_TOKEN != '' }}
     steps:
       - name: Check out default branch
         uses: actions/checkout@v4
@@ -69,4 +70,15 @@ jobs:
           2. Classify the failure as downstream drift/configuration or upstream managed behavior.
           3. If upstream managed behavior caused the failure or failed to mitigate it, open an upstream PR.
           4. If downstream drift/configuration caused it, report the downstream fix and do not hand-edit fully managed files.
+
+          If the failure mentions BRIGHT_BUILDS_PUSH_TOKEN, repository access, or "without workflows permission", run this repair flow from the Bright Builds operator workstation:
+
+          chmod 600 /Users/peterryszkiewicz/Repos/BRIGHT_BUILDS_PUSH_TOKEN.txt
+          test -s /Users/peterryszkiewicz/Repos/BRIGHT_BUILDS_PUSH_TOKEN.txt
+          gh secret set BRIGHT_BUILDS_PUSH_TOKEN -R ${{ github.repository }} < /Users/peterryszkiewicz/Repos/BRIGHT_BUILDS_PUSH_TOKEN.txt
+          gh workflow run bright-builds-auto-update.yml -R ${{ github.repository }}
+          gh run list -R ${{ github.repository }} --workflow bright-builds-auto-update.yml --limit 1
+          gh run watch RUN_ID -R ${{ github.repository }} --exit-status
+
+          Never print or paste the token value. External adopters should replace the token-file path with their own secure local path.
           BRIGHT_BUILDS_REPAIR_PROMPT

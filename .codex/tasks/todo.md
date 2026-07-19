@@ -132,3 +132,16 @@ Residual risks:
 - Verification: `./scripts/verify-docs.sh`; `./scripts/verify-managed-shells.sh`; `bash scripts/test-manage-downstream.sh`; `bash scripts/test-bright-builds-auto-update.sh`; `bun run typecheck`; `bun run test:badges`; two-pass pinned `mdformat` idempotence; `git diff --check`.
 - Completion review: Bright-owned formatting is now gated on the pinned frontmatter/GFM-aware contract, isolated to temporary managed-file candidates, and backed by downstream preservation and formatter-compatibility regression coverage. PR: `https://github.com/bright-builds-llc/bright-builds-rules/pull/10`.
 - Residual risk: Local environments without the exact formatter capabilities retain conservative exact-source matching and receive installation guidance; legacy formatting-equivalence matching is intentionally unavailable until the compatible stack is installed.
+
+## task-auto-update-token-repair | 2026-07-19 10:22 CDT | Target workflow-token failures
+
+- [x] Add the workflow token-presence contract without requiring a token for no-op or non-workflow updates.
+- [x] Classify workflow-permission and repository-authentication push failures in the managed helper.
+- [x] Surface the exact secure token repair and rerun commands for current and legacy managed workflows.
+- [x] Update adoption guidance, README behavior documentation, and release notes.
+- [x] Add regression coverage for missing, under-scoped, legacy, and ordinary PR-fallback paths.
+- [x] Run the full repository verification surface and review the final diff.
+- Incident evidence: `bright-builds-llc/bitaxe-esp-miner` run `28213075187` and `bright-builds-llc/Slic3r` run `28210098816` had direct and fallback pushes rejected because the GitHub App token could not update the managed workflow; their dedicated secrets were installed immediately before successful direct-push reruns. `bright-builds-llc/openOS` run `28184664064` was a separate managed-audit drift failure, and its existing token succeeded after the install became updateable.
+- Verification: `bash scripts/test-bright-builds-auto-update.sh`; `bash scripts/test-manage-downstream.sh`; `bash scripts/verify-managed-shells.sh`; `bash scripts/verify-docs.sh`; `bun run typecheck`; `bun run test:badges`; `bun run branding:assets:check`; `git diff --check`.
+- Completion review: Managed workflows now expose a non-sensitive token-presence flag, workflow-changing updates fail before commit when the dedicated token is absent, classified credential failures retain their push diagnostics and skip futile PR fallback, and legacy callers receive the same repair flow before their old helper attempts to publish a rewritten workflow. Historical pre-rename workflow/helper matching remains covered and updateable.
+- Residual risk: Git hosting providers can change authentication error wording; the classifier covers GitHub's observed workflows-permission, repository-permission, authentication, username, and HTTP 403 signals, while unknown push failures continue through the ordinary fallback path.

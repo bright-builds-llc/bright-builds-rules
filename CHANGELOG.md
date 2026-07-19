@@ -4,6 +4,7 @@ This repository uses a simple release-notes model instead of a heavyweight chang
 
 ## Unreleased
 
+- Hardened managed auto-update token handling so no-op and non-workflow updates can still use `github.token`, while workflow-file changes detect missing or under-scoped `BRIGHT_BUILDS_PUSH_TOKEN`, skip futile PR fallback, and print the exact secure repair and rerun flow, including for legacy managed helpers.
 - Added `should` guidance for new TypeScript/JavaScript web frontends to default to SolidJS unless a documented constraint requires another stack, plus matching managed template wording.
 - Updated app provenance guidance so visible commit values default to short hashes, public GitHub commit hashes link to commit pages when URLs are known, and CI-produced build times or build ids link to workflow runs when stable run URLs are available.
 - Clarified that web UI commit and build provenance links should open in new tabs with safe link attributes.

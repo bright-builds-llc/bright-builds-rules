@@ -137,10 +137,26 @@ When auto-update is enabled, the downstream repo gets a managed GitHub Actions w
 - the workflow runs daily on the fixed UTC schedule `0 14 * * *` and also exposes `workflow_dispatch`
 - it tries to commit managed-file changes directly to the default branch first
 - if that direct push is rejected, it falls back to the fixed branch `bright-builds/auto-update` and opens or reuses a pull request
+- `BRIGHT_BUILDS_PUSH_TOKEN` stays optional for no-op runs and managed updates that do not change `.github/workflows/bright-builds-auto-update.yml`
+- the workflow exports `BRIGHT_BUILDS_PUSH_TOKEN_CONFIGURED=true|false`; absence means a legacy caller, and the downloaded manager prints the same advisory before an old helper attempts to publish a rewritten workflow
+- when a managed workflow change is staged, a missing or under-scoped dedicated token stops with the exact repair commands; repository-authentication and workflows-permission failures skip the predictably futile pull-request fallback
 - it never uses `install --force`; if `status` stops reporting `Repo state: installed`, the helper script exits without mutating the repo
-- if the workflow job fails after it starts, it prints a copyable upstream repair prompt that points agents back to this repository to investigate and prepare a PR for managed workflow, helper, template, or installer fixes
+- if the workflow job fails after it starts, it prints a copyable upstream repair prompt that points agents back to this repository and includes the token repair flow for repository-access or workflows-permission failures
 - it also self-heals exact legacy Bright Builds README badge snippets during `update`, so already-installed downstream repos can repair old `coding-and-architecture-requirements` badge links without a separate workflow
 - it tracks the currently installed ref exactly, so `main` keeps moving while immutable tags and full SHAs effectively stay frozen
+
+For Bright Builds-managed repositories, provision or replace the token from the operator workstation and rerun without printing its value:
+
+```bash
+chmod 600 /Users/peterryszkiewicz/Repos/BRIGHT_BUILDS_PUSH_TOKEN.txt
+test -s /Users/peterryszkiewicz/Repos/BRIGHT_BUILDS_PUSH_TOKEN.txt
+gh secret set BRIGHT_BUILDS_PUSH_TOKEN -R OWNER/REPO < /Users/peterryszkiewicz/Repos/BRIGHT_BUILDS_PUSH_TOKEN.txt
+gh workflow run bright-builds-auto-update.yml -R OWNER/REPO
+gh run list -R OWNER/REPO --workflow bright-builds-auto-update.yml --limit 1
+gh run watch RUN_ID -R OWNER/REPO --exit-status
+```
+
+External adopters should replace the token-file path with their own secure local path. During AI-assisted install or update, set the secret proactively only when the repo is clearly Bright Builds-managed, auto-update is enabled, the GitHub slug resolves, and the token file exists and is non-empty; otherwise skip and report the missing prerequisite.
 
 This mechanism is intended for GitHub-hosted repos. Repos on other hosts can still use the normal manual `status`, `install`, and `update` flow.
 
@@ -284,7 +300,7 @@ Behavior by command:
 - `install --force` first backs up blocked managed files into `.bright-builds-rules-backups/<UTC-timestamp>/` before replacing them, then the agent should compare the backup with the fresh managed outputs and fold back only clearly portable downstream-specific logic or content into safe local extension points
 - if that merge review would require re-drifting a fully managed file or making a non-obvious semantic choice, the agent should stop and ask the user
 - `update` refreshes the managed AGENTS block, sidecar, managed `CONTRIBUTING.md` block, remaining managed files including the local `standards/` corpus, managed README badge block, audit manifest, and any enabled auto-update files, and also repairs exact legacy Bright Builds README badge snippets, but only when the installed managed files are either exact current renders or exact legacy unmarked renders
-- enabled auto-update workflows print a copyable upstream repair prompt on job failure so managed workflow, helper, template, or installer defects can be fixed in this repository for future downstream runs
+- enabled auto-update workflows keep the dedicated push token optional until a managed workflow change is staged, then classify repository/workflow permission failures and print the exact secure repair and rerun commands
 - `status` uses the managed AGENTS marker block plus `AGENTS.bright-builds.md` as the install signal
 - `status` also reports explicit README badge state plus the resolved auto-update mode and reason
 - `status` blocks when a whole-file managed output has downstream edits or when the managed `CONTRIBUTING.md` block has downstream edits, but still accepts exact-match legacy installs without the new marker headers

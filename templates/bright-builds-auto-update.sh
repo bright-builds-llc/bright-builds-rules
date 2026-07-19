@@ -8,6 +8,8 @@ audit_path="REPLACE_WITH_AUDIT_MANIFEST_PATH"
 legacy_audit_path="coding-and-architecture-requirements.audit.md"
 update_branch="REPLACE_WITH_AUTO_UPDATE_BRANCH"
 commit_message="REPLACE_WITH_AUTO_UPDATE_COMMIT_MESSAGE"
+auto_update_workflow_path=".github/workflows/bright-builds-auto-update.yml"
+bright_builds_push_token_file="/Users/peterryszkiewicz/Repos/BRIGHT_BUILDS_PUSH_TOKEN.txt"
 github_actions_name="github-actions[bot]"
 github_actions_email="41898282+github-actions[bot]@users.noreply.github.com"
 
@@ -25,6 +27,55 @@ note() {
 die() {
 	printf 'error: %s\n' "$*" >&2
 	exit 1
+}
+
+print_push_token_repair() {
+	local target_repo="${GITHUB_REPOSITORY:-OWNER/REPO}"
+
+	cat >&2 <<EOF
+Bright Builds push-token repair required.
+
+Run from the Bright Builds operator workstation:
+
+chmod 600 ${bright_builds_push_token_file}
+test -s ${bright_builds_push_token_file}
+gh secret set BRIGHT_BUILDS_PUSH_TOKEN -R ${target_repo} < ${bright_builds_push_token_file}
+gh workflow run bright-builds-auto-update.yml -R ${target_repo}
+gh run list -R ${target_repo} --workflow bright-builds-auto-update.yml --limit 1
+gh run watch RUN_ID -R ${target_repo} --exit-status
+
+Never print or paste the token value. External adopters should replace the token-file path with their own secure local path.
+EOF
+}
+
+push_failure_requires_token_repair() {
+	local output_path="$1"
+
+	grep -Eiq \
+		'without .*workflows.* permission|Permission to .* denied|Write access to repository not granted|Authentication failed|could not read Username|requested URL returned error: 403' \
+		"$output_path"
+}
+
+run_git_push() {
+	local output_path="$1"
+
+	shift
+	git push "$@" >"$output_path" 2>&1
+}
+
+workflow_update_is_staged() {
+	! git diff --cached --quiet --exit-code -- "$auto_update_workflow_path"
+}
+
+fail_for_push_token() {
+	local output_path="${1:-}"
+
+	if [[ -n "$output_path" && -s "$output_path" ]]; then
+		cat "$output_path" >&2
+	fi
+
+	print_push_token_repair
+	die "BRIGHT_BUILDS_PUSH_TOKEN must be replaced with a token that can write the repository and managed workflow files"
 }
 
 extract_markdown_value() {
@@ -309,16 +360,34 @@ if git diff --cached --quiet --exit-code; then
 	exit 0
 fi
 
+if workflow_update_is_staged && [[ "${BRIGHT_BUILDS_PUSH_TOKEN_CONFIGURED:-}" == "false" ]]; then
+	fail_for_push_token
+fi
+
 default_branch="$(resolve_default_branch)"
+direct_push_output_path="${tmp_dir}/direct-push.output"
+fallback_push_output_path="${tmp_dir}/fallback-push.output"
 
 git -c user.name="$github_actions_name" -c user.email="$github_actions_email" commit -m "$commit_message" >/dev/null
 
-if git push origin HEAD:"${default_branch}" >/dev/null 2>&1; then
+if run_git_push "$direct_push_output_path" origin HEAD:"${default_branch}"; then
 	note "Pushed managed updates directly to ${default_branch}"
 	exit 0
 fi
 
+if push_failure_requires_token_repair "$direct_push_output_path"; then
+	fail_for_push_token "$direct_push_output_path"
+fi
+
 note "Direct push to ${default_branch} failed; falling back to ${update_branch}"
 
-git push --force-with-lease origin HEAD:"${update_branch}" >/dev/null
+if ! run_git_push "$fallback_push_output_path" --force-with-lease origin HEAD:"${update_branch}"; then
+	if push_failure_requires_token_repair "$fallback_push_output_path"; then
+		fail_for_push_token "$fallback_push_output_path"
+	fi
+
+	cat "$fallback_push_output_path" >&2
+	die "failed to push the Bright Builds auto-update branch"
+fi
+
 create_or_reuse_pr "$default_branch"

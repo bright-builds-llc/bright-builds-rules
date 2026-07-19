@@ -159,11 +159,18 @@ assert_auto_update_workflow_contains_repair_prompt() {
 	assert_file_contains "$workflow_path" "mdformat==1.0.0" "auto-update workflow should install the pinned mdformat version"
 	assert_file_contains "$workflow_path" "mdformat-frontmatter==2.1.2" "auto-update workflow should install the pinned frontmatter extension"
 	assert_file_contains "$workflow_path" "mdformat-gfm==1.0.0" "auto-update workflow should install the pinned GFM extension"
+	assert_file_contains "$workflow_path" 'BRIGHT_BUILDS_PUSH_TOKEN_CONFIGURED: ${{ secrets.BRIGHT_BUILDS_PUSH_TOKEN != '"'"''"'"' }}' "auto-update workflow should expose whether the dedicated token is configured"
 	assert_file_contains "$workflow_path" "https://github.com/bright-builds-llc/bright-builds-rules" "auto-update workflow should point the repair prompt to the upstream repo"
 	assert_file_contains "$workflow_path" 'Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}' "auto-update workflow should include the downstream run URL expression"
 	assert_file_contains "$workflow_path" "Managed workflow: .github/workflows/bright-builds-auto-update.yml" "auto-update workflow should name the managed workflow path"
 	assert_file_contains "$workflow_path" "Managed helper: scripts/bright-builds-auto-update.sh" "auto-update workflow should name the managed helper path"
 	assert_file_contains "$workflow_path" "prepare a pull request against https://github.com/bright-builds-llc/bright-builds-rules" "auto-update workflow should direct upstream managed fixes to an upstream PR"
+	assert_file_contains "$workflow_path" "chmod 600 /Users/peterryszkiewicz/Repos/BRIGHT_BUILDS_PUSH_TOKEN.txt" "auto-update workflow should print the exact token-file permission command"
+	assert_file_contains "$workflow_path" "test -s /Users/peterryszkiewicz/Repos/BRIGHT_BUILDS_PUSH_TOKEN.txt" "auto-update workflow should print the exact non-empty token-file check"
+	assert_file_contains "$workflow_path" 'gh secret set BRIGHT_BUILDS_PUSH_TOKEN -R ${{ github.repository }} < /Users/peterryszkiewicz/Repos/BRIGHT_BUILDS_PUSH_TOKEN.txt' "auto-update workflow should print the exact token repair command"
+	assert_file_contains "$workflow_path" 'gh workflow run bright-builds-auto-update.yml -R ${{ github.repository }}' "auto-update workflow should print the exact workflow dispatch command"
+	assert_file_contains "$workflow_path" 'gh run list -R ${{ github.repository }} --workflow bright-builds-auto-update.yml --limit 1' "auto-update workflow should print the exact run lookup command"
+	assert_file_contains "$workflow_path" 'gh run watch RUN_ID -R ${{ github.repository }} --exit-status' "auto-update workflow should print the exact run watch command"
 }
 
 assert_file_contains_regex() {

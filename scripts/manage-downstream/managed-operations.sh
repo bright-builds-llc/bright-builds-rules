@@ -49,6 +49,34 @@ sync_auto_update_files() {
 	fi
 }
 
+print_legacy_auto_update_token_repair_advisory() {
+	local target_repo="${GITHUB_REPOSITORY:-OWNER/REPO}"
+	local token_file="/Users/peterryszkiewicz/Repos/BRIGHT_BUILDS_PUSH_TOKEN.txt"
+	local workflow_status=""
+
+	[[ "${GITHUB_ACTIONS:-}" == "true" ]] || return 0
+	[[ -z "${BRIGHT_BUILDS_PUSH_TOKEN_CONFIGURED+x}" ]] || return 0
+	command -v git >/dev/null 2>&1 || return 0
+	git -C "$repo_root" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
+
+	workflow_status="$(git -C "$repo_root" status --short --untracked-files=all -- "$auto_update_workflow_destination")"
+	[[ -n "$workflow_status" ]] || return 0
+
+	cat >&2 <<EOF
+Legacy Bright Builds workflow notice: this update changes ${auto_update_workflow_destination}.
+If the upcoming push fails because BRIGHT_BUILDS_PUSH_TOKEN is missing or lacks workflows permission, run:
+
+chmod 600 ${token_file}
+test -s ${token_file}
+gh secret set BRIGHT_BUILDS_PUSH_TOKEN -R ${target_repo} < ${token_file}
+gh workflow run bright-builds-auto-update.yml -R ${target_repo}
+gh run list -R ${target_repo} --workflow bright-builds-auto-update.yml --limit 1
+gh run watch RUN_ID -R ${target_repo} --exit-status
+
+Never print or paste the token value. External adopters should replace the token-file path with their own secure local path.
+EOF
+}
+
 managed_auto_update_helper_lacks_standards_staging() {
 	local helper_path="${repo_root}/${auto_update_script_destination}"
 	local managed_marker=""

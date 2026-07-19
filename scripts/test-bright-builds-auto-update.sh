@@ -370,9 +370,23 @@ install_auto_update_repo() {
 run_auto_update() {
 	local repo_path="$1"
 	local path_prefix="$2"
+	local token_state="${3:-true}"
 
 	set +e
-	run_output="$(env GITHUB_ACTIONS=true PATH="${path_prefix}:$PATH" bash "${repo_path}/scripts/bright-builds-auto-update.sh" 2>&1)"
+	if [[ "$token_state" == "legacy-unset" ]]; then
+		run_output="$(env -u BRIGHT_BUILDS_PUSH_TOKEN_CONFIGURED \
+			GITHUB_ACTIONS=true \
+			GITHUB_REPOSITORY=bright-builds-llc/test-repo \
+			PATH="${path_prefix}:$PATH" \
+			bash "${repo_path}/scripts/bright-builds-auto-update.sh" 2>&1)"
+	else
+		run_output="$(env \
+			BRIGHT_BUILDS_PUSH_TOKEN_CONFIGURED="$token_state" \
+			GITHUB_ACTIONS=true \
+			GITHUB_REPOSITORY=bright-builds-llc/test-repo \
+			PATH="${path_prefix}:$PATH" \
+			bash "${repo_path}/scripts/bright-builds-auto-update.sh" 2>&1)"
+	fi
 	run_status=$?
 	set -e
 }
@@ -411,9 +425,13 @@ create_fake_curl_bin() {
 create_fake_git_bin() {
 	local bin_dir="$1"
 	local log_path="$2"
+	local failure_mode="${3:-direct-rejection}"
 
 	mkdir -p "$bin_dir"
 	write_file "${bin_dir}/git" $'#!/usr/bin/env bash\nset -euo pipefail\nif [[ "${1:-}" == "ls-remote" && "${2:-}" == "https://github.com/bright-builds-llc/bright-builds-rules.git" ]]; then\n  ref="${3:-}"\n  [[ -n "$ref" ]] || exit 1\n  commit="$("${REAL_GIT_PATH}" -C "${FAKE_GIT_SOURCE_ROOT}" rev-parse "${ref}^{commit}")"\n  printf "%s\\t%s\\n" "$commit" "$ref"\n  exit 0\nfi\nif [[ "${1:-}" == "push" && "${2:-}" == "origin" && "${3:-}" == "HEAD:main" ]]; then\n  printf "rejected direct push\\n" >> "${FAKE_GIT_LOG}"\n  exit 1\nfi\nexec "${REAL_GIT_PATH}" "$@"\n'
+	if [[ "$failure_mode" == "workflow-permission" ]]; then
+		write_file "${bin_dir}/git" $'#!/usr/bin/env bash\nset -euo pipefail\nif [[ "${1:-}" == "ls-remote" && "${2:-}" == "https://github.com/bright-builds-llc/bright-builds-rules.git" ]]; then\n  ref="${3:-}"\n  [[ -n "$ref" ]] || exit 1\n  commit="$("${REAL_GIT_PATH}" -C "${FAKE_GIT_SOURCE_ROOT}" rev-parse "${ref}^{commit}")"\n  printf "%s\\t%s\\n" "$commit" "$ref"\n  exit 0\nfi\nif [[ "${1:-}" == "push" && "${2:-}" == "origin" && "${3:-}" == "HEAD:main" ]]; then\n  printf "workflow-permission direct push\\n" >> "${FAKE_GIT_LOG}"\n  printf "remote: refusing to allow a GitHub App to create or update workflow .github/workflows/bright-builds-auto-update.yml without workflows permission\\n" >&2\n  exit 1\nfi\nif [[ "${1:-}" == "push" ]]; then\n  printf "unexpected fallback push\\n" >> "${FAKE_GIT_LOG}"\nfi\nexec "${REAL_GIT_PATH}" "$@"\n'
+	fi
 	chmod +x "${bin_dir}/git"
 	REAL_GIT_PATH="$real_git_path"
 	FAKE_GIT_LOG="$log_path"
@@ -452,7 +470,7 @@ test_noop_when_no_changes_exist() {
 	commit_all "$repo_path" "Initial managed install"
 	create_fake_curl_bin "$fake_bin" "$bundle_root"
 
-	run_auto_update "$repo_path" "$fake_bin"
+	run_auto_update "$repo_path" "$fake_bin" "false"
 	assert_eq "$run_status" "0" "auto-update no-op should succeed"
 	assert_contains "$run_output" "No managed-file changes detected." "auto-update should report the no-op case"
 	assert_markdown_dialect_fixture_hashes "$repo_path" "$config_hash" "$document_hash"
@@ -532,6 +550,7 @@ test_pushes_directly_when_push_succeeds() {
 	config_hash="$(git -C "$repo_path" hash-object .mdformat.toml)"
 	document_hash="$(git -C "$repo_path" hash-object docs/PLAN.md)"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'BRIGHT_BUILDS_PUSH_TOKEN: ${{ secrets.BRIGHT_BUILDS_PUSH_TOKEN || github.token }}' "managed workflow should expose the optional dedicated push token"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'BRIGHT_BUILDS_PUSH_TOKEN_CONFIGURED: ${{ secrets.BRIGHT_BUILDS_PUSH_TOKEN != '"'"''"'"' }}' "managed workflow should expose whether the dedicated token is configured"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'token: ${{ secrets.BRIGHT_BUILDS_PUSH_TOKEN || github.token }}' "managed workflow should pass the dedicated token to checkout"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'GH_TOKEN: ${{ env.BRIGHT_BUILDS_PUSH_TOKEN }}' "managed workflow should export GH_TOKEN for the helper"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'GITHUB_TOKEN: ${{ env.BRIGHT_BUILDS_PUSH_TOKEN }}' "managed workflow should export GITHUB_TOKEN for the helper"
@@ -546,6 +565,12 @@ test_pushes_directly_when_push_succeeds() {
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "Managed workflow: .github/workflows/bright-builds-auto-update.yml" "managed workflow should name the managed workflow path"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "Managed helper: scripts/bright-builds-auto-update.sh" "managed workflow should name the managed helper path"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "prepare a pull request against https://github.com/bright-builds-llc/bright-builds-rules" "managed workflow should direct upstream managed fixes to an upstream PR"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "chmod 600 /Users/peterryszkiewicz/Repos/BRIGHT_BUILDS_PUSH_TOKEN.txt" "managed workflow should print the exact token-file permission command"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" "test -s /Users/peterryszkiewicz/Repos/BRIGHT_BUILDS_PUSH_TOKEN.txt" "managed workflow should print the exact non-empty token-file check"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'gh secret set BRIGHT_BUILDS_PUSH_TOKEN -R ${{ github.repository }} < /Users/peterryszkiewicz/Repos/BRIGHT_BUILDS_PUSH_TOKEN.txt' "managed workflow should print the exact token repair command"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'gh workflow run bright-builds-auto-update.yml -R ${{ github.repository }}' "managed workflow should print the exact workflow dispatch command"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'gh run list -R ${{ github.repository }} --workflow bright-builds-auto-update.yml --limit 1' "managed workflow should print the exact run lookup command"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-auto-update.yml" 'gh run watch RUN_ID -R ${{ github.repository }} --exit-status' "managed workflow should print the exact run watch command"
 	commit_all "$repo_path" "Initial managed install"
 	git -C "$repo_path" push -u origin main >/dev/null
 	printf '\n- Added direct-push update marker.\n' >>"${bundle_root}/templates/AGENTS.bright-builds.md"
@@ -557,7 +582,7 @@ test_pushes_directly_when_push_succeeds() {
 	assert_eq "$local_name_before" "Test User" "direct-push auto-update should start with the repo-local user.name"
 	assert_eq "$local_email_before" "test@example.com" "direct-push auto-update should start with the repo-local user.email"
 
-	run_auto_update "$repo_path" "$fake_bin"
+	run_auto_update "$repo_path" "$fake_bin" "false"
 	assert_eq "$run_status" "0" "direct-push auto-update should succeed"
 	assert_contains "$run_output" "Pushed managed updates directly to main" "auto-update should report the direct push path"
 	assert_markdown_dialect_fixture_hashes "$repo_path" "$config_hash" "$document_hash"
@@ -633,9 +658,11 @@ test_legacy_helper_without_standards_staging_commits_backfilled_standards() {
 	git -C "$repo_path" push -u origin main >/dev/null
 	create_fake_curl_bin "$fake_bin" "$current_bundle_root" "$old_bundle_root" "$current_bundle_root" "" "$old_bundle_root"
 
-	run_auto_update "$repo_path" "$fake_bin"
+	run_auto_update "$repo_path" "$fake_bin" "legacy-unset"
 	assert_eq "$run_status" "0" "legacy helper without standards staging should converge through the current manager"
 	assert_contains "$run_output" "Repo state: installed" "legacy helper should classify the old clean install as installed"
+	assert_contains "$run_output" "Legacy Bright Builds workflow notice" "current manager should warn legacy helpers before publishing a workflow change"
+	assert_contains "$run_output" "gh secret set BRIGHT_BUILDS_PUSH_TOKEN -R bright-builds-llc/test-repo" "legacy helper advisory should include the exact secret repair command"
 	assert_contains "$run_output" "Staged managed standards for legacy auto-update helper compatibility." "current manager should stage standards for the old helper"
 	assert_contains "$run_output" "Pushed managed updates directly to main" "legacy helper should publish the converged update"
 	assert_file_exists "${repo_path}/standards/languages/typescript-javascript.md"
@@ -775,6 +802,71 @@ test_legacy_helper_falls_back_from_stale_exact_commit_during_status() {
 	assert_eq "$commit_count" "2" "stale exact-commit fallback should still create one update commit"
 }
 
+test_missing_token_stops_only_when_workflow_changes() {
+	local bundle_root=""
+	local repo_path=""
+	local fake_bin=""
+	local commit_count=""
+
+	bundle_root="$(create_source_bundle missing-token-workflow)"
+	repo_path="$(create_repo missing-token-workflow-repo)"
+	fake_bin="${temp_root}/missing-token-workflow-bin"
+
+	init_git_repo "$repo_path"
+	install_auto_update_repo "$bundle_root" "$repo_path"
+	commit_all "$repo_path" "Initial managed install"
+	printf '\n# Token-required workflow update fixture.\n' >>"${bundle_root}/templates/bright-builds-auto-update.yml"
+	git -C "$bundle_root" add -A
+	git -C "$bundle_root" commit -m "Workflow update" >/dev/null
+	create_fake_curl_bin "$fake_bin" "$bundle_root"
+
+	run_auto_update "$repo_path" "$fake_bin" "false"
+	assert_eq "$run_status" "1" "workflow updates should require the dedicated push token"
+	assert_contains "$run_output" "Bright Builds push-token repair required." "missing-token workflow updates should print the targeted repair heading"
+	assert_contains "$run_output" "gh secret set BRIGHT_BUILDS_PUSH_TOKEN -R bright-builds-llc/test-repo" "missing-token workflow updates should print the exact secret repair command"
+	assert_contains "$run_output" "gh run watch RUN_ID -R bright-builds-llc/test-repo --exit-status" "missing-token workflow updates should print the exact rerun watch command"
+	assert_not_contains "$run_output" "Direct push to main failed" "missing-token workflow updates should stop before attempting a push"
+	commit_count="$(git -C "$repo_path" rev-list --count HEAD)"
+	assert_eq "$commit_count" "1" "missing-token workflow updates should not create a commit"
+}
+
+test_workflow_permission_failure_skips_pull_request_fallback() {
+	local bundle_root=""
+	local repo_path=""
+	local remote_path=""
+	local fake_bin=""
+	local fake_git_log=""
+	local fake_gh_log=""
+
+	bundle_root="$(create_source_bundle workflow-permission)"
+	repo_path="$(create_repo workflow-permission-repo)"
+	remote_path="$(create_bare_remote workflow-permission-origin)"
+	fake_bin="${temp_root}/workflow-permission-bin"
+	fake_git_log="${temp_root}/workflow-permission-git.log"
+	fake_gh_log="${temp_root}/workflow-permission-gh.log"
+
+	init_git_repo "$repo_path"
+	git -C "$repo_path" remote add origin "$remote_path"
+	install_auto_update_repo "$bundle_root" "$repo_path"
+	commit_all "$repo_path" "Initial managed install"
+	git -C "$repo_path" push -u origin main >/dev/null
+	printf '\n# Under-scoped token workflow fixture.\n' >>"${bundle_root}/templates/bright-builds-auto-update.yml"
+	git -C "$bundle_root" add -A
+	git -C "$bundle_root" commit -m "Workflow update" >/dev/null
+	create_fake_curl_bin "$fake_bin" "$bundle_root"
+	create_fake_git_bin "$fake_bin" "$fake_git_log" "workflow-permission"
+	create_fake_gh_bin "$fake_bin" "$fake_gh_log"
+	write_file "$fake_gh_log" ""
+
+	run_auto_update "$repo_path" "$fake_bin" "true"
+	assert_eq "$run_status" "1" "under-scoped configured tokens should fail with targeted guidance"
+	assert_contains "$run_output" "without workflows permission" "auto-update should preserve the classified push error"
+	assert_contains "$run_output" "Bright Builds push-token repair required." "workflow-permission failures should print targeted repair guidance"
+	assert_not_contains "$run_output" "falling back to bright-builds/auto-update" "workflow-permission failures should skip the futile branch fallback"
+	assert_file_not_contains "$fake_git_log" "unexpected fallback push" "workflow-permission failures should not attempt another push"
+	assert_file_not_contains "$fake_gh_log" "pr create" "workflow-permission failures should not attempt PR creation"
+}
+
 test_falls_back_to_pull_request_when_direct_push_fails() {
 	local bundle_root=""
 	local repo_path=""
@@ -870,6 +962,8 @@ test_legacy_helper_without_standards_staging_commits_backfilled_standards
 test_refreshes_old_managed_canonical_badge_to_flat_default_when_upstream_is_otherwise_unchanged
 test_legacy_helper_migrates_prerename_install_with_current_manager
 test_legacy_helper_falls_back_from_stale_exact_commit_during_status
+test_missing_token_stops_only_when_workflow_changes
+test_workflow_permission_failure_skips_pull_request_fallback
 test_falls_back_to_pull_request_when_direct_push_fails
 test_fails_when_repo_state_is_blocked
 test_fails_when_repo_state_is_blocked_by_managed_file_drift

@@ -24,6 +24,7 @@ Use this decision rule:
 1. If preserving prior behavior would require re-drifting a fully managed file, inventing a new contract, or making a non-obvious semantic choice, stop and ask the user instead of guessing.
 1. Treat `README.md` as part of the managed surface when the installer can verify default badges from the downstream repo or when a Peter-owned GitHub repo qualifies for the owner-specific OpenLinks badge. If `status` reports a blocked README badge state, stop unless the user explicitly wants `install --force`; after repair, keep the managed badge block immediately after the first H1 and only reinsert prior top-of-file badges or content below it when that does not recreate badge ambiguity.
 1. Let the installer resolve downstream auto-update to `disabled` unless the downstream GitHub repo owner or current GitHub user is trusted. Trusted identities are `pRizz` and `bright-builds-llc`. Respect `--auto-update enabled|disabled` when the user asks for an override.
+1. After install or update, proactively set `BRIGHT_BUILDS_PUSH_TOKEN` only when the repo is clearly Bright Builds-managed, auto-update is enabled, the GitHub `OWNER/REPO` slug resolves, and `/Users/peterryszkiewicz/Repos/BRIGHT_BUILDS_PUSH_TOKEN.txt` is non-empty. Tighten that file to mode `600`, pass it to `gh secret set` through stdin, and never print or inspect its value. Skip and report when any prerequisite is missing.
 1. When the downstream GitHub repo owner normalizes to `pRizz` or `peterryszkiewicz` (Peter Ryszkiewicz), let the managed sidecar require the `openlinks-identity-presence` skill for README/docs, UI chrome, profile/about/footer, and metadata/discovery surfaces, and let the managed README badge block append a subtle `OpenLinks profile` badge linked to `https://openlinks.us/` after any project badges. Keep the placement subtle and keep the host brand primary.
 1. After install or update, report the files written and point the user to `bright-builds-rules.audit.md` as the paper trail, including the source URL, requested ref, exact resolved commit when available, whether the local managed standards corpus was installed or refreshed, whether a managed README badge block was installed or refreshed, whether owner-specific OpenLinks guidance was included, whether the owner-specific OpenLinks README badge applied, and whether auto-update ended up enabled or disabled.
 1. After install or update, treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds Rules spec. Before plan, review, implementation, or audit work, load `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md` when present, and the local managed standards pages relevant to the task; if that has not happened yet, stop and do it first.
@@ -136,8 +137,24 @@ Auto-update defaults behave this way:
 - fresh installs also default to `enabled` when the current GitHub user is trusted and the repo owner is not
 - once installed, later `update` runs reuse the persisted auto-update setting from the audit trail unless `--auto-update` is passed again
 - when enabled, auto-update tracks the currently pinned ref exactly, runs on the fixed UTC schedule `0 14 * * *`, pushes to the default branch when possible, and falls back to the branch `bright-builds/auto-update` plus a pull request when direct push is rejected
-- when enabled, the auto-update workflow prints a copyable upstream repair prompt on job failure so managed workflow, helper, template, or installer defects can be fixed in this repository for future downstream runs
+- `BRIGHT_BUILDS_PUSH_TOKEN` remains optional for no-op runs and managed updates that do not change `.github/workflows/bright-builds-auto-update.yml`
+- the managed workflow passes `BRIGHT_BUILDS_PUSH_TOKEN_CONFIGURED=true|false`; an absent flag identifies a legacy caller, so the downloaded manager prints the same repair advisory when that caller rewrites the managed workflow
+- when a managed workflow change is staged, the dedicated token must be configured with repository-write and workflow-file-write access; missing, wrong-identity, and under-scoped tokens stop with the exact repair flow instead of attempting a predictably futile pull-request fallback
+- when enabled, the auto-update workflow prints a copyable upstream repair prompt on job failure, including the exact token repair flow when the failure mentions repository access or workflows permission
 - when enabled, that same `update` path also repairs the exact legacy Bright Builds README badge snippets this repo previously documented, so already-installed downstream repos can self-heal old `coding-and-architecture-requirements` badge markdown without a separate job
+
+For a Bright Builds-managed repository, repair the token and rerun the workflow without exposing the token value:
+
+```bash
+chmod 600 /Users/peterryszkiewicz/Repos/BRIGHT_BUILDS_PUSH_TOKEN.txt
+test -s /Users/peterryszkiewicz/Repos/BRIGHT_BUILDS_PUSH_TOKEN.txt
+gh secret set BRIGHT_BUILDS_PUSH_TOKEN -R OWNER/REPO < /Users/peterryszkiewicz/Repos/BRIGHT_BUILDS_PUSH_TOKEN.txt
+gh workflow run bright-builds-auto-update.yml -R OWNER/REPO
+gh run list -R OWNER/REPO --workflow bright-builds-auto-update.yml --limit 1
+gh run watch RUN_ID -R OWNER/REPO --exit-status
+```
+
+External adopters should replace the token-file path with their own secure local path.
 
 The installer also tailors the managed sidecar when the downstream GitHub owner matches Peter Ryszkiewicz or `pRizz` after normalization:
 
