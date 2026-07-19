@@ -80,6 +80,17 @@ rg -Fq 'Use the managed standards page `standards/core/frontend-ui.md` for front
 rg -Fq 'Use the managed standards page `standards/core/testing.md` for unit-test expectations.' templates/AGENTS.bright-builds.md
 rg -Fq 'Frontend experiences should default to dark mode' templates/AGENTS.bright-builds.md
 rg -Fq 'New TypeScript/JavaScript web frontends should default to SolidJS' templates/AGENTS.bright-builds.md
+rg -Fq '## Load And Maintain Active Lessons Within A Bounded Context Budget' standards/core/local-guidance.md
+rg -Fq 'combined size is at most 24,000 bytes' standards/core/local-guidance.md
+rg -Fq 'summed conservative estimate `ceil(file_bytes / 3)` is at most 8,000 tokens' standards/core/local-guidance.md
+rg -Fq 'when no audit baseline exists' standards/core/local-guidance.md
+rg -Fq 'first crosses 75% of either budget' standards/core/local-guidance.md
+rg -Fq 'when 90 days have elapsed and active lesson content changed' standards/core/local-guidance.md
+rg -Fq 'when 10 active lessons have been added since the prior audit' standards/core/local-guidance.md
+rg -Fq 'before an append projected to exceed either full budget' standards/core/local-guidance.md
+rg -Fq 'must not recursively retrigger solely because the set remains above that threshold' standards/core/local-guidance.md
+rg -Fq 'read the repository-owned active set in full within the default 24,000-byte and 8,000-estimated-token budgets' templates/AGENTS.bright-builds.md
+rg -Fq 'Normal install and update must not create or edit downstream lesson, audit, or archive files.' templates/AGENTS.bright-builds.md
 rg -Fq 'Public open-source web apps and sites must expose source repository access in stable product chrome' templates/AGENTS.bright-builds.md
 rg -Fq 'Disclose Public Open-Source Project Identity In Product Chrome' standards/core/frontend-ui.md
 rg -Fq 'Only describe the project as `free and open source` when the repository and license actually support that claim.' standards/core/frontend-ui.md

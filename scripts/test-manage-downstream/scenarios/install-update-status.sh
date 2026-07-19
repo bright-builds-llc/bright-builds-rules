@@ -22,6 +22,16 @@ test_fresh_install_and_reinstall() {
 	assert_file_exists "${repo_path}/standards-overrides.md"
 	assert_managed_standards_exist "$repo_path"
 	assert_file_contains "${repo_path}/standards/languages/typescript-javascript.md" "Do Not Add Python Scripts To Bun-Friendly JS/TS Repositories" "fresh install should copy the TypeScript/JavaScript standards page"
+	assert_file_contains "${repo_path}/standards/core/local-guidance.md" "## Load And Maintain Active Lessons Within A Bounded Context Budget" "fresh install should distribute the bounded lesson-loading standard"
+	assert_file_contains "${repo_path}/standards/core/local-guidance.md" "24,000 bytes" "fresh install should distribute the default lesson byte budget"
+	assert_file_contains "${repo_path}/standards/core/local-guidance.md" "8,000 tokens" "fresh install should distribute the default lesson token budget"
+	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Normal install and update must not create or edit downstream lesson, audit, or archive files." "fresh install should distribute the bounded lesson-loading sidecar summary"
+	assert_file_missing "${repo_path}/tasks/lessons.md"
+	assert_file_missing "${repo_path}/tasks/lesson-audits.md"
+	assert_file_missing "${repo_path}/tasks/lessons-archive.md"
+	assert_file_missing "${repo_path}/.codex/tasks/lessons.md"
+	assert_file_missing "${repo_path}/.codex/tasks/lesson-audits.md"
+	assert_file_missing "${repo_path}/.codex/tasks/lessons-archive.md"
 	assert_file_missing "${repo_path}/README.md"
 	assert_file_missing "${repo_path}/scripts/bright-builds-auto-update.sh"
 	assert_file_missing "${repo_path}/.github/workflows/bright-builds-auto-update.yml"
@@ -374,10 +384,19 @@ test_auto_update_enabled_files_are_restored_on_update() {
 }
 
 test_update_preserves_local_agents_and_overrides() {
+	local audit_hash=""
+	local archive_hash=""
+	local lessons_hash=""
 	local repo_path=""
 
 	repo_path="$(create_repo update)"
 	write_file "${repo_path}/AGENTS.md" $'# Local AGENTS\n\n- Preserve this.\n'
+	write_file "${repo_path}/.codex/tasks/lessons.md" $'# Lessons\n\n## lesson-local | 2026-07-19\n\n1. Date: 2026-07-19\n2. What went wrong: Local fixture.\n3. Preventive rule: Preserve this file.\n4. Trigger signal: A managed update runs.\n'
+	write_file "${repo_path}/.codex/tasks/lesson-audits.md" $'# Lesson Audits\n\n## lesson-audit-local | 2026-07-19\n\n- Retained: lesson-local\n'
+	write_file "${repo_path}/.codex/tasks/lessons-archive.md" $'# Lesson Archive\n\n## lesson-archived-local | 2026-07-19\n\n- Archive reason: Fixture.\n'
+	lessons_hash="$(git -C "$repo_path" hash-object .codex/tasks/lessons.md)"
+	audit_hash="$(git -C "$repo_path" hash-object .codex/tasks/lesson-audits.md)"
+	archive_hash="$(git -C "$repo_path" hash-object .codex/tasks/lessons-archive.md)"
 
 	run_manage "$repo_path" install
 	assert_eq "$run_status" "0" "initial install should succeed before update"
@@ -403,7 +422,12 @@ test_update_preserves_local_agents_and_overrides() {
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "link public GitHub commits and CI run-backed build times when URLs are available" "update should keep linked UI provenance guidance"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "open external provenance links in new tabs safely" "update should keep safe new-tab provenance link guidance"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "copyable summaries as optional support affordances" "update should keep the UI provenance guidance"
+	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Normal install and update must not create or edit downstream lesson, audit, or archive files." "update should refresh the bounded lesson-loading sidecar summary"
+	assert_file_contains "${repo_path}/standards/core/local-guidance.md" "## Load And Maintain Active Lessons Within A Bounded Context Budget" "update should refresh the bounded lesson-loading standard"
 	assert_file_contains "${repo_path}/standards-overrides.md" "| \`custom\` | \`keep it\` | \`local\` | \`owner\` | \`2026-03-13\` |" "update should preserve local overrides"
+	assert_eq "$(git -C "$repo_path" hash-object .codex/tasks/lessons.md)" "$lessons_hash" "update should preserve downstream lessons byte-for-byte"
+	assert_eq "$(git -C "$repo_path" hash-object .codex/tasks/lesson-audits.md)" "$audit_hash" "update should preserve downstream lesson audits byte-for-byte"
+	assert_eq "$(git -C "$repo_path" hash-object .codex/tasks/lessons-archive.md)" "$archive_hash" "update should preserve downstream lesson archives byte-for-byte"
 	assert_markdown_is_mdformat_clean \
 		"update should keep downstream AGENTS and CONTRIBUTING markdown mdformat-clean" \
 		"${repo_path}/AGENTS.md" \

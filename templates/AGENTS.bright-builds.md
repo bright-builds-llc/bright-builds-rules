@@ -61,6 +61,7 @@ Record recurring repo-specific workflow facts in `AGENTS.md` under `## Repo-Loca
 - Heavy integration, end-to-end, or external-service suites may stay CI-only when local guidance says so.
 - If hook-managed verification is detected and local docs are silent, ask before duplicating it manually.
 - If the repo tracks shared task or lesson files such as `tasks/todo.md`, `tasks/lessons.md`, `.codex/tasks/todo.md`, or `.codex/tasks/lessons.md`, keep them append-only with stable IDs and timestamps, edit only the relevant block, and avoid hot counters or whole-file rewrites when a localized edit is sufficient.
+- When a repository tracks active lessons, follow the bounded startup and maintenance policy in `standards/core/local-guidance.md`: read the repository-owned active set in full within the default 24,000-byte and 8,000-estimated-token budgets; above either budget, inventory all headings, load whole priority blocks, disclose omissions, and audit only on the five defined triggers. Normal install and update must not create or edit downstream lesson, audit, or archive files.
 - Parse boundary data into domain types instead of re-validating primitives everywhere.
 - Make illegal states unrepresentable when the language makes that practical.
 - Unit test pure code and business logic.

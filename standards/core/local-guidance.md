@@ -76,6 +76,40 @@ Completed on 2026-03-23.
 - Review questions: Does the repository track tasks or lessons in shared versioned files? Are multiple changes likely to touch the same "current status" lines? Can the same information be represented as stable per-task blocks or derived summaries instead of hot shared counters?
 - Automation potential: Linters or helper scripts can enforce heading shapes and append-only ordering, but judging whether a summary is truly derived or whether a block-local edit was possible still needs context.
 
+## Load And Maintain Active Lessons Within A Bounded Context Budget
+
+- Level: `should`
+- Intent: Make repository-owned lessons available early enough to prevent repeated mistakes without allowing an unbounded ledger to crowd out the task itself.
+- Rule: Apply this rule when a repository contains `tasks/lessons.md`, `.codex/tasks/lessons.md`, or names another active repository-owned lesson source in local guidance. Before the first substantive plan, review, implementation, or audit action, measure every existing active source and read it in full when the combined size is at most 24,000 bytes and the summed conservative estimate `ceil(file_bytes / 3)` is at most 8,000 tokens. Do not load lesson archives during normal startup. If either budget is exceeded, inventory every lesson heading, then load complete unsplit blocks in this order: safety, privacy, security, authorization, and evidence-integrity lessons; lessons relevant to the current task; lessons from the previous 90 days; then as many remaining blocks as fit. Stop only at lesson-block boundaries, disclose which blocks were omitted, and flag a scoped lesson audit instead of claiming the full ledger was read.
+- Rationale: Small active ledgers are cheap, high-value startup context. A deterministic ceiling and whole-block fallback keep larger ledgers useful and honest while reserving context for current evidence and implementation.
+- Good example:
+
+```text
+Active lesson sources:
+- .codex/tasks/lessons.md: 14,400 bytes, ceil(14,400 / 3) = 4,800 tokens
+
+The active set is within both defaults, so read it in full before planning.
+```
+
+```text
+The active set exceeds the default budget. Inventory every heading, load whole
+priority blocks up to the budget, disclose omitted IDs, and record that an audit
+is due.
+```
+
+- Bad example:
+
+```text
+- Load an archive at startup because it contains older context.
+- Read only the first 24,000 bytes and split the final lesson mid-block.
+- Say "all lessons reviewed" after silently omitting over-budget blocks.
+- Archive the oldest lessons solely because they are old.
+```
+
+- Exceptions or escape hatches: A repository may choose a different byte or token budget only as a documented local exception, normally in `standards-overrides.md`. Audit active lessons when no audit baseline exists; when the active set first crosses 75% of either budget after the latest below-threshold baseline; when 90 days have elapsed and active lesson content changed; when 10 active lessons have been added since the prior audit; or before an append projected to exceed either full budget. A completed audit above 75% establishes a new baseline and must not recursively retrigger solely because the set remains above that threshold. Consolidate only lessons with the same durable cause, preventive rule, and trigger, keeping the clearest stable ID active and preserving superseded IDs as provenance. Archive only obsolete, duplicated, or fully superseded lessons; age and size are review signals, never sufficient reasons. Do not weaken or archive safety, privacy, security, authorization, or evidence-integrity guardrails unless an equally strong current rule replaces them. Keep audit records append-only. Create an archive only when a lesson is actually archived, preserving its stable ID, original four fields, archive date, reason, and canonical replacement when applicable. Installers and update tools must not create or edit downstream lesson, audit, or archive files merely to distribute this standard.
+- Review questions: Which repository-owned files are active lesson sources? Are both default budgets satisfied? If not, were all headings inventoried, whole blocks selected in the required order, and omissions disclosed? Has one of the five audit triggers fired? Does any proposed consolidation or archival preserve provenance and an equally strong active rule?
+- Automation potential: A repository-owned verifier can measure bytes, compute `ceil(file_bytes / 3)` per active source, validate stable IDs and four-field blocks, identify deterministic audit triggers, and test whole-block selection. Relevance, equivalence, obsolescence, and the strength of replacement guardrails still require review judgment.
+
 ## Keep Repo-Local Guidance Concise and Durable
 
 - Level: `should`

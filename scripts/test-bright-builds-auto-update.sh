@@ -602,11 +602,14 @@ test_pushes_directly_when_push_succeeds() {
 }
 
 test_refreshes_managed_standards_files() {
+	local audit_hash=""
+	local archive_hash=""
 	local bundle_root=""
 	local repo_path=""
 	local remote_path=""
 	local fake_bin=""
 	local latest_subject=""
+	local lessons_hash=""
 
 	bundle_root="$(create_source_bundle standards-refresh)"
 	repo_path="$(create_repo standards-refresh-repo)"
@@ -616,9 +619,16 @@ test_refreshes_managed_standards_files() {
 	init_git_repo "$repo_path"
 	git -C "$repo_path" remote add origin "$remote_path"
 	install_auto_update_repo "$bundle_root" "$repo_path"
+	write_file "${repo_path}/.codex/tasks/lessons.md" $'# Lessons\n\n## lesson-local | 2026-07-19\n\n1. Date: 2026-07-19\n2. What went wrong: Local fixture.\n3. Preventive rule: Preserve this file.\n4. Trigger signal: A managed update runs.\n'
+	write_file "${repo_path}/.codex/tasks/lesson-audits.md" $'# Lesson Audits\n\n## lesson-audit-local | 2026-07-19\n\n- Retained: lesson-local\n'
+	write_file "${repo_path}/.codex/tasks/lessons-archive.md" $'# Lesson Archive\n\n## lesson-archived-local | 2026-07-19\n\n- Archive reason: Fixture.\n'
+	lessons_hash="$(git -C "$repo_path" hash-object .codex/tasks/lessons.md)"
+	audit_hash="$(git -C "$repo_path" hash-object .codex/tasks/lesson-audits.md)"
+	archive_hash="$(git -C "$repo_path" hash-object .codex/tasks/lessons-archive.md)"
 	commit_all "$repo_path" "Initial managed install"
 	git -C "$repo_path" push -u origin main >/dev/null
-	printf '\n- Added auto-update standards marker.\n' >>"${bundle_root}/standards/languages/typescript-javascript.md"
+	printf '\n- Added auto-update lesson-standard marker.\n' >>"${bundle_root}/standards/core/local-guidance.md"
+	printf '\n- Added auto-update lesson-sidecar marker.\n' >>"${bundle_root}/templates/AGENTS.bright-builds.md"
 	git -C "$bundle_root" add -A
 	git -C "$bundle_root" commit -m "Standards update" >/dev/null
 	create_fake_curl_bin "$fake_bin" "$bundle_root"
@@ -626,7 +636,11 @@ test_refreshes_managed_standards_files() {
 	run_auto_update "$repo_path" "$fake_bin"
 	assert_eq "$run_status" "0" "standards auto-update should succeed"
 	assert_contains "$run_output" "Pushed managed updates directly to main" "standards auto-update should use the direct push path"
-	assert_file_contains "${repo_path}/standards/languages/typescript-javascript.md" "Added auto-update standards marker." "auto-update should refresh the managed standards page"
+	assert_file_contains "${repo_path}/standards/core/local-guidance.md" "Added auto-update lesson-standard marker." "auto-update should refresh the managed lesson-loading standard"
+	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Added auto-update lesson-sidecar marker." "auto-update should refresh the managed lesson-loading sidecar"
+	assert_eq "$(git -C "$repo_path" hash-object .codex/tasks/lessons.md)" "$lessons_hash" "auto-update should preserve downstream lessons byte-for-byte"
+	assert_eq "$(git -C "$repo_path" hash-object .codex/tasks/lesson-audits.md)" "$audit_hash" "auto-update should preserve downstream lesson audits byte-for-byte"
+	assert_eq "$(git -C "$repo_path" hash-object .codex/tasks/lessons-archive.md)" "$archive_hash" "auto-update should preserve downstream lesson archives byte-for-byte"
 	latest_subject="$(git --git-dir="$remote_path" log --format=%s -1 refs/heads/main)"
 	assert_eq "$latest_subject" "chore: update Bright Builds Rules" "standards refresh should create the standard auto-update commit"
 }
