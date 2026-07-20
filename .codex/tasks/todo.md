@@ -145,3 +145,15 @@ Residual risks:
 - Verification: `bash scripts/test-bright-builds-auto-update.sh`; `bash scripts/test-manage-downstream.sh`; `bash scripts/verify-managed-shells.sh`; `bash scripts/verify-docs.sh`; `bun run typecheck`; `bun run test:badges`; `bun run branding:assets:check`; `git diff --check`.
 - Completion review: Managed workflows now expose a non-sensitive token-presence flag, workflow-changing updates fail before commit when the dedicated token is absent, classified credential failures retain their push diagnostics and skip futile PR fallback, and legacy callers receive the same repair flow before their old helper attempts to publish a rewritten workflow. Historical pre-rename workflow/helper matching remains covered and updateable.
 - Residual risk: Git hosting providers can change authentication error wording; the classifier covers GitHub's observed workflows-permission, repository-permission, authentication, username, and HTTP 403 signals, while unknown push failures continue through the ordinary fallback path.
+
+## task-track-skill-context-cost | 2026-07-19 21:00 CDT | Track and publish skill context cost
+
+- [x] Add conservative skill and adoption-path context measurements with append-only CSV history.
+- [x] Generate a guarded latest-snapshot section in README.
+- [x] Add an auto-staging native pre-commit hook and opt-in installer.
+- [x] Enforce history and generated README integrity in focused CI.
+- [x] Add behavior-focused unit and Git integration coverage.
+- [x] Run focused and full verification and review downstream-contract impact.
+- Verification: `bun run typecheck`; `bun run test:context-cost` (15 passed); `bun run test:badges` (15 passed); `bun run branding:assets:check`; `bun run context-cost:check`; `./scripts/verify-docs.sh`; `./scripts/verify-managed-shells.sh`; `bash ./scripts/test-manage-downstream.sh`; `bash ./scripts/test-bright-builds-auto-update.sh`; workflow YAML parse; hook `bash -n`; `git diff --check`.
+- Completion review: Context snapshots now use a versioned conservative estimator and source fingerprint, preserve committed CSV rows, regenerate a formatter-clean bounded README block, and remain canonical-repository tooling rather than downstream-managed output. The native hook stages complete owned files, while base-relative CI independently enforces history integrity.
+- Residual risk: Git hooks remain opt-in and bypassable, and installing this hook intentionally replaces any existing repo-local `core.hooksPath`; the dedicated CI workflow is therefore the authoritative enforcement layer.

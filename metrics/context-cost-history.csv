@@ -1,0 +1,2 @@
+recorded_at_utc,base_commit,source_sha256,estimator,skill_bytes,skill_estimated_tokens,adoption_guide_bytes,adoption_guide_estimated_tokens,adoption_path_bytes,adoption_path_estimated_tokens
+2026-07-20T02:03:34.687Z,ed2e61121f831b66aebf87aab775b62c3f25399a,4bf453c3ce58843ed316ca2e53d25aa6375b20f29ea34766c1d54587ffe135af,utf8-bytes-ceil-div-3-v1,8344,2782,20285,6762,28629,9544

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+if ! command -v bun >/dev/null 2>&1; then
+	echo "error: Bun is required to refresh and verify context-cost history" >&2
+	exit 1
+fi
+
+bun run context-cost:precommit

@@ -10,6 +10,25 @@ This repository is the canonical source and adoption kit for Bright Builds Rules
 
 The core corpus currently covers architecture, code shape, frontend UI, operability, local guidance, verification, and testing, with repo-local overrides for deliberate exceptions.
 
+<!-- bright-builds-rules-context-cost:begin -->
+
+## Estimated AI context cost
+
+Bright Builds Rules publishes a conservative approximation of the instruction context an AI must load for the skill and its adoption flow.
+
+| Baseline           | Included files                        | UTF-8 bytes | Estimated tokens |
+| ------------------ | ------------------------------------- | ----------: | ---------------: |
+| Skill instructions | `skills/bright-builds-rules/SKILL.md` |       8,344 |            2,782 |
+| Adoption path      | Skill instructions + `AI-ADOPTION.md` |      28,629 |            9,544 |
+
+Latest snapshot: `2026-07-20T02:03:34.687Z` from base commit `ed2e61121f83`. Estimator: `utf8-bytes-ceil-div-3-v1`, calculated per file and then summed.
+
+This is a rough context approximation, not API billing or cached-token usage. Skill metadata, this README, and task-specific standards pages are excluded; standards pages are variable additional context selected for the task.
+
+[View the append-only context-cost history.](metrics/context-cost-history.csv)
+
+<!-- bright-builds-rules-context-cost:end -->
+
 ## For AI Agents
 
 If an AI is given only this repository URL and asked to adopt Bright Builds Rules into another repository, the AI should start with [AI-ADOPTION.md](AI-ADOPTION.md).
@@ -411,6 +430,25 @@ bash ./scripts/test-bright-builds-auto-update.sh
 ```
 
 The scripts run Markdown linting, internal link checks, managed shell template syntax and formatting checks, and installer integration coverage for the repository.
+
+### Context-cost snapshots and commit hook
+
+Run the context-cost generator or its read-only verifier with:
+
+```bash
+bun run context-cost:update
+bun run context-cost:check
+```
+
+The generator owns `metrics/context-cost-history.csv` and the guarded context-cost block near the top of this README. It appends a snapshot only when the measured skill or adoption-guide content changes and refuses to rewrite rows that already exist in `HEAD`.
+
+Install the repository's tracked pre-commit hook for the current clone with:
+
+```bash
+bun run hooks:install
+```
+
+The installer intentionally replaces the repository-local `core.hooksPath` with `.githooks`. When context-cost output needs a refresh, the hook updates it and stages the complete current versions of the skill instructions, adoption guide, README, and history CSV, including any otherwise-unstaged edits in those files. Hooks remain bypassable and opt-in per clone, so the dedicated Context Cost CI workflow is the authoritative guard.
 
 ## Initial source material
 
