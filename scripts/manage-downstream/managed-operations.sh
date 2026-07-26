@@ -4,7 +4,9 @@ remove_or_update_contributing_file_for_uninstall() {
 	local updated_path=""
 	local trimmed_path=""
 
-	state="$(resolve_contributing_file_state)"
+	if ! state="$(resolve_contributing_file_state)"; then
+		die "unable to determine managed state for ${contributing_destination}"
+	fi
 
 	case "$state" in
 	block-clean)

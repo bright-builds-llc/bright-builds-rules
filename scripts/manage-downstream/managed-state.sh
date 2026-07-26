@@ -107,7 +107,10 @@ resolve_contributing_file_state() {
 		return
 		;;
 	present)
-		rendered_block_path="$(render_template_to_tmp_path "$contributing_block_source" "contributing-block")"
+		if ! rendered_block_path="$(render_template_to_tmp_path "$contributing_block_source" "contributing-block")"; then
+			return 1
+		fi
+
 		ensure_tmp_dir
 		extracted_block_path="${tmp_dir}/CONTRIBUTING.block.extracted"
 		extract_marker_block "$destination_path" "$extracted_block_path" "$contributing_block_begin" "$contributing_block_end"
@@ -150,10 +153,16 @@ repair_blocking_contributing_file() {
 
 	[[ -f "$destination_path" ]] || return
 
-	state="$(resolve_contributing_file_state)"
+	if ! state="$(resolve_contributing_file_state)"; then
+		die "unable to determine managed state for ${contributing_destination}"
+	fi
+
 	case "$state" in
 	block-clean | block-drifted)
-		rendered_block_path="$(render_template_to_tmp_path "$contributing_block_source" "contributing-block")"
+		if ! rendered_block_path="$(render_template_to_tmp_path "$contributing_block_source" "contributing-block")"; then
+			die "unable to prepare managed block for ${contributing_destination}"
+		fi
+
 		ensure_tmp_dir
 		updated_path="${tmp_dir}/CONTRIBUTING.repaired"
 		replace_contributing_block "$destination_path" "$updated_path" "$rendered_block_path"

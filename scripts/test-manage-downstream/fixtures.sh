@@ -247,18 +247,38 @@ create_fake_remote_fetch_bin() {
 	local stale_ref="${4:-}"
 
 	mkdir -p "$bin_dir"
-	write_file "${bin_dir}/curl" $'#!/usr/bin/env bash\nset -euo pipefail\noutput=""\nurl=""\nwhile [[ $# -gt 0 ]]; do\n  case "$1" in\n    -o)\n      output="$2"\n      shift 2\n      ;;\n    -f|-s|-S|-L|-fsSL)\n      shift\n      ;;\n    *)\n      url="$1"\n      shift\n      ;;\n  esac\ndone\n[[ -n "$output" ]] || exit 1\nrepo_slug="$(printf "%s" "$url" | sed -n "s#^https://raw\\.githubusercontent\\.com/\\([^/]*/[^/]*\\)/[^/]*/.*#\\1#p")"\nrequested_ref="$(printf "%s" "$url" | sed -n "s#^https://raw\\.githubusercontent\\.com/[^/]*/[^/]*/\\([^/]*\\)/.*#\\1#p")"\nrelative_path="$(printf "%s" "$url" | sed -n "s#^https://raw\\.githubusercontent\\.com/[^/]*/[^/]*/[^/]*/##p")"\n[[ -n "$repo_slug" && -n "$requested_ref" && -n "$relative_path" ]] || exit 1\ncase "$repo_slug" in\n  bright-builds-llc/bright-builds-rules)\n    source_root="${FAKE_CURL_CURRENT_SOURCE_ROOT}"\n    ;;\n  bright-builds-llc/coding-and-architecture-requirements)\n    source_root="${FAKE_CURL_LEGACY_SOURCE_ROOT}"\n    ;;\n  *)\n    source_root=""\n    ;;\nesac\nif [[ -z "$source_root" ]]; then\n  printf "curl: (22) The requested URL returned error: 404\\n" >&2\n  exit 22\nfi\nif [[ -n "${FAKE_CURL_STALE_REF:-}" && "$repo_slug" == "bright-builds-llc/coding-and-architecture-requirements" && "$requested_ref" == "${FAKE_CURL_STALE_REF}" ]]; then\n  printf "curl: (22) The requested URL returned error: 404\\n" >&2\n  exit 22\nfi\nif "${REAL_GIT_PATH}" -C "$source_root" rev-parse --verify "${requested_ref}^{commit}" >/dev/null 2>&1; then\n  if "${REAL_GIT_PATH}" -C "$source_root" cat-file -e "${requested_ref}:${relative_path}" >/dev/null 2>&1; then\n    "${REAL_GIT_PATH}" -C "$source_root" show "${requested_ref}:${relative_path}" > "$output"\n    exit 0\n  fi\nfi\nif [[ -f "${source_root}/${relative_path}" ]]; then\n  cp "${source_root}/${relative_path}" "$output"\n  exit 0\nfi\nprintf "curl: (22) The requested URL returned error: 404\\n" >&2\nexit 22\n'
+	cp "${repo_root}/scripts/test-support/fake-remote-curl.sh" "${bin_dir}/curl"
 	chmod +x "${bin_dir}/curl"
 	write_file "${bin_dir}/git" $'#!/usr/bin/env bash\nset -euo pipefail\nif [[ "${1:-}" == "ls-remote" && "${2:-}" == "https://github.com/bright-builds-llc/bright-builds-rules.git" ]]; then\n  ref="${3:-}"\n  [[ -n "$ref" ]] || exit 1\n  commit="$("${REAL_GIT_PATH}" -C "${FAKE_GIT_SOURCE_ROOT}" rev-parse "${ref}^{commit}")"\n  printf "%s\\t%s\\n" "$commit" "$ref"\n  exit 0\nfi\nexec "${REAL_GIT_PATH}" "$@"\n'
 	chmod +x "${bin_dir}/git"
 	FAKE_CURL_CURRENT_SOURCE_ROOT="$current_source_root"
 	FAKE_CURL_LEGACY_SOURCE_ROOT="$legacy_source_root"
+	FAKE_CURL_LEGACY_SCRIPT_SOURCE_ROOT="$current_source_root"
 	FAKE_CURL_STALE_REF="$stale_ref"
+	FAKE_CURL_PRE_LOCAL_STANDARDS_REF=""
+	FAKE_CURL_PRE_LOCAL_STANDARDS_SOURCE_ROOT=""
+	FAKE_CURL_FAIL_PATH=""
+	FAKE_CURL_FAIL_START_ATTEMPT=""
+	FAKE_CURL_FAIL_ATTEMPTS=""
+	FAKE_CURL_EMPTY_PATH=""
+	FAKE_CURL_EMPTY_START_ATTEMPT=""
+	FAKE_CURL_ATTEMPT_STATE_DIR="${bin_dir}/curl-attempts"
+	FAKE_CURL_ATTEMPT_LOG="${bin_dir}/curl-attempts.log"
 	FAKE_GIT_SOURCE_ROOT="$current_source_root"
 	REAL_GIT_PATH="$real_git_path"
 	export FAKE_CURL_CURRENT_SOURCE_ROOT
 	export FAKE_CURL_LEGACY_SOURCE_ROOT
+	export FAKE_CURL_LEGACY_SCRIPT_SOURCE_ROOT
 	export FAKE_CURL_STALE_REF
+	export FAKE_CURL_PRE_LOCAL_STANDARDS_REF
+	export FAKE_CURL_PRE_LOCAL_STANDARDS_SOURCE_ROOT
+	export FAKE_CURL_FAIL_PATH
+	export FAKE_CURL_FAIL_START_ATTEMPT
+	export FAKE_CURL_FAIL_ATTEMPTS
+	export FAKE_CURL_EMPTY_PATH
+	export FAKE_CURL_EMPTY_START_ATTEMPT
+	export FAKE_CURL_ATTEMPT_STATE_DIR
+	export FAKE_CURL_ATTEMPT_LOG
 	export FAKE_GIT_SOURCE_ROOT
 	export REAL_GIT_PATH
 }

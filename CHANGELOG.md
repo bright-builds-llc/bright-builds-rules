@@ -4,6 +4,7 @@ This repository uses a simple release-notes model instead of a heavyweight chang
 
 ## Unreleased
 
+- Hardened managed-source downloads with bounded transient retries, non-empty response validation, and atomic replacement so failed fetches cannot empty or publish managed files.
 - Added conservative skill and adoption-path context-cost snapshots, append-only history, guarded README visibility, and local/CI enforcement.
 - Added a bounded startup-loading and maintenance `should` rule for repositories that already track active lessons, plus matching managed-sidecar guidance that propagates through normal downstream updates without creating or modifying downstream lesson artifacts.
 - Hardened managed auto-update token handling so no-op and non-workflow updates can still use `github.token`, while workflow-file changes detect missing or under-scoped `BRIGHT_BUILDS_PUSH_TOKEN`, skip futile PR fallback, and print the exact secure repair and rerun flow, including for legacy managed helpers.

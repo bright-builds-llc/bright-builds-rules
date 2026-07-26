@@ -15,6 +15,7 @@ shell_scripts_to_verify=(
 	"scripts/test-manage-downstream.sh"
 	scripts/test-manage-downstream/*.sh
 	scripts/test-manage-downstream/scenarios/*.sh
+	scripts/test-support/*.sh
 	"scripts/test-bright-builds-auto-update.sh"
 	"scripts/verify-managed-shells.sh"
 	"templates/bright-builds-auto-update.sh"

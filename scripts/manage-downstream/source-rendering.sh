@@ -1,17 +1,58 @@
+download_url_to_file() {
+	local source_url="$1"
+	local output_path="$2"
+	local partial_path="${output_path}.partial"
+
+	require_command curl
+	rm -f "$partial_path"
+
+	if ! curl -fsSL \
+		--retry 3 \
+		--retry-delay 1 \
+		--retry-max-time 15 \
+		"$source_url" \
+		-o "$partial_path"; then
+		rm -f "$partial_path"
+		return 1
+	fi
+
+	if [[ ! -s "$partial_path" ]]; then
+		printf 'error: downloaded managed source is empty: %s\n' "$source_url" >&2
+		rm -f "$partial_path"
+		return 1
+	fi
+
+	if ! mv "$partial_path" "$output_path"; then
+		rm -f "$partial_path"
+		return 1
+	fi
+}
+
 download_file() {
 	local source_path="$1"
 	local output_path="$2"
 	local maybe_local_source_path=""
+	local source_url=""
 
 	maybe_local_source_path="${local_source_root}/${source_path}"
 
 	if [[ -n "$local_source_root" && -f "$maybe_local_source_path" ]]; then
+		if [[ ! -s "$maybe_local_source_path" ]]; then
+			printf 'error: managed source is empty: %s\n' "$maybe_local_source_path" >&2
+			return 1
+		fi
+
 		cp "$maybe_local_source_path" "$output_path"
 		return
 	fi
 
-	require_command curl
-	curl -fsSL "${raw_base}/${source_path}" -o "$output_path"
+	source_url="${raw_base}/${source_path}"
+	if download_url_to_file "$source_url" "$output_path"; then
+		return 0
+	fi
+
+	printf 'error: unable to download managed source %s from %s\n' "$source_path" "$raw_base" >&2
+	return 1
 }
 
 download_file_if_available_from_raw_base() {
@@ -21,9 +62,7 @@ download_file_if_available_from_raw_base() {
 
 	[[ -n "$candidate_raw_base" ]] || return 1
 
-	require_command curl
-	rm -f "$output_path"
-	if curl -fsSL "${candidate_raw_base}/${source_path}" -o "$output_path" >/dev/null 2>&1; then
+	if download_url_to_file "${candidate_raw_base}/${source_path}" "$output_path" >/dev/null 2>&1; then
 		return 0
 	fi
 
@@ -35,6 +74,7 @@ download_file_if_available_from_local_git_ref() {
 	local source_path="$1"
 	local output_path="$2"
 	local candidate_ref="$3"
+	local partial_path="${output_path}.partial"
 
 	[[ -n "$local_source_root" ]] || return 1
 	[[ -n "$candidate_ref" ]] || return 1
@@ -42,7 +82,21 @@ download_file_if_available_from_local_git_ref() {
 	command -v git >/dev/null 2>&1 || return 1
 	git -C "$local_source_root" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 1
 	git -C "$local_source_root" cat-file -e "${candidate_ref}:${source_path}" >/dev/null 2>&1 || return 1
-	git -C "$local_source_root" show "${candidate_ref}:${source_path}" >"$output_path"
+	rm -f "$partial_path"
+	if ! git -C "$local_source_root" show "${candidate_ref}:${source_path}" >"$partial_path"; then
+		rm -f "$partial_path"
+		return 1
+	fi
+
+	if [[ ! -s "$partial_path" ]]; then
+		rm -f "$partial_path"
+		return 1
+	fi
+
+	if ! mv "$partial_path" "$output_path"; then
+		rm -f "$partial_path"
+		return 1
+	fi
 }
 
 download_file_for_install_state_candidate() {
@@ -80,6 +134,7 @@ download_file_for_install_state_rendering() {
 	compare_repo_slug="$(extract_repo_slug_from_url "$compare_repo_url")"
 	maybe_local_source_path="${local_source_root}/${source_path}"
 	if [[ "$prefer_local_source" == "enabled" && "$compare_exact_commit" == "$manager_exact_commit" && -n "$local_source_root" && -f "$maybe_local_source_path" ]]; then
+		[[ -s "$maybe_local_source_path" ]] || return 1
 		cp "$maybe_local_source_path" "$output_path"
 		return 0
 	fi
@@ -257,8 +312,23 @@ render_template_to_tmp_path() {
 	ensure_tmp_dir
 	downloaded_path="${tmp_dir}/${tmp_stem}.source"
 	rendered_path="${tmp_dir}/${tmp_stem}.rendered"
-	download_file "$source_path" "$downloaded_path"
-	render_template_file "$downloaded_path" "$rendered_path" "$managed_files_markdown" "$relative_destination" "enabled"
+	rm -f "$downloaded_path" "$rendered_path"
+
+	if ! download_file "$source_path" "$downloaded_path"; then
+		return 1
+	fi
+
+	if ! render_template_file "$downloaded_path" "$rendered_path" "$managed_files_markdown" "$relative_destination" "enabled"; then
+		rm -f "$rendered_path"
+		return 1
+	fi
+
+	if [[ ! -s "$rendered_path" ]]; then
+		printf 'error: rendered managed source is empty: %s\n' "$source_path" >&2
+		rm -f "$rendered_path"
+		return 1
+	fi
+
 	printf '%s\n' "$rendered_path"
 }
 
@@ -320,7 +390,18 @@ render_template_to_tmp_path_for_install_state() {
 		return 0
 	fi
 
-	render_template_file "$downloaded_path" "$rendered_path" "$managed_files_markdown" "$relative_destination" "$include_managed_file_marker" "$compare_owner_specific_guidance_markdown"
+	if ! render_template_file "$downloaded_path" "$rendered_path" "$managed_files_markdown" "$relative_destination" "$include_managed_file_marker" "$compare_owner_specific_guidance_markdown"; then
+		rm -f "$rendered_path"
+		printf '\n'
+		return 0
+	fi
+
+	if [[ ! -s "$rendered_path" ]]; then
+		rm -f "$rendered_path"
+		printf '\n'
+		return 0
+	fi
+
 	printf '%s\n' "$rendered_path"
 }
 
@@ -579,8 +660,20 @@ render_template_to_legacy_identity_tmp_path_for_install_state() {
 		return 0
 	fi
 
-	render_template_file "$downloaded_path" "$rendered_path" "$managed_files_markdown" "$relative_destination" "$include_managed_file_marker" "$compare_owner_specific_guidance_markdown"
-	rewrite_rendered_file_for_legacy_identity "$rendered_path" "$compat_rendered_path" "$relative_destination"
+	if ! render_template_file "$downloaded_path" "$rendered_path" "$managed_files_markdown" "$relative_destination" "$include_managed_file_marker" "$compare_owner_specific_guidance_markdown"; then
+		rm -f "$rendered_path"
+		printf '\n'
+		return 0
+	fi
+
+	if [[ ! -s "$rendered_path" ]] ||
+		! rewrite_rendered_file_for_legacy_identity "$rendered_path" "$compat_rendered_path" "$relative_destination" ||
+		[[ ! -s "$compat_rendered_path" ]]; then
+		rm -f "$rendered_path" "$compat_rendered_path"
+		printf '\n'
+		return 0
+	fi
+
 	printf '%s\n' "$compat_rendered_path"
 }
 
@@ -685,7 +778,18 @@ render_template_to_prerename_compat_tmp_path_for_install_state() {
 		return 0
 	fi
 
-	render_template_file "$downloaded_path" "$rendered_path" "$managed_files_markdown" "$relative_destination" "$include_managed_file_marker" "$compare_owner_specific_guidance_markdown"
+	if ! render_template_file "$downloaded_path" "$rendered_path" "$managed_files_markdown" "$relative_destination" "$include_managed_file_marker" "$compare_owner_specific_guidance_markdown"; then
+		rm -f "$rendered_path"
+		printf '\n'
+		return 0
+	fi
+
+	if [[ ! -s "$rendered_path" ]]; then
+		rm -f "$rendered_path"
+		printf '\n'
+		return 0
+	fi
+
 	printf '%s\n' "$rendered_path"
 }
 
@@ -697,7 +801,10 @@ write_rendered_file() {
 	local rendered_path=""
 	local updated_path=""
 
-	rendered_path="$(render_template_to_tmp_path "$source_path" "$(basename "$relative_destination")" "$managed_files_markdown" "$relative_destination")"
+	if ! rendered_path="$(render_template_to_tmp_path "$source_path" "$(basename "$relative_destination")" "$managed_files_markdown" "$relative_destination")"; then
+		die "unable to prepare managed file ${relative_destination} from ${source_path}"
+	fi
+
 	mkdir -p "$(dirname "$destination_path")"
 	ensure_tmp_dir
 	updated_path="${tmp_dir}/$(basename "$relative_destination").write"

@@ -4,7 +4,10 @@ write_or_update_agents_file() {
 	local updated_path=""
 	local stripped_path=""
 
-	rendered_block_path="$(render_template_to_tmp_path "$agents_block_source" "agents-block")"
+	if ! rendered_block_path="$(render_template_to_tmp_path "$agents_block_source" "agents-block")"; then
+		die "unable to prepare managed block for ${agents_destination}"
+	fi
+
 	resolve_agents_block_state "$destination_path"
 
 	if [[ ! -f "$destination_path" ]]; then
@@ -53,8 +56,13 @@ write_or_update_contributing_file() {
 	local stripped_path=""
 	local state=""
 
-	rendered_block_path="$(render_template_to_tmp_path "$contributing_block_source" "contributing-block")"
-	state="$(resolve_contributing_file_state)"
+	if ! rendered_block_path="$(render_template_to_tmp_path "$contributing_block_source" "contributing-block")"; then
+		die "unable to prepare managed block for ${contributing_destination}"
+	fi
+
+	if ! state="$(resolve_contributing_file_state)"; then
+		die "unable to determine managed state for ${contributing_destination}"
+	fi
 
 	case "$state" in
 	missing | whole-file-clean)

@@ -157,3 +157,13 @@ Residual risks:
 - Verification: `bun run typecheck`; `bun run test:context-cost` (15 passed); `bun run test:badges` (15 passed); `bun run branding:assets:check`; `bun run context-cost:check`; `./scripts/verify-docs.sh`; `./scripts/verify-managed-shells.sh`; `bash ./scripts/test-manage-downstream.sh`; `bash ./scripts/test-bright-builds-auto-update.sh`; workflow YAML parse; hook `bash -n`; `git diff --check`.
 - Completion review: Context snapshots now use a versioned conservative estimator and source fingerprint, preserve committed CSV rows, regenerate a formatter-clean bounded README block, and remain canonical-repository tooling rather than downstream-managed output. The native hook stages complete owned files, while base-relative CI independently enforces history integrity.
 - Residual risk: Git hooks remain opt-in and bypassable, and installing this hook intentionally replaces any existing repo-local `core.hooksPath`; the dedicated CI workflow is therefore the authoritative enforcement layer.
+
+## task-harden-managed-source-downloads | 2026-07-26 11:28 CDT | Harden managed-source downloads
+
+- [x] Make required and optional managed-source downloads atomic, non-empty, and bounded-retry aware.
+- [x] Propagate download and render failures explicitly so destinations remain unchanged.
+- [x] Add shared curl failure injection plus manager and auto-update regression coverage.
+- [x] Record the behavior change in the changelog.
+- [x] Run the full managed shell, downstream manager, auto-update, docs, and diff verification surface.
+- Completion review: Managed-source and manager-module downloads now retry transient failures, validate non-empty content, and replace temp outputs atomically. Regression coverage proves required failures preserve downstream files and prevent auto-update publication.
+- Residual risk: Atomicity remains per managed file; an update can still leave earlier successful per-file writes in the worktree, while auto-update stops before commit or push.

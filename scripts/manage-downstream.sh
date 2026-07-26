@@ -95,8 +95,27 @@ manager_source_remote_modules() {
 
 	for module_path in "${manager_module_paths[@]}"; do
 		local_module_path="${manager_bootstrap_tmp_dir}/$(basename "$module_path")"
-		if ! curl -fsSL "${raw_base}/${module_path}" -o "$local_module_path"; then
+		rm -f "$local_module_path" "${local_module_path}.partial"
+		if ! curl -fsSL \
+			--retry 3 \
+			--retry-delay 1 \
+			--retry-max-time 15 \
+			"${raw_base}/${module_path}" \
+			-o "${local_module_path}.partial"; then
+			rm -f "${local_module_path}.partial"
 			printf 'error: unable to load Bright Builds manager module %s from %s\n' "$module_path" "$raw_base" >&2
+			exit 1
+		fi
+
+		if [[ ! -s "${local_module_path}.partial" ]]; then
+			printf 'error: downloaded Bright Builds manager module is empty: %s\n' "$module_path" >&2
+			rm -f "${local_module_path}.partial"
+			exit 1
+		fi
+
+		if ! mv "${local_module_path}.partial" "$local_module_path"; then
+			rm -f "${local_module_path}.partial"
+			printf 'error: unable to store Bright Builds manager module %s\n' "$module_path" >&2
 			exit 1
 		fi
 	done

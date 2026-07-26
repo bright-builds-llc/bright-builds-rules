@@ -12,7 +12,9 @@ determine_repo_state() {
 	resolve_agents_block_state "$agents_path"
 	readme_badge_state="$(resolve_readme_badge_state)"
 	effective_audit_destination="$(resolve_effective_audit_destination)"
-	contributing_state="$(resolve_contributing_file_state)"
+	if ! contributing_state="$(resolve_contributing_file_state)"; then
+		die "unable to determine managed state for ${contributing_destination}"
+	fi
 
 	if [[ "$agents_block_state" == "present" && -f "${repo_root}/${sidecar_destination}" ]]; then
 		installed_signal=1

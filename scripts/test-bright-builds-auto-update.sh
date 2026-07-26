@@ -400,9 +400,9 @@ create_fake_curl_bin() {
 	local pre_local_standards_source_root="${6:-}"
 
 	mkdir -p "$bin_dir"
-	write_file "${bin_dir}/curl" $'#!/usr/bin/env bash\nset -euo pipefail\noutput=""\nurl=""\nwhile [[ $# -gt 0 ]]; do\n  case "$1" in\n    -o)\n      output="$2"\n      shift 2\n      ;;\n    -f|-s|-S|-L|-fsSL)\n      shift\n      ;;\n    *)\n      url="$1"\n      shift\n      ;;\n  esac\ndone\n[[ -n "$output" ]] || exit 1\nrepo_slug="$(printf "%s" "$url" | sed -n "s#^https://raw\\.githubusercontent\\.com/\\([^/]*/[^/]*\\)/[^/]*/.*#\\1#p")"\nrequested_ref="$(printf "%s" "$url" | sed -n "s#^https://raw\\.githubusercontent\\.com/[^/]*/[^/]*/\\([^/]*\\)/.*#\\1#p")"\nrelative_path="$(printf "%s" "$url" | sed -n "s#^https://raw\\.githubusercontent\\.com/[^/]*/[^/]*/[^/]*/##p")"\n[[ -n "$repo_slug" && -n "$requested_ref" && -n "$relative_path" ]] || exit 1\ncase "$repo_slug" in\n  bright-builds-llc/bright-builds-rules)\n    source_root="${FAKE_CURL_CURRENT_SOURCE_ROOT}"\n    ;;\n  bright-builds-llc/coding-and-architecture-requirements)\n    if [[ "$relative_path" == "scripts/manage-downstream.sh" ]]; then\n      source_root="${FAKE_CURL_LEGACY_SCRIPT_SOURCE_ROOT}"\n    else\n      source_root="${FAKE_CURL_LEGACY_SOURCE_ROOT}"\n    fi\n    ;;\n  *)\n    source_root=""\n    ;;\nesac\nif [[ -n "${FAKE_CURL_PRE_LOCAL_STANDARDS_REF:-}" && "$requested_ref" == "${FAKE_CURL_PRE_LOCAL_STANDARDS_REF}" && -n "${FAKE_CURL_PRE_LOCAL_STANDARDS_SOURCE_ROOT:-}" ]]; then\n  source_root="${FAKE_CURL_PRE_LOCAL_STANDARDS_SOURCE_ROOT}"\nfi\nif [[ -z "$source_root" ]]; then\n  printf "curl: (22) The requested URL returned error: 404\\n" >&2\n  exit 22\nfi\nif [[ -n "${FAKE_CURL_STALE_REF:-}" && "$repo_slug" == "bright-builds-llc/coding-and-architecture-requirements" && "$requested_ref" == "${FAKE_CURL_STALE_REF}" ]]; then\n  printf "curl: (22) The requested URL returned error: 404\\n" >&2\n  exit 22\nfi\nif "${REAL_GIT_PATH}" -C "$source_root" rev-parse --verify "${requested_ref}^{commit}" >/dev/null 2>&1; then\n  if "${REAL_GIT_PATH}" -C "$source_root" cat-file -e "${requested_ref}:${relative_path}" >/dev/null 2>&1; then\n    "${REAL_GIT_PATH}" -C "$source_root" show "${requested_ref}:${relative_path}" > "$output"\n    exit 0\n  fi\nfi\nif [[ -f "${source_root}/${relative_path}" ]]; then\n  cp "${source_root}/${relative_path}" "$output"\n  exit 0\nfi\nprintf "curl: (22) The requested URL returned error: 404\\n" >&2\nexit 22\n'
+	cp "${repo_root}/scripts/test-support/fake-remote-curl.sh" "${bin_dir}/curl"
 	chmod +x "${bin_dir}/curl"
-	write_file "${bin_dir}/git" $'#!/usr/bin/env bash\nset -euo pipefail\nif [[ "${1:-}" == "ls-remote" && "${2:-}" == "https://github.com/bright-builds-llc/bright-builds-rules.git" ]]; then\n  ref="${3:-}"\n  [[ -n "$ref" ]] || exit 1\n  commit="$("${REAL_GIT_PATH}" -C "${FAKE_GIT_SOURCE_ROOT}" rev-parse "${ref}^{commit}")"\n  printf "%s\\t%s\\n" "$commit" "$ref"\n  exit 0\nfi\nexec "${REAL_GIT_PATH}" "$@"\n'
+	write_file "${bin_dir}/git" $'#!/usr/bin/env bash\nset -euo pipefail\nif [[ "${1:-}" == "ls-remote" && "${2:-}" == "https://github.com/bright-builds-llc/bright-builds-rules.git" ]]; then\n  ref="${3:-}"\n  [[ -n "$ref" ]] || exit 1\n  commit="$("${REAL_GIT_PATH}" -C "${FAKE_GIT_SOURCE_ROOT}" rev-parse "${ref}^{commit}")"\n  printf "%s\\t%s\\n" "$commit" "$ref"\n  exit 0\nfi\nif [[ "${1:-}" == "push" && -n "${FAKE_GIT_PUSH_LOG:-}" ]]; then\n  printf "%s\\n" "$*" >> "${FAKE_GIT_PUSH_LOG}"\nfi\nexec "${REAL_GIT_PATH}" "$@"\n'
 	chmod +x "${bin_dir}/git"
 	FAKE_CURL_CURRENT_SOURCE_ROOT="$current_source_root"
 	FAKE_CURL_LEGACY_SOURCE_ROOT="$legacy_source_root"
@@ -410,7 +410,15 @@ create_fake_curl_bin() {
 	FAKE_CURL_STALE_REF="$stale_ref"
 	FAKE_CURL_PRE_LOCAL_STANDARDS_REF="$pre_local_standards_ref"
 	FAKE_CURL_PRE_LOCAL_STANDARDS_SOURCE_ROOT="$pre_local_standards_source_root"
+	FAKE_CURL_FAIL_PATH=""
+	FAKE_CURL_FAIL_START_ATTEMPT=""
+	FAKE_CURL_FAIL_ATTEMPTS=""
+	FAKE_CURL_EMPTY_PATH=""
+	FAKE_CURL_EMPTY_START_ATTEMPT=""
+	FAKE_CURL_ATTEMPT_STATE_DIR="${bin_dir}/curl-attempts"
+	FAKE_CURL_ATTEMPT_LOG="${bin_dir}/curl-attempts.log"
 	FAKE_GIT_SOURCE_ROOT="$current_source_root"
+	FAKE_GIT_PUSH_LOG=""
 	REAL_GIT_PATH="$real_git_path"
 	export FAKE_CURL_CURRENT_SOURCE_ROOT
 	export FAKE_CURL_LEGACY_SOURCE_ROOT
@@ -418,7 +426,15 @@ create_fake_curl_bin() {
 	export FAKE_CURL_STALE_REF
 	export FAKE_CURL_PRE_LOCAL_STANDARDS_REF
 	export FAKE_CURL_PRE_LOCAL_STANDARDS_SOURCE_ROOT
+	export FAKE_CURL_FAIL_PATH
+	export FAKE_CURL_FAIL_START_ATTEMPT
+	export FAKE_CURL_FAIL_ATTEMPTS
+	export FAKE_CURL_EMPTY_PATH
+	export FAKE_CURL_EMPTY_START_ATTEMPT
+	export FAKE_CURL_ATTEMPT_STATE_DIR
+	export FAKE_CURL_ATTEMPT_LOG
 	export FAKE_GIT_SOURCE_ROOT
+	export FAKE_GIT_PUSH_LOG
 	export REAL_GIT_PATH
 }
 
@@ -917,6 +933,67 @@ test_falls_back_to_pull_request_when_direct_push_fails() {
 	assert_ref_exists "$remote_path" "refs/heads/bright-builds/auto-update"
 }
 
+test_managed_source_download_failure_stops_before_publish() {
+	local bundle_root=""
+	local repo_path=""
+	local remote_path=""
+	local fake_bin=""
+	local fake_gh_log=""
+	local fake_git_push_log=""
+	local architecture_hash=""
+	local audit_hash=""
+	local initial_commit=""
+	local remote_commit=""
+	local commit_count=""
+	local architecture_attempts=""
+	local worktree_status=""
+
+	bundle_root="$(create_source_bundle managed-source-download-failure)"
+	repo_path="$(create_repo managed-source-download-failure-repo)"
+	remote_path="$(create_bare_remote managed-source-download-failure-origin)"
+	fake_bin="${temp_root}/managed-source-download-failure-bin"
+	fake_gh_log="${temp_root}/managed-source-download-failure-gh.log"
+	fake_git_push_log="${temp_root}/managed-source-download-failure-git-push.log"
+
+	init_git_repo "$repo_path"
+	git -C "$repo_path" remote add origin "$remote_path"
+	install_auto_update_repo "$bundle_root" "$repo_path"
+	commit_all "$repo_path" "Initial managed install"
+	git -C "$repo_path" push -u origin main >/dev/null
+	architecture_hash="$(git -C "$repo_path" hash-object standards/core/architecture.md)"
+	audit_hash="$(git -C "$repo_path" hash-object bright-builds-rules.audit.md)"
+	initial_commit="$(git -C "$repo_path" rev-parse HEAD)"
+	create_fake_curl_bin "$fake_bin" "$bundle_root"
+	create_fake_gh_bin "$fake_bin" "$fake_gh_log"
+	write_file "$fake_gh_log" ""
+	write_file "$fake_git_push_log" ""
+	FAKE_GIT_PUSH_LOG="$fake_git_push_log"
+	FAKE_CURL_FAIL_PATH="standards/core/architecture.md"
+	FAKE_CURL_FAIL_START_ATTEMPT="3"
+	FAKE_CURL_FAIL_ATTEMPTS="always"
+	export FAKE_GIT_PUSH_LOG FAKE_CURL_FAIL_PATH FAKE_CURL_FAIL_START_ATTEMPT FAKE_CURL_FAIL_ATTEMPTS
+
+	run_auto_update "$repo_path" "$fake_bin"
+	assert_eq "$run_status" "1" "exhausted managed-source retries should fail auto-update"
+	assert_contains "$run_output" "unable to download managed source standards/core/architecture.md" "auto-update failure should identify the required source path"
+	assert_contains "$run_output" "error: update failed" "auto-update should stop at the manager failure boundary"
+	assert_eq "$(git -C "$repo_path" hash-object standards/core/architecture.md)" "$architecture_hash" "failed auto-update should preserve local managed content"
+	assert_eq "$(git -C "$repo_path" hash-object bright-builds-rules.audit.md)" "$audit_hash" "failed auto-update should preserve local audit metadata"
+	remote_commit="$(git --git-dir="$remote_path" rev-parse refs/heads/main)"
+	assert_eq "$remote_commit" "$initial_commit" "failed auto-update should preserve the remote default branch"
+	commit_count="$(git -C "$repo_path" rev-list --count HEAD)"
+	assert_eq "$commit_count" "1" "failed auto-update should not create a local update commit"
+	worktree_status="$(git -C "$repo_path" status --short --untracked-files=all)"
+	assert_eq "$worktree_status" "" "failed auto-update should leave the downstream worktree unchanged"
+	assert_file_not_contains "$fake_git_push_log" "push" "failed auto-update should not attempt a direct or fallback push"
+	assert_file_not_contains "$fake_gh_log" "pr create" "failed auto-update should not create a pull request"
+	if git --git-dir="$remote_path" show-ref --verify --quiet refs/heads/bright-builds/auto-update; then
+		fail "failed auto-update should not create the fallback branch"
+	fi
+	architecture_attempts="$(awk -F '\t' '$1 == "standards/core/architecture.md" { count++ } END { print count + 0 }' "$FAKE_CURL_ATTEMPT_LOG")"
+	assert_eq "$architecture_attempts" "6" "auto-update should perform two comparison fetches before four bounded required attempts"
+}
+
 test_fails_when_repo_state_is_blocked() {
 	local bundle_root=""
 	local repo_path=""
@@ -979,6 +1056,7 @@ test_legacy_helper_falls_back_from_stale_exact_commit_during_status
 test_missing_token_stops_only_when_workflow_changes
 test_workflow_permission_failure_skips_pull_request_fallback
 test_falls_back_to_pull_request_when_direct_push_fails
+test_managed_source_download_failure_stops_before_publish
 test_fails_when_repo_state_is_blocked
 test_fails_when_repo_state_is_blocked_by_managed_file_drift
 
