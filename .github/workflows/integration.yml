@@ -59,7 +59,7 @@ jobs:
 
       - name: Test downstream manager
         if: matrix.suite == 'downstream-manager'
-        run: bash ./scripts/test-manage-downstream.sh
+        run: env -u GITHUB_ACTIONS bash ./scripts/test-manage-downstream.sh
 
       - name: Test managed auto-update
         if: matrix.suite == 'auto-update'
