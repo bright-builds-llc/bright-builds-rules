@@ -74,6 +74,7 @@ rg -Fq 'Before plan, review, implementation, or audit work:' templates/AGENTS.md
 rg -Fq 'Use this routing map when deciding what to load next:' templates/AGENTS.md
 rg -Fq 'use the managed standards page `standards/core/frontend-ui.md`' templates/AGENTS.md
 rg -Fq 'use the managed standards page `standards/core/verification.md`' templates/AGENTS.md
+rg -Fq 'bun scripts/bright-builds-check.ts all' templates/AGENTS.md
 rg -Fq '`AGENTS.md` is the entrypoint for repo-local instructions, not a complete Bright Builds Rules spec.' templates/AGENTS.bright-builds.md
 rg -Fq '## Routing hints' templates/AGENTS.bright-builds.md
 rg -Fq 'Use the managed standards page `standards/core/frontend-ui.md` for frontend visual defaults, theme defaults, dark-mode decisions, and public open-source source/FOSS/maintainer disclosure.' templates/AGENTS.bright-builds.md
@@ -109,13 +110,23 @@ rg -Fq 'Do not fall back to bare `mdformat` or another generic formatter when th
 rg -Fq 'Before substantive implementation work, sync first: fetch remote state before editing;' templates/AGENTS.bright-builds.md
 rg -Fq '`git pull --rebase` when local guidance uses it' templates/AGENTS.bright-builds.md
 rg -Fq 'Never fall back to bare `mdformat` when required plugins are unavailable.' templates/AGENTS.bright-builds.md
+rg -Fq 'optional user-owned `.bright-builds-rules-checks.tsv`' templates/AGENTS.bright-builds.md
 rg -Fq 'Before substantive implementation work, sync first: fetch remote state before editing;' templates/CONTRIBUTING.md
 rg -Fq '`git pull --rebase` when local guidance uses it' templates/CONTRIBUTING.md
 rg -Fq 'Never fall back to bare `mdformat` when required plugins are unavailable.' templates/CONTRIBUTING.md
+rg -Fq 'Run `bun scripts/bright-builds-check.ts all`' templates/CONTRIBUTING.md
+rg -Fq '`bun scripts/bright-builds-check.ts all` ran and passed' templates/pull_request_template.md
 rg -Fq 'After install or update, treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds Rules spec.' AI-ADOPTION.md
 rg -Fq 'Preserve any downstream `.mdformat.toml` and arbitrary user-authored Markdown.' AI-ADOPTION.md
+rg -Fq '`Checks CI: enabled|disabled`' AI-ADOPTION.md
+rg -Fq '`scripts/bright-builds-check.ts`' AI-ADOPTION.md
 rg -Fq 'Treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds Rules spec.' README.md
 rg -Fq 'Bright Builds owns only its managed Markdown.' README.md
+rg -Fq '## Managed Starter Checks' README.md
+rg -Fq 'check-id<TAB>repo-relative-exact-path<TAB>required reason' README.md
+rg -Fq 'bun scripts/bright-builds-check.ts file-lengths' standards/core/code-shape.md
+rg -Fq 'bun scripts/bright-builds-check.ts lessons' standards/core/local-guidance.md
+rg -Fq 'When the managed `scripts/bright-builds-check.ts` exists' standards/core/verification.md
 rg -Fq 'mdformat 1.0.0' .mdformat.toml
 rg -Fq 'mdformat-frontmatter 2.1.2' .mdformat.toml
 rg -Fq 'mdformat-gfm 1.0.0' .mdformat.toml

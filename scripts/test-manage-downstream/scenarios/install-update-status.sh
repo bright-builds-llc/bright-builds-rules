@@ -10,6 +10,8 @@ test_fresh_install_and_reinstall() {
 	assert_contains "$run_output" "README badge block: not applicable" "fresh repo should report README badges as not applicable"
 	assert_contains "$run_output" "Auto-update: disabled" "fresh repo should default auto-update to disabled"
 	assert_contains "$run_output" "Auto-update reason: default disabled" "fresh repo should explain the disabled auto-update default"
+	assert_contains "$run_output" "Checks CI: disabled" "non-GitHub fresh repos should disable managed checks CI"
+	assert_contains "$run_output" "Checks CI reason: non-GitHub repository" "fresh status should explain why checks CI is disabled"
 
 	run_manage "$repo_path" install
 	assert_eq "$run_status" "0" "fresh install should succeed"
@@ -19,6 +21,7 @@ test_fresh_install_and_reinstall() {
 	assert_file_exists "${repo_path}/CONTRIBUTING.md"
 	assert_file_exists "${repo_path}/.github/pull_request_template.md"
 	assert_file_exists "${repo_path}/bright-builds-rules.audit.md"
+	assert_file_exists "${repo_path}/scripts/bright-builds-check.ts"
 	assert_file_exists "${repo_path}/standards-overrides.md"
 	assert_managed_standards_exist "$repo_path"
 	assert_file_contains "${repo_path}/standards/languages/typescript-javascript.md" "Do Not Add Python Scripts To Bun-Friendly JS/TS Repositories" "fresh install should copy the TypeScript/JavaScript standards page"
@@ -35,6 +38,8 @@ test_fresh_install_and_reinstall() {
 	assert_file_missing "${repo_path}/README.md"
 	assert_file_missing "${repo_path}/scripts/bright-builds-auto-update.sh"
 	assert_file_missing "${repo_path}/.github/workflows/bright-builds-auto-update.yml"
+	assert_file_missing "${repo_path}/.github/workflows/bright-builds-checks.yml"
+	assert_file_missing "${repo_path}/.bright-builds-rules-checks.tsv"
 	assert_markdown_is_mdformat_clean \
 		"fresh install should write mdformat-clean downstream Markdown" \
 		"${repo_path}/AGENTS.md" \
@@ -127,6 +132,10 @@ test_fresh_install_and_reinstall() {
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "This audit trail is managed upstream by \`bright-builds-rules\`." "audit trail should direct fixes upstream"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "Auto-update: \`disabled\`" "audit trail should record the disabled auto-update setting"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "Auto-update reason: \`default disabled\`" "audit trail should record why auto-update stayed disabled"
+	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "Checks CI: \`disabled\`" "audit trail should record disabled checks CI"
+	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "Checks CI reason: \`non-GitHub repository\`" "audit trail should record the checks CI reason"
+	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "\`scripts/bright-builds-check.ts\`" "audit trail should list the managed checker"
+	assert_file_contains "${repo_path}/scripts/bright-builds-check.ts" "$(managed_file_marker "scripts/bright-builds-check.ts")" "checker should include the TypeScript whole-file marker"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "\`standards/languages/typescript-javascript.md\`" "audit trail should list the managed standards corpus"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "$(managed_file_marker "bright-builds-rules.audit.md")" "audit trail should include the whole-file managed marker"
 
@@ -187,8 +196,16 @@ test_trusted_repo_owner_enables_auto_update_by_default() {
 	assert_eq "$run_status" "0" "trusted-owner install should succeed"
 	assert_file_exists "${repo_path}/scripts/bright-builds-auto-update.sh"
 	assert_file_exists "${repo_path}/.github/workflows/bright-builds-auto-update.yml"
+	assert_file_exists "${repo_path}/scripts/bright-builds-check.ts"
+	assert_file_exists "${repo_path}/.github/workflows/bright-builds-checks.yml"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "Auto-update: \`enabled\`" "audit should record enabled auto-update"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "Auto-update reason: \`trusted repo owner pRizz\`" "audit should record the repo-owner trust decision"
+	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "Checks CI: \`enabled\`" "GitHub-backed installs should record enabled checks CI"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-checks.yml" "bun scripts/bright-builds-check.ts all" "checks workflow should run the managed checker"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-checks.yml" "bun-version: \"1.3.9\"" "checks workflow should pin Bun"
+	assert_command_succeeds \
+		"installed starter checker should run successfully" \
+		bash -c 'cd "$1" && bun scripts/bright-builds-check.ts all' _ "$repo_path"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "use the \`openlinks-identity-presence\` skill whenever the task touches README/docs" "matching owners should receive the OpenLinks identity guidance"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "repo owner resolves to \`pRizz\`" "sidecar should explain why the OpenLinks guidance applies"
 	assert_line_equals "${repo_path}/scripts/bright-builds-auto-update.sh" "1" "#!/usr/bin/env bash" "auto-update helper should keep the shebang on line 1"
@@ -218,6 +235,61 @@ test_trusted_github_user_enables_auto_update_by_default() {
 	assert_file_exists "${repo_path}/scripts/bright-builds-auto-update.sh"
 	assert_file_exists "${repo_path}/.github/workflows/bright-builds-auto-update.yml"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "Auto-update reason: \`trusted GitHub user pRizz\`" "audit should record the GitHub-user trust decision"
+}
+
+test_managed_checks_conflicts_force_repair_and_uninstall() {
+	local repo_path=""
+	local conflict_repo_path=""
+	local backup_file=""
+
+	repo_path="$(create_repo managed-checks-lifecycle)"
+	init_git_repo_with_origin "$repo_path" "git@github.com:someone-else/managed-checks-lifecycle.git"
+
+	run_manage "$repo_path" install
+	assert_eq "$run_status" "0" "GitHub-backed checks lifecycle install should succeed"
+	assert_file_exists "${repo_path}/scripts/bright-builds-check.ts"
+	assert_file_exists "${repo_path}/.github/workflows/bright-builds-checks.yml"
+
+	append_file "${repo_path}/scripts/bright-builds-check.ts" $'\nconsole.log("downstream drift");\n'
+	run_manage "$repo_path" status
+	assert_eq "$run_status" "0" "drifted checker status should complete"
+	assert_contains "$run_output" "Repo state: blocked" "a drifted managed checker should block updates"
+	assert_contains "$run_output" "Blocking paths: scripts/bright-builds-check.ts" "status should identify the drifted checker"
+
+	run_manage "$repo_path" install --force
+	assert_eq "$run_status" "0" "force install should back up and repair a drifted checker"
+	backup_file="$(find "${repo_path}/.bright-builds-rules-backups" -type f -path '*/scripts/bright-builds-check.ts' | head -n 1)"
+	[[ -n "$backup_file" ]] || fail "force install should back up the drifted checker"
+	assert_file_not_contains "${repo_path}/scripts/bright-builds-check.ts" "downstream drift" "force install should restore the managed checker"
+
+	append_file "${repo_path}/.github/workflows/bright-builds-checks.yml" $'\n# downstream workflow drift\n'
+	run_manage "$repo_path" status
+	assert_eq "$run_status" "0" "drifted checks workflow status should complete"
+	assert_contains "$run_output" "Repo state: blocked" "a drifted managed checks workflow should block updates"
+	assert_contains "$run_output" ".github/workflows/bright-builds-checks.yml" "status should identify the drifted checks workflow"
+
+	run_manage "$repo_path" install --force
+	assert_eq "$run_status" "0" "force install should back up and repair a drifted checks workflow"
+	backup_file="$(find "${repo_path}/.bright-builds-rules-backups" -type f -path '*/.github/workflows/bright-builds-checks.yml' | head -n 1)"
+	[[ -n "$backup_file" ]] || fail "force install should back up the drifted checks workflow"
+	assert_file_not_contains "${repo_path}/.github/workflows/bright-builds-checks.yml" "downstream workflow drift" "force install should restore the managed checks workflow"
+
+	write_file \
+		"${repo_path}/.bright-builds-rules-checks.tsv" \
+		$'file-lengths\tscripts/bright-builds-check.ts\tTemporary local exception\n'
+	run_manage "$repo_path" uninstall
+	assert_eq "$run_status" "0" "uninstall should remove clean managed checks"
+	assert_file_missing "${repo_path}/scripts/bright-builds-check.ts"
+	assert_file_missing "${repo_path}/.github/workflows/bright-builds-checks.yml"
+	assert_file_exists "${repo_path}/.bright-builds-rules-checks.tsv"
+
+	conflict_repo_path="$(create_repo managed-checks-conflict)"
+	init_git_repo_with_origin "$conflict_repo_path" "git@github.com:someone-else/managed-checks-conflict.git"
+	write_file "${conflict_repo_path}/.github/workflows/bright-builds-checks.yml" $'name: Local checks\n'
+	run_manage "$conflict_repo_path" status
+	assert_eq "$run_status" "0" "checks workflow conflict status should complete"
+	assert_contains "$run_output" "Repo state: blocked" "an existing checks workflow should block fresh install"
+	assert_contains "$run_output" ".github/workflows/bright-builds-checks.yml" "status should identify the checks workflow conflict"
 }
 
 test_peter_ryszkiewicz_owner_gets_openlinks_identity_guidance() {
@@ -453,7 +525,11 @@ test_update_backfills_missing_local_standards() {
 	run_manage "$repo_path" update
 	assert_eq "$run_status" "0" "update should backfill missing local standards"
 	assert_managed_standards_exist "$repo_path"
+	assert_file_exists "${repo_path}/scripts/bright-builds-check.ts"
+	assert_file_missing "${repo_path}/.github/workflows/bright-builds-checks.yml"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "\`standards/languages/typescript-javascript.md\`" "update should add standards to the audit manifest"
+	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "\`scripts/bright-builds-check.ts\`" "update should add the checker to the audit manifest"
+	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "Checks CI: \`disabled\`" "non-GitHub updates should record disabled checks CI"
 }
 
 test_pre_frontend_ui_audit_manifest_remains_updateable() {

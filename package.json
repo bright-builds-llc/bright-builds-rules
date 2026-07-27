@@ -14,6 +14,7 @@
     "hooks:install": "bun scripts/install-git-hooks.ts",
     "typecheck": "tsc --noEmit",
     "test:badges": "bun test scripts/site-badge.test.ts scripts/flat-site-badge.test.ts scripts/readme-badge-assets.test.ts",
+    "test:checks": "bun test scripts/bright-builds-check.test.ts",
     "test:context-cost": "bun test scripts/context-cost.test.ts"
   },
   "devDependencies": {

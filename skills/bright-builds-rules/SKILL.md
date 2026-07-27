@@ -55,6 +55,8 @@ Use this skill when the user wants to:
    - use `install` when status reports `Repo state: installable`
    - use `update` when status reports `Repo state: installed`
    - expect install/update to copy the managed standards corpus under downstream `standards/`
+   - expect install/update to manage `scripts/bright-builds-check.ts`, and to manage `.github/workflows/bright-builds-checks.yml` only for verifiably GitHub-backed repositories
+   - preserve the optional user-owned `.bright-builds-rules-checks.tsv`
    - stop and explain blocking files when status reports `Repo state: blocked`
    - never choose `install --force` automatically
    - if the user explicitly opts into replacement, treat `install --force` as a backup-first merge-assisted path: inspect `.bright-builds-rules-backups/<UTC-timestamp>/`, compare the backups with the fresh managed outputs, and reapply only clearly portable downstream-specific logic or content into safe local extension points

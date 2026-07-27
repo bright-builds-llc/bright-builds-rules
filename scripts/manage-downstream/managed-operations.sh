@@ -51,6 +51,33 @@ sync_auto_update_files() {
 	fi
 }
 
+sync_checks_workflow() {
+	local state=""
+	local managed_files_markdown=""
+
+	if [[ "$checks_ci_mode" == "enabled" ]]; then
+		write_rendered_file "$checks_workflow_source" "$checks_workflow_destination"
+		return
+	fi
+
+	if [[ "$current_checks_ci" != "enabled" ]]; then
+		return
+	fi
+	managed_files_markdown="$(build_installed_managed_files_markdown)"
+	state="$(resolve_whole_file_managed_state "$checks_workflow_source" "$checks_workflow_destination" "$managed_files_markdown")"
+	case "$state" in
+	marked | legacy)
+		rm -f "${repo_root}/${checks_workflow_destination}"
+		note "Removed ${checks_workflow_destination}"
+		rmdir "${repo_root}/.github/workflows" 2>/dev/null || true
+		rmdir "${repo_root}/.github" 2>/dev/null || true
+		;;
+	drifted)
+		note "Skipped ${checks_workflow_destination} because it has downstream edits"
+		;;
+	esac
+}
+
 print_legacy_auto_update_token_repair_advisory() {
 	local target_repo="${GITHUB_REPOSITORY:-OWNER/REPO}"
 	local token_file="/Users/peterryszkiewicz/Repos/BRIGHT_BUILDS_PUSH_TOKEN.txt"
@@ -61,11 +88,15 @@ print_legacy_auto_update_token_repair_advisory() {
 	command -v git >/dev/null 2>&1 || return 0
 	git -C "$repo_root" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
 
-	workflow_status="$(git -C "$repo_root" status --short --untracked-files=all -- "$auto_update_workflow_destination")"
+	workflow_status="$(
+		git -C "$repo_root" status --short --untracked-files=all -- \
+			"$auto_update_workflow_destination" \
+			"$checks_workflow_destination"
+	)"
 	[[ -n "$workflow_status" ]] || return 0
 
 	cat >&2 <<EOF
-Legacy Bright Builds workflow notice: this update changes ${auto_update_workflow_destination}.
+Legacy Bright Builds workflow notice: this update changes one or more managed workflows.
 If the upcoming push fails because BRIGHT_BUILDS_PUSH_TOKEN is missing or lacks workflows permission, run:
 
 chmod 600 ${token_file}
@@ -103,6 +134,11 @@ record_legacy_auto_update_helper_staging_need() {
 }
 
 stage_legacy_auto_update_standards_for_github_actions() {
+	local managed_paths=(
+		"${managed_standards_paths[@]}"
+		"$checks_script_destination"
+	)
+
 	[[ "$legacy_auto_update_helper_needs_standards_staging" -eq 1 ]] || return 0
 	[[ "${GITHUB_ACTIONS:-}" == "true" ]] || return 0
 	command -v git >/dev/null 2>&1 || return 0
@@ -111,8 +147,13 @@ stage_legacy_auto_update_standards_for_github_actions() {
 		return 0
 	fi
 
-	git -C "$repo_root" add -f -A -- "${managed_standards_paths[@]}"
-	note "Staged managed standards for legacy auto-update helper compatibility."
+	if [[ -e "${repo_root}/${checks_workflow_destination}" ]] ||
+		git -C "$repo_root" ls-files --error-unmatch -- "$checks_workflow_destination" >/dev/null 2>&1; then
+		managed_paths+=("$checks_workflow_destination")
+	fi
+
+	git -C "$repo_root" add -f -A -- "${managed_paths[@]}"
+	note "Staged managed standards and starter checks for legacy auto-update helper compatibility."
 }
 
 write_or_update_readme_file() {
@@ -405,6 +446,8 @@ resolve_current_install_metadata() {
 	current_exact_commit=""
 	current_auto_update=""
 	current_auto_update_reason=""
+	current_checks_ci=""
+	current_checks_ci_reason=""
 	current_last_operation=""
 	current_last_updated_utc=""
 	current_audit_destination=""
@@ -425,6 +468,8 @@ resolve_current_install_metadata() {
 	current_entrypoint="$(extract_markdown_value "${repo_root}/${current_audit_destination}" "Canonical entrypoint")"
 	current_auto_update="$(extract_markdown_value "${repo_root}/${current_audit_destination}" "Auto-update")"
 	current_auto_update_reason="$(extract_markdown_value "${repo_root}/${current_audit_destination}" "Auto-update reason")"
+	current_checks_ci="$(extract_markdown_value "${repo_root}/${current_audit_destination}" "Checks CI")"
+	current_checks_ci_reason="$(extract_markdown_value "${repo_root}/${current_audit_destination}" "Checks CI reason")"
 	current_last_operation="$(extract_markdown_value "${repo_root}/${current_audit_destination}" "Last operation")"
 	current_last_updated_utc="$(extract_markdown_value "${repo_root}/${current_audit_destination}" "Last updated (UTC)")"
 

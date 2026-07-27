@@ -319,4 +319,4 @@ checkout.rs
 
 - Exceptions or escape hatches: Some files act as intentionally central registries or protocol definitions. Keep those rare, obvious, and documented.
 - Review questions: Does the file contain multiple clusters of logic that would be easier to navigate as separate modules? Are tests, adapters, and domain rules all mixed together?
-- Automation potential: File-length checks are easy to automate; good module boundaries are not.
+- Automation potential: The managed downstream command `bun scripts/bright-builds-check.ts file-lengths` fails at 629 physical lines for common tracked source-file extensions while excluding conventional dependency and build directories. A reasoned exact-path entry in the optional user-owned `.bright-builds-rules-checks.tsv` preserves intentional exceptions. Good module boundaries still require review.

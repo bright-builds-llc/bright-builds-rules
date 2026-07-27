@@ -9,6 +9,8 @@ strip_whole_file_managed_markers() {
 		"CONTRIBUTING.md" \
 		".github/pull_request_template.md" \
 		"bright-builds-rules.audit.md" \
+		"scripts/bright-builds-check.ts" \
+		".github/workflows/bright-builds-checks.yml" \
 		"scripts/bright-builds-auto-update.sh" \
 		".github/workflows/bright-builds-auto-update.yml"; do
 		file_path="${repo_path}/${relative_destination}"

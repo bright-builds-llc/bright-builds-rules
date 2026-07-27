@@ -633,8 +633,12 @@ test_refreshes_managed_standards_files() {
 	fake_bin="${temp_root}/standards-refresh-bin"
 
 	init_git_repo "$repo_path"
-	git -C "$repo_path" remote add origin "$remote_path"
+	git -C "$repo_path" remote add origin "https://github.com/example/standards-refresh.git"
+	git -C "$repo_path" config \
+		"url.file://${remote_path}.insteadOf" \
+		"https://github.com/example/standards-refresh.git"
 	install_auto_update_repo "$bundle_root" "$repo_path"
+	assert_file_exists "${repo_path}/.github/workflows/bright-builds-checks.yml"
 	write_file "${repo_path}/.codex/tasks/lessons.md" $'# Lessons\n\n## lesson-local | 2026-07-19\n\n1. Date: 2026-07-19\n2. What went wrong: Local fixture.\n3. Preventive rule: Preserve this file.\n4. Trigger signal: A managed update runs.\n'
 	write_file "${repo_path}/.codex/tasks/lesson-audits.md" $'# Lesson Audits\n\n## lesson-audit-local | 2026-07-19\n\n- Retained: lesson-local\n'
 	write_file "${repo_path}/.codex/tasks/lessons-archive.md" $'# Lesson Archive\n\n## lesson-archived-local | 2026-07-19\n\n- Archive reason: Fixture.\n'
@@ -645,6 +649,8 @@ test_refreshes_managed_standards_files() {
 	git -C "$repo_path" push -u origin main >/dev/null
 	printf '\n- Added auto-update lesson-standard marker.\n' >>"${bundle_root}/standards/core/local-guidance.md"
 	printf '\n- Added auto-update lesson-sidecar marker.\n' >>"${bundle_root}/templates/AGENTS.bright-builds.md"
+	printf '\n// Added scheduled checker marker.\n' >>"${bundle_root}/templates/bright-builds-check.ts"
+	printf '\n# Added scheduled checks-workflow marker.\n' >>"${bundle_root}/templates/bright-builds-checks.yml"
 	git -C "$bundle_root" add -A
 	git -C "$bundle_root" commit -m "Standards update" >/dev/null
 	create_fake_curl_bin "$fake_bin" "$bundle_root"
@@ -654,11 +660,19 @@ test_refreshes_managed_standards_files() {
 	assert_contains "$run_output" "Pushed managed updates directly to main" "standards auto-update should use the direct push path"
 	assert_file_contains "${repo_path}/standards/core/local-guidance.md" "Added auto-update lesson-standard marker." "auto-update should refresh the managed lesson-loading standard"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Added auto-update lesson-sidecar marker." "auto-update should refresh the managed lesson-loading sidecar"
+	assert_file_contains "${repo_path}/scripts/bright-builds-check.ts" "Added scheduled checker marker." "auto-update should refresh the managed starter checker"
+	assert_file_contains "${repo_path}/.github/workflows/bright-builds-checks.yml" "Added scheduled checks-workflow marker." "auto-update should refresh the managed checks workflow"
 	assert_eq "$(git -C "$repo_path" hash-object .codex/tasks/lessons.md)" "$lessons_hash" "auto-update should preserve downstream lessons byte-for-byte"
 	assert_eq "$(git -C "$repo_path" hash-object .codex/tasks/lesson-audits.md)" "$audit_hash" "auto-update should preserve downstream lesson audits byte-for-byte"
 	assert_eq "$(git -C "$repo_path" hash-object .codex/tasks/lessons-archive.md)" "$archive_hash" "auto-update should preserve downstream lesson archives byte-for-byte"
 	latest_subject="$(git --git-dir="$remote_path" log --format=%s -1 refs/heads/main)"
 	assert_eq "$latest_subject" "chore: update Bright Builds Rules" "standards refresh should create the standard auto-update commit"
+	if ! git --git-dir="$remote_path" show refs/heads/main:scripts/bright-builds-check.ts | grep -Fq "Added scheduled checker marker."; then
+		fail "scheduled auto-update should commit the refreshed starter checker"
+	fi
+	if ! git --git-dir="$remote_path" show refs/heads/main:.github/workflows/bright-builds-checks.yml | grep -Fq "Added scheduled checks-workflow marker."; then
+		fail "scheduled auto-update should commit the refreshed checks workflow"
+	fi
 }
 
 test_legacy_helper_without_standards_staging_commits_backfilled_standards() {
@@ -693,17 +707,22 @@ test_legacy_helper_without_standards_staging_commits_backfilled_standards() {
 	assert_contains "$run_output" "Repo state: installed" "legacy helper should classify the old clean install as installed"
 	assert_contains "$run_output" "Legacy Bright Builds workflow notice" "current manager should warn legacy helpers before publishing a workflow change"
 	assert_contains "$run_output" "gh secret set BRIGHT_BUILDS_PUSH_TOKEN -R bright-builds-llc/test-repo" "legacy helper advisory should include the exact secret repair command"
-	assert_contains "$run_output" "Staged managed standards for legacy auto-update helper compatibility." "current manager should stage standards for the old helper"
+	assert_contains "$run_output" "Staged managed standards and starter checks for legacy auto-update helper compatibility." "current manager should stage standards and starter checks for the old helper"
 	assert_contains "$run_output" "Pushed managed updates directly to main" "legacy helper should publish the converged update"
 	assert_file_exists "${repo_path}/standards/languages/typescript-javascript.md"
+	assert_file_exists "${repo_path}/scripts/bright-builds-check.ts"
 	assert_file_contains "${repo_path}/CONTRIBUTING.md" "local managed standards pages" "update should refresh the old clean CONTRIBUTING block"
 	assert_file_contains "${repo_path}/scripts/bright-builds-auto-update.sh" "print_audit_manifest_paths" "updated helper should use manifest-based staging"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "\`standards/languages/typescript-javascript.md\`" "updated audit should list managed standards"
+	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "\`scripts/bright-builds-check.ts\`" "updated audit should list the managed starter checker"
 	if ! git --git-dir="$remote_path" ls-tree -r --name-only refs/heads/main | grep -Fxq "standards/languages/typescript-javascript.md"; then
 		fail "legacy helper update should commit the backfilled standards file"
 	fi
 	if ! git --git-dir="$remote_path" ls-tree -r --name-only refs/heads/main | grep -Fxq "standards/core/frontend-ui.md"; then
 		fail "legacy helper update should force-add ignored managed standards/core files"
+	fi
+	if ! git --git-dir="$remote_path" ls-tree -r --name-only refs/heads/main | grep -Fxq "scripts/bright-builds-check.ts"; then
+		fail "legacy helper update should commit the backfilled starter checker"
 	fi
 	commit_count="$(git -C "$repo_path" rev-list --count HEAD)"
 	assert_eq "$commit_count" "2" "legacy helper standards convergence should create one update commit"

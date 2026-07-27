@@ -184,7 +184,9 @@ render_template_file() {
 
 	{
 		while IFS= read -r line || [[ -n "$line" ]]; do
-			if [[ "$line" == "$managed_file_marker_placeholder" ]]; then
+			if [[ "$line" == "$managed_file_marker_placeholder" ||
+				"$line" == "# ${managed_file_marker_placeholder}" ||
+				"$line" == "// ${managed_file_marker_placeholder}" ]]; then
 				if [[ -n "$managed_file_marker_line" ]]; then
 					printf '%s\n' "$managed_file_marker_line"
 				fi
@@ -213,6 +215,8 @@ render_template_file() {
 			line="${line//REPLACE_WITH_MANAGED_SIDECAR_PATH/$sidecar_destination}"
 			line="${line//REPLACE_WITH_AUTO_UPDATE_MODE/$auto_update_mode}"
 			line="${line//REPLACE_WITH_AUTO_UPDATE_REASON/$auto_update_reason}"
+			line="${line//REPLACE_WITH_CHECKS_CI_MODE/$checks_ci_mode}"
+			line="${line//REPLACE_WITH_CHECKS_CI_REASON/$checks_ci_reason}"
 			line="${line//REPLACE_WITH_AUTO_UPDATE_SCRIPT_PATH/$auto_update_script_destination}"
 			line="${line//REPLACE_WITH_AUTO_UPDATE_BRANCH/$auto_update_branch}"
 			line="${line//REPLACE_WITH_AUTO_UPDATE_COMMIT_MESSAGE/$auto_update_commit_message}"
@@ -346,6 +350,8 @@ render_template_to_tmp_path_for_install_state() {
 	local compare_entrypoint="${current_entrypoint:-}"
 	local compare_auto_update_mode="${current_auto_update:-$auto_update_mode}"
 	local compare_auto_update_reason="${current_auto_update_reason:-$auto_update_reason}"
+	local compare_checks_ci_mode="${current_checks_ci:-$checks_ci_mode}"
+	local compare_checks_ci_reason="${current_checks_ci_reason:-$checks_ci_reason}"
 	local compare_owner_specific_guidance_markdown=""
 	local compare_last_operation="${current_last_operation:-}"
 	local compare_last_updated_utc="${current_last_updated_utc:-}"
@@ -358,6 +364,8 @@ render_template_to_tmp_path_for_install_state() {
 	local standards_index_url=""
 	local auto_update_mode=""
 	local auto_update_reason=""
+	local checks_ci_mode=""
+	local checks_ci_reason=""
 	local last_operation=""
 	local last_updated_utc=""
 	local downloaded_path=""
@@ -373,6 +381,8 @@ render_template_to_tmp_path_for_install_state() {
 	standards_index_url="$compare_entrypoint"
 	auto_update_mode="$compare_auto_update_mode"
 	auto_update_reason="$compare_auto_update_reason"
+	checks_ci_mode="$compare_checks_ci_mode"
+	checks_ci_reason="$compare_checks_ci_reason"
 	last_operation="$compare_last_operation"
 	last_updated_utc="$compare_last_updated_utc"
 
@@ -514,6 +524,7 @@ rewrite_rendered_file_for_legacy_identity() {
 					continue
 				fi
 				if [[ "$line" == 'auto_update_workflow_path=".github/workflows/bright-builds-auto-update.yml"' ||
+					"$line" == 'checks_workflow_path=".github/workflows/bright-builds-checks.yml"' ||
 					"$line" == 'bright_builds_push_token_file="/Users/peterryszkiewicz/Repos/BRIGHT_BUILDS_PUSH_TOKEN.txt"' ||
 					"$line" == 'direct_push_output_path="${tmp_dir}/direct-push.output"' ||
 					"$line" == 'fallback_push_output_path="${tmp_dir}/fallback-push.output"' ]]; then
@@ -523,6 +534,7 @@ rewrite_rendered_file_for_legacy_identity() {
 					"$line" == "push_failure_requires_token_repair() {" ||
 					"$line" == "run_git_push() {" ||
 					"$line" == "workflow_update_is_staged() {" ||
+					"$line" == "managed_workflow_update_is_staged() {" ||
 					"$line" == "fail_for_push_token() {" ]]; then
 					skip_legacy_helper_token_function=1
 					continue
@@ -539,6 +551,9 @@ rewrite_rendered_file_for_legacy_identity() {
 				*"standards/"*" \\")
 					continue
 					;;
+				*".github/workflows/bright-builds-checks.yml"* | *"scripts/bright-builds-check.ts"*)
+					continue
+					;;
 				esac
 				if [[ "$line" == 'legacy_audit_path="coding-and-architecture-requirements.audit.md"' ]]; then
 					continue
@@ -553,6 +568,7 @@ rewrite_rendered_file_for_legacy_identity() {
 					continue
 				fi
 				if [[ "$line" == 'if workflow_update_is_staged && [[ "${BRIGHT_BUILDS_PUSH_TOKEN_CONFIGURED:-}" == "false" ]]; then' ||
+					"$line" == 'if managed_workflow_update_is_staged && [[ "${BRIGHT_BUILDS_PUSH_TOKEN_CONFIGURED:-}" == "false" ]]; then' ||
 					"$line" == 'if push_failure_requires_token_repair "$direct_push_output_path"; then' ]]; then
 					skip_legacy_helper_token_block=1
 					continue
@@ -611,6 +627,8 @@ render_template_to_legacy_identity_tmp_path_for_install_state() {
 	local compare_entrypoint="${current_entrypoint:-}"
 	local compare_auto_update_mode="${current_auto_update:-$auto_update_mode}"
 	local compare_auto_update_reason="${current_auto_update_reason:-$auto_update_reason}"
+	local compare_checks_ci_mode="${current_checks_ci:-$checks_ci_mode}"
+	local compare_checks_ci_reason="${current_checks_ci_reason:-$checks_ci_reason}"
 	local compare_last_operation="${current_last_operation:-}"
 	local compare_last_updated_utc="${current_last_updated_utc:-}"
 	local compare_owner_specific_guidance_markdown=""
@@ -623,6 +641,8 @@ render_template_to_legacy_identity_tmp_path_for_install_state() {
 	local standards_index_url=""
 	local auto_update_mode=""
 	local auto_update_reason=""
+	local checks_ci_mode=""
+	local checks_ci_reason=""
 	local last_operation=""
 	local last_updated_utc=""
 	local audit_destination="$legacy_audit_destination"
@@ -642,6 +662,8 @@ render_template_to_legacy_identity_tmp_path_for_install_state() {
 	standards_index_url="$compare_entrypoint"
 	auto_update_mode="$compare_auto_update_mode"
 	auto_update_reason="$compare_auto_update_reason"
+	checks_ci_mode="$compare_checks_ci_mode"
+	checks_ci_reason="$compare_checks_ci_reason"
 	last_operation="$compare_last_operation"
 	last_updated_utc="$compare_last_updated_utc"
 
@@ -724,6 +746,8 @@ render_template_to_prerename_compat_tmp_path_for_install_state() {
 	local compare_entrypoint="${current_entrypoint:-}"
 	local compare_auto_update_mode="${current_auto_update:-$auto_update_mode}"
 	local compare_auto_update_reason="${current_auto_update_reason:-$auto_update_reason}"
+	local compare_checks_ci_mode="${current_checks_ci:-$checks_ci_mode}"
+	local compare_checks_ci_reason="${current_checks_ci_reason:-$checks_ci_reason}"
 	local compare_last_operation="${current_last_operation:-}"
 	local compare_last_updated_utc="${current_last_updated_utc:-}"
 	local compare_owner_specific_guidance_markdown=""
@@ -737,6 +761,8 @@ render_template_to_prerename_compat_tmp_path_for_install_state() {
 	local standards_index_url=""
 	local auto_update_mode=""
 	local auto_update_reason=""
+	local checks_ci_mode=""
+	local checks_ci_reason=""
 	local last_operation=""
 	local last_updated_utc=""
 	local audit_destination="$legacy_audit_destination"
@@ -761,6 +787,8 @@ render_template_to_prerename_compat_tmp_path_for_install_state() {
 	standards_index_url="$compare_entrypoint"
 	auto_update_mode="$compare_auto_update_mode"
 	auto_update_reason="$compare_auto_update_reason"
+	checks_ci_mode="$compare_checks_ci_mode"
+	checks_ci_reason="$compare_checks_ci_reason"
 	last_operation="$compare_last_operation"
 	last_updated_utc="$compare_last_updated_utc"
 

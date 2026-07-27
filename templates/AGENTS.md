@@ -24,6 +24,7 @@ Use this routing map when deciding what to load next:
 - For control flow, naming, function/file size, and readability rules, use the managed standards page `standards/core/code-shape.md`.
 - For frontend visual defaults, theme defaults, and dark-mode decisions, use the managed standards page `standards/core/frontend-ui.md`.
 - For sync, bootstrap, and pre-commit verification rules, use the managed standards page `standards/core/verification.md`.
+- For the managed starter checks, run `bun scripts/bright-builds-check.ts all`; use its `--help` output for check-specific commands and exact-path exception syntax.
 - For unit-test expectations, use the managed standards page `standards/core/testing.md`.
 - For Rust or TypeScript/JavaScript-specific rules, use the matching managed standards page under `standards/languages/`.
 - For TypeScript/JavaScript frontend framework and UI-library defaults, use `standards/languages/typescript-javascript.md`.

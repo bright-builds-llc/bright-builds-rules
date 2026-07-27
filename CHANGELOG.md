@@ -4,6 +4,7 @@ This repository uses a simple release-notes model instead of a heavyweight chang
 
 ## Unreleased
 
+- Added a fail-by-default Bun starter checker for downstream source-file length and active lesson-ledger structure, optional reasoned exact-path exceptions, and a GitHub-only managed checks workflow that propagates through install, update, auto-update, drift repair, audit, and uninstall.
 - Hardened managed-source downloads with bounded transient retries, non-empty response validation, and atomic replacement so failed fetches cannot empty or publish managed files.
 - Added conservative skill and adoption-path context-cost snapshots, append-only history, guarded README visibility, and local/CI enforcement.
 - Added a bounded startup-loading and maintenance `should` rule for repositories that already track active lessons, plus matching managed-sidecar guidance that propagates through normal downstream updates without creating or modifying downstream lesson artifacts.

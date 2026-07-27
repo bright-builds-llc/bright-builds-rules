@@ -9,6 +9,7 @@ legacy_audit_path="coding-and-architecture-requirements.audit.md"
 update_branch="REPLACE_WITH_AUTO_UPDATE_BRANCH"
 commit_message="REPLACE_WITH_AUTO_UPDATE_COMMIT_MESSAGE"
 auto_update_workflow_path=".github/workflows/bright-builds-auto-update.yml"
+checks_workflow_path=".github/workflows/bright-builds-checks.yml"
 bright_builds_push_token_file="/Users/peterryszkiewicz/Repos/BRIGHT_BUILDS_PUSH_TOKEN.txt"
 github_actions_name="github-actions[bot]"
 github_actions_email="41898282+github-actions[bot]@users.noreply.github.com"
@@ -63,8 +64,8 @@ run_git_push() {
 	git push "$@" >"$output_path" 2>&1
 }
 
-workflow_update_is_staged() {
-	! git diff --cached --quiet --exit-code -- "$auto_update_workflow_path"
+managed_workflow_update_is_staged() {
+	! git diff --cached --quiet --exit-code -- "$auto_update_workflow_path" "$checks_workflow_path"
 }
 
 fail_for_push_token() {
@@ -192,6 +193,8 @@ stage_managed_paths() {
 		bright-builds-rules.audit.md \
 		coding-and-architecture-requirements.audit.md \
 		.github/pull_request_template.md \
+		.github/workflows/bright-builds-checks.yml \
+		scripts/bright-builds-check.ts \
 		standards/index.md \
 		standards/core/architecture.md \
 		standards/core/code-shape.md \
@@ -232,6 +235,8 @@ restore_audit_if_only_runtime_changed() {
 		CONTRIBUTING.md \
 		README.md \
 		.github/pull_request_template.md \
+		.github/workflows/bright-builds-checks.yml \
+		scripts/bright-builds-check.ts \
 		standards/index.md \
 		standards/core/architecture.md \
 		standards/core/code-shape.md \
@@ -360,7 +365,7 @@ if git diff --cached --quiet --exit-code; then
 	exit 0
 fi
 
-if workflow_update_is_staged && [[ "${BRIGHT_BUILDS_PUSH_TOKEN_CONFIGURED:-}" == "false" ]]; then
+if managed_workflow_update_is_staged && [[ "${BRIGHT_BUILDS_PUSH_TOKEN_CONFIGURED:-}" == "false" ]]; then
 	fail_for_push_token
 fi
 

@@ -19,6 +19,7 @@ Describe the behavior change and why it is needed.
 ## Verification
 
 - [ ] Relevant repo-native verification ran and passed when applicable
+- [ ] `bun scripts/bright-builds-check.ts all` ran and passed, or every intentional exact-path exception has a reason in `.bright-builds-rules-checks.tsv`
 - [ ] Any CI-only or hook-owned verification exception is documented
 - [ ] Changed paths were validated manually when appropriate
 

@@ -17,6 +17,9 @@ managed_file_marker() {
 	*.sh | *.yml | *.yaml)
 		printf '# bright-builds-rules-managed-file: %s\n' "$relative_destination"
 		;;
+	*.js | *.jsx | *.ts | *.tsx)
+		printf '// bright-builds-rules-managed-file: %s\n' "$relative_destination"
+		;;
 	*)
 		printf '# bright-builds-rules-managed-file: %s\n' "$relative_destination"
 		;;
@@ -32,6 +35,9 @@ legacy_managed_file_marker() {
 		;;
 	*.sh | *.yml | *.yaml)
 		printf '# coding-and-architecture-requirements-managed-file: %s\n' "$relative_destination"
+		;;
+	*.js | *.jsx | *.ts | *.tsx)
+		printf '// coding-and-architecture-requirements-managed-file: %s\n' "$relative_destination"
 		;;
 	*)
 		printf '# coding-and-architecture-requirements-managed-file: %s\n' "$relative_destination"

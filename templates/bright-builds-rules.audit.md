@@ -17,6 +17,8 @@ This audit trail is managed upstream by `bright-builds-rules`. If the managed au
 - Audit manifest path: `REPLACE_WITH_AUDIT_MANIFEST_PATH`
 - Auto-update: `REPLACE_WITH_AUTO_UPDATE_MODE`
 - Auto-update reason: `REPLACE_WITH_AUTO_UPDATE_REASON`
+- Checks CI: `REPLACE_WITH_CHECKS_CI_MODE`
+- Checks CI reason: `REPLACE_WITH_CHECKS_CI_REASON`
 - Last operation: `REPLACE_WITH_LAST_OPERATION`
 - Last updated (UTC): `REPLACE_WITH_LAST_UPDATED_UTC`
 
@@ -27,6 +29,7 @@ REPLACE_WITH_MANAGED_FILES_LIST
 ## Why this exists
 
 - It provides a visible paper trail for install, update, and uninstall operations.
-- The installer manages a bounded block inside `AGENTS.md`, a bounded README badge block when applicable, local standards files under `standards/`, and marked whole-file managed surfaces such as the sidecar, audit trail, contribution guide, PR template, and optional auto-update files.
+- The installer manages a bounded block inside `AGENTS.md`, a bounded README badge block when applicable, local standards files under `standards/`, and marked whole-file managed surfaces such as the sidecar, audit trail, contribution guide, PR template, starter checker, conditional checks workflow, and optional auto-update files.
 - `standards-overrides.md` remains repo-local and is preserved during update and uninstall.
+- `.bright-builds-rules-checks.tsv` is an optional user-owned exact-path exception file and is never created, modified, managed, or removed by the installer.
 - It helps humans and tools debug which standards revision a repository is pinned to.

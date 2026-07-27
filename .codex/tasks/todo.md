@@ -167,3 +167,20 @@ Residual risks:
 - [x] Run the full managed shell, downstream manager, auto-update, docs, and diff verification surface.
 - Completion review: Managed-source and manager-module downloads now retry transient failures, validate non-empty content, and replace temp outputs atomically. Regression coverage proves required failures preserve downstream files and prevent auto-update publication.
 - Residual risk: Atomicity remains per managed file; an update can still leave earlier successful per-file writes in the worktree, while auto-update stops before commit or push.
+
+## task-managed-starter-checks | 2026-07-26 21:12 CDT | Add managed starter checks
+
+- [x] Add the managed Bun checker for source-file lengths and active lesson ledgers.
+- [x] Add the conditional GitHub checks workflow and full downstream lifecycle integration.
+- [x] Update managed guidance, standards, adoption docs, audit metadata, and release notes.
+- [x] Add checker, installer, and auto-update regression coverage.
+- [x] Run the full repository verification surface and review the diff.
+- Verification: `bun run typecheck`
+- Verification: `env TMPDIR=/tmp bun test` (47 passed)
+- Verification: `./scripts/verify-docs.sh`
+- Verification: `./scripts/verify-managed-shells.sh`
+- Verification: `env TMPDIR=/tmp bash ./scripts/test-manage-downstream.sh`
+- Verification: `env TMPDIR=/tmp bash ./scripts/test-bright-builds-auto-update.sh`
+- Verification: `bun run context-cost:check`, `bun run branding:assets:check`, `actionlint templates/bright-builds-checks.yml`, `git diff --check`
+- Completion review: Added the dependency-free managed checker, GitHub-only checks workflow, exact-path exception contract, compatible install/update/auto-update/uninstall behavior, and downstream-facing guidance. Historical marker and helper-name compatibility remain covered.
+- Residual risk: The curated extension and excluded-directory sets will need deliberate expansion as downstream ecosystems introduce common source or generated-output conventions; the TSV provides a reasoned exact-path escape hatch meanwhile.

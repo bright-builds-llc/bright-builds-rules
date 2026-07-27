@@ -14,6 +14,7 @@ remove_auto_update_files() {
 
 build_whole_file_managed_pairs_for_mode() {
 	local current_auto_update_mode="$1"
+	local current_checks_ci_mode="${2:-$checks_ci_mode}"
 	local entries=("${base_whole_file_managed_pairs[@]}")
 	local standards_path=""
 
@@ -26,6 +27,9 @@ build_whole_file_managed_pairs_for_mode() {
 			"${auto_update_script_source}|${auto_update_script_destination}"
 			"${auto_update_workflow_source}|${auto_update_workflow_destination}"
 		)
+	fi
+	if [[ "$current_checks_ci_mode" == "enabled" ]]; then
+		entries+=("${checks_workflow_source}|${checks_workflow_destination}")
 	fi
 
 	printf '%s\n' "${entries[@]}"
@@ -64,7 +68,7 @@ strip_managed_file_marker_line() {
 	local input_path="$1"
 	local output_path="$2"
 
-	grep -Ev '^(<!-- (bright-builds-rules|coding-and-architecture-requirements)-managed-file: .* -->|# (bright-builds-rules|coding-and-architecture-requirements)-managed-file: .*)$' "$input_path" >"$output_path"
+	grep -Ev '^(<!-- (bright-builds-rules|coding-and-architecture-requirements)-managed-file: .* -->|# (bright-builds-rules|coding-and-architecture-requirements)-managed-file: .*|// (bright-builds-rules|coding-and-architecture-requirements)-managed-file: .*)$' "$input_path" >"$output_path"
 }
 
 marked_candidate_path_matches_destination_as_legacy_exact_match() {
@@ -448,7 +452,11 @@ append_drifted_installed_whole_file_paths() {
 		if [[ "$state" == "drifted" ]]; then
 			append_unique_blocking_path "$relative_destination"
 		fi
-	done < <(build_whole_file_managed_pairs_for_mode "${current_auto_update:-$auto_update_mode}")
+	done < <(
+		build_whole_file_managed_pairs_for_mode \
+			"${current_auto_update:-$auto_update_mode}" \
+			"${current_checks_ci:-$checks_ci_mode}"
+	)
 }
 
 append_conflicting_existing_standards_paths() {

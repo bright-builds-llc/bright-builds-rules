@@ -21,6 +21,10 @@ auto_update_script_source="templates/bright-builds-auto-update.sh"
 auto_update_script_destination="scripts/bright-builds-auto-update.sh"
 auto_update_workflow_source="templates/bright-builds-auto-update.yml"
 auto_update_workflow_destination=".github/workflows/bright-builds-auto-update.yml"
+checks_script_source="templates/bright-builds-check.ts"
+checks_script_destination="scripts/bright-builds-check.ts"
+checks_workflow_source="templates/bright-builds-checks.yml"
+checks_workflow_destination=".github/workflows/bright-builds-checks.yml"
 prerename_compat_auto_update_script_source="templates/compat/prerename/bright-builds-auto-update.sh"
 prerename_compat_auto_update_workflow_source="templates/compat/prerename/bright-builds-auto-update.yml"
 prerename_compat_contributing_source="templates/compat/prerename/CONTRIBUTING.md"
@@ -63,6 +67,7 @@ trusted_auto_update_identities=(
 base_managed_pairs=(
 	"${sidecar_source}|${sidecar_destination}"
 	"templates/pull_request_template.md|.github/pull_request_template.md"
+	"${checks_script_source}|${checks_script_destination}"
 )
 managed_standards_paths=(
 	"standards/index.md"
@@ -79,6 +84,7 @@ managed_standards_paths=(
 base_whole_file_managed_pairs=(
 	"${sidecar_source}|${sidecar_destination}"
 	"templates/pull_request_template.md|.github/pull_request_template.md"
+	"${checks_script_source}|${checks_script_destination}"
 	"${audit_source}|${audit_destination}"
 )
 base_managed_status_paths=(
@@ -106,6 +112,8 @@ current_entrypoint=""
 current_exact_commit=""
 current_auto_update=""
 current_auto_update_reason=""
+current_checks_ci=""
+current_checks_ci_reason=""
 current_last_operation=""
 current_last_updated_utc=""
 current_audit_destination=""
@@ -138,6 +146,8 @@ readme_has_managed_badges=0
 auto_update_request="auto"
 auto_update_mode=""
 auto_update_reason=""
+checks_ci_mode=""
+checks_ci_reason=""
 downstream_repo_slug=""
 downstream_repo_url=""
 downstream_repo_owner=""
@@ -392,6 +402,9 @@ build_managed_file_marker_line() {
 		;;
 	*.sh | *.yml | *.yaml)
 		printf '# %s: %s' "$marker_prefix" "$relative_destination"
+		;;
+	*.js | *.jsx | *.ts | *.tsx)
+		printf '// %s: %s' "$marker_prefix" "$relative_destination"
 		;;
 	*)
 		printf '# %s: %s' "$marker_prefix" "$relative_destination"

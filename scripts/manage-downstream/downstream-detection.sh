@@ -94,7 +94,7 @@ resolve_downstream_repo_slug() {
 		return
 	fi
 
-	if ! remote_url="$(git -C "$repo_root" remote get-url origin 2>/dev/null)"; then
+	if ! remote_url="$(git -C "$repo_root" config --get remote.origin.url 2>/dev/null)"; then
 		return
 	fi
 
@@ -472,4 +472,19 @@ resolve_auto_update_state() {
 
 auto_update_files_are_relevant() {
 	[[ "$auto_update_mode" == "enabled" || "$current_auto_update" == "enabled" ]]
+}
+
+resolve_checks_ci_state() {
+	if [[ -n "$downstream_repo_slug" ]]; then
+		checks_ci_mode="enabled"
+		checks_ci_reason="GitHub-backed repository"
+		return
+	fi
+
+	checks_ci_mode="disabled"
+	checks_ci_reason="non-GitHub repository"
+}
+
+checks_ci_files_are_relevant() {
+	[[ "$checks_ci_mode" == "enabled" || "$current_checks_ci" == "enabled" ]]
 }

@@ -24,6 +24,7 @@ Use this decision rule:
 1. If preserving prior behavior would require re-drifting a fully managed file, inventing a new contract, or making a non-obvious semantic choice, stop and ask the user instead of guessing.
 1. Treat `README.md` as part of the managed surface when the installer can verify default badges from the downstream repo or when a Peter-owned GitHub repo qualifies for the owner-specific OpenLinks badge. If `status` reports a blocked README badge state, stop unless the user explicitly wants `install --force`; after repair, keep the managed badge block immediately after the first H1 and only reinsert prior top-of-file badges or content below it when that does not recreate badge ambiguity.
 1. Let the installer resolve downstream auto-update to `disabled` unless the downstream GitHub repo owner or current GitHub user is trusted. Trusted identities are `pRizz` and `bright-builds-llc`. Respect `--auto-update enabled|disabled` when the user asks for an override.
+1. Let every install or update manage `scripts/bright-builds-check.ts`. Let the installer add `.github/workflows/bright-builds-checks.yml` only when it can verify a GitHub-backed downstream remote; report the resulting `Checks CI` mode and reason.
 1. After install or update, proactively set `BRIGHT_BUILDS_PUSH_TOKEN` only when the repo is clearly Bright Builds-managed, auto-update is enabled, the GitHub `OWNER/REPO` slug resolves, and `/Users/peterryszkiewicz/Repos/BRIGHT_BUILDS_PUSH_TOKEN.txt` is non-empty. Tighten that file to mode `600`, pass it to `gh secret set` through stdin, and never print or inspect its value. Skip and report when any prerequisite is missing.
 1. When the downstream GitHub repo owner normalizes to `pRizz` or `peterryszkiewicz` (Peter Ryszkiewicz), let the managed sidecar require the `openlinks-identity-presence` skill for README/docs, UI chrome, profile/about/footer, and metadata/discovery surfaces, and let the managed README badge block append a subtle `OpenLinks profile` badge linked to `https://openlinks.us/` after any project badges. Keep the placement subtle and keep the host brand primary.
 1. After install or update, report the files written and point the user to `bright-builds-rules.audit.md` as the paper trail, including the source URL, requested ref, exact resolved commit when available, whether the local managed standards corpus was installed or refreshed, whether a managed README badge block was installed or refreshed, whether owner-specific OpenLinks guidance was included, whether the owner-specific OpenLinks README badge applied, and whether auto-update ended up enabled or disabled.
@@ -87,10 +88,14 @@ Expected downstream files after a successful install or update:
 - `CONTRIBUTING.md`
 - `.github/pull_request_template.md`
 - `standards/index.md` and the managed standards pages under `standards/core/` and `standards/languages/`
+- `scripts/bright-builds-check.ts`
 - `bright-builds-rules.audit.md`
 - `README.md` when the downstream repo has at least one verified default badge or the owner-specific OpenLinks badge applies and the installer adds or refreshes the managed badge block
 - `standards-overrides.md` when it did not already exist
 - `scripts/bright-builds-auto-update.sh` and `.github/workflows/bright-builds-auto-update.yml` when auto-update resolves to `enabled`
+- `.github/workflows/bright-builds-checks.yml` when the repository is verifiably GitHub-backed
+
+The optional `.bright-builds-rules-checks.tsv` is user-owned. Install, update, and uninstall must not create, modify, or remove it.
 
 After install or update, the downstream instruction contract is layered:
 
@@ -114,6 +119,8 @@ Use the `status` output as the primary decision signal. It emits stable lines su
 - `README badge block: present|absent|partial|ambiguous|not applicable`
 - `Auto-update: enabled|disabled`
 - `Auto-update reason: explicit|trusted repo owner <owner>|trusted GitHub user <login>|default disabled`
+- `Checks CI: enabled|disabled`
+- `Checks CI reason: GitHub-backed repository|non-GitHub repository`
 
 Interpret those states this way:
 
@@ -123,6 +130,7 @@ Interpret those states this way:
 - a repo with an exact-match legacy install of the fully managed files but without the new whole-file marker headers still reports `installed`, and `update` migrates those files into the marked format
 - a repo with conflicting managed files such as `.github/pull_request_template.md`, `AGENTS.bright-builds.md`, or `bright-builds-rules.audit.md` reports `blocked`
 - a repo with existing conflicting files at the managed standards paths under `standards/` reports `blocked`
+- a fresh repo with a conflicting `scripts/bright-builds-check.ts`, or a conflicting `.github/workflows/bright-builds-checks.yml` when GitHub-backed, reports `blocked`
 - a repo whose marked whole-file managed outputs have downstream edits also reports `blocked` and lists the drifted paths in `Blocking paths:`
 - a repo whose managed `CONTRIBUTING.md` block is partial or has downstream edits inside the managed block also reports `blocked` and includes `CONTRIBUTING.md` in `Blocking paths:`
 - a repo with an existing unmarked local `CONTRIBUTING.md` and no other managed conflicts remains `installable`; `install` preserves that file and appends the managed CONTRIBUTING block
@@ -142,6 +150,17 @@ Auto-update defaults behave this way:
 - when a managed workflow change is staged, the dedicated token must be configured with repository-write and workflow-file-write access; missing, wrong-identity, and under-scoped tokens stop with the exact repair flow instead of attempting a predictably futile pull-request fallback
 - when enabled, the auto-update workflow prints a copyable upstream repair prompt on job failure, including the exact token repair flow when the failure mentions repository access or workflows permission
 - when enabled, that same `update` path also repairs the exact legacy Bright Builds README badge snippets this repo previously documented, so already-installed downstream repos can self-heal old `coding-and-architecture-requirements` badge markdown without a separate job
+- current and legacy auto-update paths stage the managed starter checker and, for GitHub-backed repositories, its managed checks workflow when an update introduces or refreshes them
+
+Managed starter checks behave this way:
+
+- `bun scripts/bright-builds-check.ts all` is the default full command; omitting `all` has the same effect
+- `file-lengths` checks Git-tracked common source files, permits 628 physical lines, and fails at 629 while excluding conventional dependency and build directories
+- `lessons` validates existing root `tasks/lessons.md` and `.codex/tasks/lessons.md` ledgers, including stable IDs, the four required fields, and combined startup-budget measurements
+- lesson-budget threshold notices do not fail because the standard defines bounded loading above the budget
+- exit `0` means pass or notices only, exit `1` means standards findings remain, and exit `2` means invalid invocation, environment, or allowlist configuration
+- `bun scripts/bright-builds-check.ts --help` documents the checks, exclusions, and optional TSV format
+- `.bright-builds-rules-checks.tsv` entries use `check-id<TAB>repo-relative-exact-path<TAB>required reason`; supported IDs are `file-lengths` and `lessons`
 
 For a Bright Builds-managed repository, repair the token and rerun the workflow without exposing the token value:
 
@@ -187,6 +206,7 @@ If you do not have shell access:
 - tell the user the expected downstream files listed above
 - tell the user to inspect `bright-builds-rules.audit.md` after installation
 - tell the user that auto-update is GitHub-only and remains disabled unless they trust the default or pass `--auto-update enabled`
+- tell the user that the checker is always installed, while checks CI is installed only for verifiably GitHub-backed repositories
 
 If you do not know which repository should receive the adoption:
 
@@ -216,6 +236,7 @@ After a successful install or update, mention:
 - whether `README.md` received a managed badge block, had exact legacy Bright Builds badge snippets normalized, was left unchanged because no managed README badges applied, or had its managed badge block removed on update
 - whether `AGENTS.bright-builds.md` included the owner-specific `openlinks-identity-presence` rule for a Peter-owned repo
 - whether auto-update was enabled or disabled, and whether that came from an explicit override or a trust-based default
-- that `bright-builds-rules.audit.md` records the source URL, pinned ref, exact commit when resolved, auto-update state, and managed files
+- whether checks CI was enabled for a GitHub-backed repository or disabled for a non-GitHub repository
+- that `bright-builds-rules.audit.md` records the source URL, pinned ref, exact commit when resolved, auto-update state, checks CI state, and managed files
 - that the local managed standards corpus starts at `standards/index.md` and records canonical provenance from `https://github.com/bright-builds-llc/bright-builds-rules/blob/main/standards/index.md`
 - for pre-existing repos, that the optional `bright-builds-rules` skill can run a whole-repo `audit` or a bounded `audit-and-fix` cleanup wave after adoption

@@ -130,6 +130,7 @@ build_current_managed_status_paths() {
 		"${sidecar_destination}"
 		"CONTRIBUTING.md"
 		".github/pull_request_template.md"
+		"${checks_script_destination}"
 		"${effective_audit_destination}"
 		"${overrides_destination}"
 	)
@@ -141,6 +142,9 @@ build_current_managed_status_paths() {
 	if auto_update_files_are_relevant; then
 		entries+=("${auto_update_script_destination}" "${auto_update_workflow_destination}")
 	fi
+	if checks_ci_files_are_relevant; then
+		entries+=("${checks_workflow_destination}")
+	fi
 
 	printf '%s\n' "${entries[@]}"
 }
@@ -150,6 +154,8 @@ build_managed_files_markdown_for_state() {
 	local current_auto_update_mode="$2"
 	local current_audit_relative_destination="${3:-$audit_destination}"
 	local include_standards="${4:-enabled}"
+	local current_checks_ci_mode="${5:-$checks_ci_mode}"
+	local include_checks="${6:-enabled}"
 	local standards_path=""
 	local entries=(
 		"${agents_destination} (managed block)"
@@ -172,25 +178,56 @@ build_managed_files_markdown_for_state() {
 	if [[ "$current_auto_update_mode" == "enabled" ]]; then
 		entries+=("${auto_update_script_destination}" "${auto_update_workflow_destination}")
 	fi
+	if [[ "$include_checks" == "enabled" ]]; then
+		entries+=("${checks_script_destination}")
+		if [[ "$current_checks_ci_mode" == "enabled" ]]; then
+			entries+=("${checks_workflow_destination}")
+		fi
+	fi
 
 	build_managed_files_markdown "${entries[@]}"
 }
 
 build_current_managed_files_markdown() {
-	build_managed_files_markdown_for_state "$readme_badge_state" "$auto_update_mode" "$audit_destination" "enabled"
+	build_managed_files_markdown_for_state "$readme_badge_state" "$auto_update_mode" "$audit_destination" "enabled" "$checks_ci_mode" "enabled"
 }
 
 build_installed_managed_files_markdown() {
-	build_managed_files_markdown_for_state "$readme_badge_state" "${current_auto_update:-$auto_update_mode}" "$(resolve_effective_audit_destination)" "enabled"
+	local include_checks="disabled"
+
+	if [[ "$current_checks_ci" == "enabled" || "$current_checks_ci" == "disabled" ]]; then
+		include_checks="enabled"
+	fi
+
+	build_managed_files_markdown_for_state \
+		"$readme_badge_state" \
+		"${current_auto_update:-$auto_update_mode}" \
+		"$(resolve_effective_audit_destination)" \
+		"enabled" \
+		"${current_checks_ci:-disabled}" \
+		"$include_checks"
 }
 
 build_current_pre_standards_managed_files_markdown() {
-	build_managed_files_markdown_for_state "$readme_badge_state" "${current_auto_update:-$auto_update_mode}" "$(resolve_effective_audit_destination)" "disabled"
+	local include_checks="disabled"
+
+	if [[ "$current_checks_ci" == "enabled" || "$current_checks_ci" == "disabled" ]]; then
+		include_checks="enabled"
+	fi
+
+	build_managed_files_markdown_for_state \
+		"$readme_badge_state" \
+		"${current_auto_update:-$auto_update_mode}" \
+		"$(resolve_effective_audit_destination)" \
+		"disabled" \
+		"${current_checks_ci:-disabled}" \
+		"$include_checks"
 }
 
 build_current_pre_frontend_ui_managed_files_markdown() {
 	local current_audit_relative_destination=""
 	local current_auto_update_mode=""
+	local include_checks="disabled"
 	local standards_path=""
 	local entries=(
 		"${agents_destination} (managed block)"
@@ -214,6 +251,15 @@ build_current_pre_frontend_ui_managed_files_markdown() {
 
 	if [[ "$current_auto_update_mode" == "enabled" ]]; then
 		entries+=("${auto_update_script_destination}" "${auto_update_workflow_destination}")
+	fi
+	if [[ "$current_checks_ci" == "enabled" || "$current_checks_ci" == "disabled" ]]; then
+		include_checks="enabled"
+	fi
+	if [[ "$include_checks" == "enabled" ]]; then
+		entries+=("${checks_script_destination}")
+		if [[ "$current_checks_ci" == "enabled" ]]; then
+			entries+=("${checks_workflow_destination}")
+		fi
 	fi
 
 	build_managed_files_markdown "${entries[@]}"

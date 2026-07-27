@@ -54,7 +54,7 @@ determine_repo_state() {
 	fi
 
 	if [[ "$installed_signal" -ne 1 ]]; then
-		for path in ".github/pull_request_template.md" "${effective_audit_destination}"; do
+		for path in ".github/pull_request_template.md" "${checks_script_destination}" "${effective_audit_destination}"; do
 			if [[ -f "${repo_root}/${path}" ]]; then
 				append_unique_blocking_path "$path"
 			fi
@@ -67,6 +67,9 @@ determine_repo_state() {
 				fi
 			done
 		fi
+		if checks_ci_files_are_relevant && [[ -f "${repo_root}/${checks_workflow_destination}" ]]; then
+			append_unique_blocking_path "$checks_workflow_destination"
+		fi
 	fi
 
 	if [[ "$installed_signal" -eq 1 && "$auto_update_mode" == "enabled" && "$current_auto_update" != "enabled" ]]; then
@@ -75,6 +78,10 @@ determine_repo_state() {
 				append_unique_blocking_path "$auto_update_path"
 			fi
 		done
+	fi
+	if [[ "$installed_signal" -eq 1 && "$checks_ci_mode" == "enabled" && "$current_checks_ci" != "enabled" ]] &&
+		[[ -f "${repo_root}/${checks_workflow_destination}" ]]; then
+		append_unique_blocking_path "$checks_workflow_destination"
 	fi
 
 	if [[ "$readme_badge_state" == "partial" || "$readme_badge_state" == "ambiguous" ]]; then
@@ -163,6 +170,7 @@ install_or_update() {
 	ensure_overrides_file
 	write_or_update_readme_file
 	sync_auto_update_files
+	sync_checks_workflow
 	print_legacy_auto_update_token_repair_advisory
 	write_audit_manifest "$operation"
 	remove_legacy_audit_manifest_if_migrated
@@ -182,6 +190,8 @@ status() {
 	note "README badge block: ${readme_badge_state}"
 	note "Auto-update: ${auto_update_mode}"
 	note "Auto-update reason: ${auto_update_reason}"
+	note "Checks CI: ${checks_ci_mode}"
+	note "Checks CI reason: ${checks_ci_reason}"
 
 	if [[ -n "$readme_badge_blocking_reason" ]]; then
 		note "README badge reason: ${readme_badge_blocking_reason}"
@@ -288,7 +298,14 @@ uninstall() {
 				remove_clean_installed_whole_file "$source_path" "$relative_destination" "$managed_files_markdown"
 				;;
 			esac
-		done < <(build_whole_file_managed_pairs_for_mode "$current_auto_update")
+		done < <(build_whole_file_managed_pairs_for_mode "$current_auto_update" "disabled")
+	fi
+
+	if [[ "$current_checks_ci" == "enabled" ]]; then
+		remove_clean_installed_whole_file \
+			"$checks_workflow_source" \
+			"$checks_workflow_destination" \
+			"$managed_files_markdown"
 	fi
 
 	while IFS= read -r pair; do
@@ -299,7 +316,7 @@ uninstall() {
 			;;
 		esac
 		remove_clean_installed_whole_file "$source_path" "$relative_destination" "$managed_files_markdown"
-	done < <(build_whole_file_managed_pairs_for_mode "disabled")
+	done < <(build_whole_file_managed_pairs_for_mode "disabled" "disabled")
 
 	rmdir "${repo_root}/standards/core" 2>/dev/null || true
 	rmdir "${repo_root}/standards/languages" 2>/dev/null || true
@@ -392,6 +409,7 @@ manage_downstream_main() {
 	resolve_downstream_badges
 	resolve_owner_specific_guidance
 	resolve_auto_update_state
+	resolve_checks_ci_state
 	prepare_managed_markdown_mdformat
 	determine_repo_state
 

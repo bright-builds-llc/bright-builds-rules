@@ -39,6 +39,7 @@ Record recurring repo-specific workflow facts in `AGENTS.md` under `## Repo-Loca
 - Use the managed standards page `standards/core/code-shape.md` for control flow, naming, function/file size, and readability rules.
 - Use the managed standards page `standards/core/frontend-ui.md` for frontend visual defaults, theme defaults, dark-mode decisions, and public open-source source/FOSS/maintainer disclosure.
 - Use the managed standards page `standards/core/verification.md` for sync, bootstrap, and pre-commit verification rules.
+- Run `bun scripts/bright-builds-check.ts all` for the managed starter checks; use `--help` for check-specific commands, exclusions, and the optional exact-path exception format.
 - Use the managed standards page `standards/core/testing.md` for unit-test expectations.
 - Use the matching managed standards page under `standards/languages/` for Rust or TypeScript/JavaScript-specific rules.
 
@@ -54,6 +55,7 @@ Record recurring repo-specific workflow facts in `AGENTS.md` under `## Repo-Loca
 - Treat functions over roughly 161 lines as refactor triggers; use `floor(100 * phi)` as the mnemonic, not a hard cap.
 - Do not hide substantial foreign-language logic inside strings; keep orchestration thin, move scripts, queries, and similar artifacts into repo-owned or language-aware files, and make checked-in scripts rerunnable when sensible with breadcrumb-heavy logs and summaries in a repo-defined gitignored location.
 - Treat files over roughly 628 lines as refactor triggers; use `floor(100 * tau)` as the mnemonic, not a hard cap.
+- Run `bun scripts/bright-builds-check.ts all` before committing when the managed checker is installed. A deliberate file-length or lesson-ledger exception belongs in the optional user-owned `.bright-builds-rules-checks.tsv` with an exact repo-relative path and required reason; do not edit the managed checker to suppress a finding.
 - Before substantive implementation work, sync first: fetch remote state before editing; if the current branch tracks an upstream and the worktree is clean, prefer rebasing onto the latest upstream or the repo's equivalent sync path, such as `git pull --rebase` when local guidance uses it; if a worktree starts detached, assume the repo default branch, often `main`; resolve any sync conflicts before proceeding, then run the repo's normal bootstrap or dependency-sync step when dependencies or tools may be stale.
 - Before formatting Markdown, inspect repo-local guidance and formatter configuration, require the configured syntax extensions, preserve existing configuration, use repo-owned setup or migration commands when provided, and run check mode before an authorized, scoped write. Never fall back to bare `mdformat` when required plugins are unavailable.
 - Before committing, run the relevant repo-native verification steps for the changed paths, including repository-compatible Markdown or shell formatter checks when supported tools are already available and local guidance does not define a clearer workflow, and do not commit if they fail.
