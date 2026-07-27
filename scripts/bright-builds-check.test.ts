@@ -126,7 +126,7 @@ test("file-lengths includes UI, query, and schema source extensions", () => {
   assert.match(result.stdout, /scanned=3/u);
 });
 
-test("a reasoned exact-path exception suppresses a file-length finding", () => {
+test("a reasoned exact-file exception suppresses a file-length finding", () => {
   // Arrange
   const rootDir = createFixture();
   writeFile(rootDir, "src/generated.ts", "line\n".repeat(629));
@@ -145,6 +145,141 @@ test("a reasoned exact-path exception suppresses a file-length finding", () => {
   assert.match(result.stdout, /EXCEPTION file-lengths src\/generated\.ts/u);
 });
 
+test("a directory exception recursively excludes only path-boundary descendants", () => {
+  // Arrange
+  const rootDir = createFixture();
+  const oversized = "line\n".repeat(629);
+  writeFile(rootDir, "external/sdk/library.ts", oversized);
+  writeFile(rootDir, "external/sdk/nested/generated.rs", oversized);
+  writeFile(rootDir, "external/sdk-other/library.ts", oversized);
+  writeFile(
+    rootDir,
+    ".bright-builds-rules-checks.tsv",
+    "file-lengths\texternal/sdk/\tThird-party source maintained upstream\n",
+  );
+  stageFixture(rootDir);
+
+  // Act
+  const result = runChecker(rootDir, "file-lengths");
+
+  // Assert
+  assert.equal(result.status, 1);
+  assert.match(
+    result.stdout,
+    /EXCEPTION file-lengths external\/sdk\/: excluded 2 tracked source files; Third-party source maintained upstream/u,
+  );
+  assert.equal(
+    result.stdout.match(/EXCEPTION file-lengths external\/sdk\//gu)?.length,
+    1,
+  );
+  assert.doesNotMatch(result.stdout, /FAIL file-lengths external\/sdk\//u);
+  assert.match(result.stdout, /FAIL file-lengths external\/sdk-other\/library\.ts/u);
+  assert.match(result.stdout, /scanned=1 exceptions=1 findings=1/u);
+});
+
+test("a directory path without a trailing slash is rejected", () => {
+  // Arrange
+  const rootDir = createFixture();
+  writeFile(rootDir, "external/sdk/library.ts", "export {};\n");
+  writeFile(
+    rootDir,
+    ".bright-builds-rules-checks.tsv",
+    "file-lengths\texternal/sdk\tMissing directory marker\n",
+  );
+  stageFixture(rootDir);
+
+  // Act
+  const result = runChecker(rootDir, "file-lengths");
+
+  // Assert
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /directory exception paths must end with \//u);
+});
+
+test("a trailing-slash exception must resolve to a directory", () => {
+  // Arrange
+  const rootDir = createFixture();
+  writeFile(rootDir, "src/app.ts", "export {};\n");
+  writeFile(
+    rootDir,
+    ".bright-builds-rules-checks.tsv",
+    "file-lengths\tsrc/app.ts/\tFile marked as a directory\n",
+  );
+  stageFixture(rootDir);
+
+  // Act
+  const result = runChecker(rootDir, "file-lengths");
+
+  // Assert
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /directory exception does not resolve to a directory/u);
+});
+
+test("directory exceptions are rejected for lesson checks", () => {
+  // Arrange
+  const rootDir = createFixture();
+  writeFile(rootDir, "tasks/lessons.md", "# Lessons\n");
+  writeFile(
+    rootDir,
+    ".bright-builds-rules-checks.tsv",
+    "lessons\ttasks/\tDo not bypass lesson integrity\n",
+  );
+  stageFixture(rootDir);
+
+  // Act
+  const result = runChecker(rootDir, "lessons");
+
+  // Assert
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /directory exceptions are supported only for file-lengths/u);
+});
+
+test("overlapping directory exceptions are rejected", () => {
+  // Arrange
+  const rootDir = createFixture();
+  writeFile(rootDir, "external/sdk/library.ts", "export {};\n");
+  writeFile(
+    rootDir,
+    ".bright-builds-rules-checks.tsv",
+    [
+      "file-lengths\texternal/\tExternal source",
+      "file-lengths\texternal/sdk/\tNested SDK",
+      "",
+    ].join("\n"),
+  );
+  stageFixture(rootDir);
+
+  // Act
+  const result = runChecker(rootDir, "file-lengths");
+
+  // Assert
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /overlapping directory exceptions/u);
+});
+
+test("file exceptions covered by a directory exception are rejected", () => {
+  // Arrange
+  const rootDir = createFixture();
+  writeFile(rootDir, "external/sdk/library.ts", "export {};\n");
+  writeFile(
+    rootDir,
+    ".bright-builds-rules-checks.tsv",
+    [
+      "file-lengths\texternal/sdk/\tThird-party SDK",
+      "file-lengths\texternal/sdk/library.ts\tRedundant file exception",
+      "",
+    ].join("\n"),
+  );
+  stageFixture(rootDir);
+
+  // Act
+  const result = runChecker(rootDir, "file-lengths");
+
+  // Assert
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /is already covered by directory exception/u);
+});
+
 const invalidAllowlistCases = [
   ["malformed", "file-lengths\tsrc/app.ts\n", /exactly three/u],
   ["unknown ID", "other\tsrc/app.ts\tUnknown check\n", /unknown check ID/u],
@@ -155,6 +290,8 @@ const invalidAllowlistCases = [
     /duplicates/u,
   ],
   ["unsafe", "file-lengths\t../app.ts\tUnsafe\n", /normalized repo-relative/u],
+  ["root directory", "file-lengths\t./\tToo broad\n", /normalized repo-relative/u],
+  ["glob", "file-lengths\tsrc/*.ts\tToo broad\n", /globs are not supported/u],
   ["stale", "file-lengths\tsrc/missing.ts\tGone\n", /stale path/u],
 ] as const;
 
@@ -334,7 +471,12 @@ test("CLI help succeeds outside Git and invalid usage exits two", () => {
   assert.equal(helpResult.status, 0);
   assert.match(helpResult.stdout, /Usage:/u);
   assert.match(helpResult.stdout, /Excluded path segments:.*node_modules/u);
-  assert.match(helpResult.stdout, /check-id<TAB>repo-relative-exact-path<TAB>required reason/u);
+  assert.match(
+    helpResult.stdout,
+    /check-id<TAB>repo-relative-file-or-directory\/<TAB>required reason/u,
+  );
+  assert.match(helpResult.stdout, /Directory paths must end with \//u);
+  assert.match(helpResult.stdout, /Globs are not supported/u);
   assert.equal(invalidResult.status, 2);
   assert.match(invalidResult.stderr, /unknown command/u);
   assert.equal(noGitResult.status, 2);

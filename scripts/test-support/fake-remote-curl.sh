@@ -55,6 +55,12 @@ if [[ -n "${FAKE_CURL_PRE_LOCAL_STANDARDS_REF:-}" &&
 	source_root="${FAKE_CURL_PRE_LOCAL_STANDARDS_SOURCE_ROOT}"
 fi
 
+if [[ -n "${FAKE_CURL_HISTORICAL_REF:-}" &&
+	"$requested_ref" == "${FAKE_CURL_HISTORICAL_REF}" &&
+	-n "${FAKE_CURL_HISTORICAL_SOURCE_ROOT:-}" ]]; then
+	source_root="${FAKE_CURL_HISTORICAL_SOURCE_ROOT}"
+fi
+
 if [[ -z "$source_root" ]]; then
 	printf 'curl: (22) The requested URL returned error: 404\n' >&2
 	exit 22

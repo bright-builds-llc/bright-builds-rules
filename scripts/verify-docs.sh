@@ -128,7 +128,9 @@ rg -Fq '`scripts/bright-builds-check.ts`' AI-ADOPTION.md
 rg -Fq 'Treat downstream `AGENTS.md` as the local entrypoint, not the full Bright Builds Rules spec.' README.md
 rg -Fq 'Bright Builds owns only its managed Markdown.' README.md
 rg -Fq '## Managed Starter Checks' README.md
-rg -Fq 'check-id<TAB>repo-relative-exact-path<TAB>required reason' README.md
+rg -Fq 'check-id<TAB>repo-relative-file-or-directory/<TAB>required reason' README.md
+rg -Fq 'trailing-slash directory to exclude third-party descendants recursively' templates/AGENTS.bright-builds.md
+rg -Fq 'directory exceptions are intentionally unavailable for lesson sources' standards/core/local-guidance.md
 rg -Fq 'bun scripts/bright-builds-check.ts file-lengths' standards/core/code-shape.md
 rg -Fq 'bun scripts/bright-builds-check.ts lessons' standards/core/local-guidance.md
 rg -Fq 'When the managed `scripts/bright-builds-check.ts` exists' standards/core/verification.md

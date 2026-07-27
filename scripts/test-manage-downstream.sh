@@ -17,6 +17,7 @@ legacy_readme_badges_end="<!-- coding-and-architecture-requirements-readme-badge
 legacy_audit_destination="coding-and-architecture-requirements.audit.md"
 legacy_repo_ref="0d5dce1^"
 pre_lint_guard_ref="85588ad75ba23d917a58ecf0a9b911922cc5ffab"
+pre_directory_exception_ref="de249d5462e72728085ae270a62b57949e2d2f79"
 pre_local_standards_ref="05f8d7a6c9c2e157ec4f922a05273e72dab97676"
 temp_root="$(mktemp -d "${TMPDIR:-/tmp}/bright-builds-rules-tests.XXXXXX")"
 repo_exact_commit="$(git -C "${repo_root}" rev-parse HEAD)"
@@ -50,6 +51,7 @@ test_fresh_install_and_reinstall
 test_existing_agents_is_installable
 test_trusted_repo_owner_enables_auto_update_by_default
 test_trusted_github_user_enables_auto_update_by_default
+test_installed_checker_supports_directory_exceptions
 test_managed_checks_conflicts_force_repair_and_uninstall
 test_peter_ryszkiewicz_owner_gets_openlinks_identity_guidance
 test_owner_specific_openlinks_badge_appends_after_detected_badges
@@ -61,6 +63,7 @@ test_auto_update_enabled_files_are_restored_on_update
 test_update_preserves_local_agents_and_overrides
 test_update_backfills_missing_local_standards
 test_update_replaces_pre_lint_guard_checker_notices
+test_update_adds_directory_exception_support
 test_pre_frontend_ui_audit_manifest_remains_updateable
 test_managed_markdown_status_and_update_bootstrap_mdformat_in_github_actions
 test_install_status_and_update_preserve_downstream_markdown_dialect

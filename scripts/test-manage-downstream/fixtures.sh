@@ -251,6 +251,44 @@ create_pre_lint_guard_installer_bundle() {
 	printf '%s\n' "${bundle_root}/scripts/manage-downstream.sh"
 }
 
+create_pre_directory_exception_installer_bundle() {
+	local name="$1"
+	local bundle_root="${temp_root}/${name}-pre-directory-exception-bundle"
+
+	mkdir -p "$bundle_root"
+	git -C "$repo_root" archive "$pre_directory_exception_ref" \
+		scripts/manage-downstream.sh \
+		scripts/manage-downstream \
+		templates \
+		standards | tar -x -C "$bundle_root"
+
+	chmod +x "${bundle_root}/scripts/manage-downstream.sh"
+	git -C "$bundle_root" init -b main >/dev/null 2>&1
+	git -C "$bundle_root" config user.name "Bundle User"
+	git -C "$bundle_root" config user.email "bundle@example.com"
+	git -C "$bundle_root" add -A
+	git -C "$bundle_root" commit -m "Pre-directory-exception bundle" >/dev/null
+	printf '%s\n' "${bundle_root}/scripts/manage-downstream.sh"
+}
+
+create_history_aware_current_installer_bundle() {
+	local name="$1"
+	local bundle_root="${temp_root}/${name}-current-bundle"
+
+	git clone --quiet "$repo_root" "$bundle_root"
+	cp "$script_path" "${bundle_root}/scripts/manage-downstream.sh"
+	cp -R "${repo_root}/scripts/manage-downstream/." "${bundle_root}/scripts/manage-downstream/"
+	cp -R "${repo_root}/templates/." "${bundle_root}/templates/"
+	cp -R "${repo_root}/standards/." "${bundle_root}/standards/"
+	git -C "$bundle_root" config user.name "Bundle User"
+	git -C "$bundle_root" config user.email "bundle@example.com"
+	git -C "$bundle_root" add -A
+	if ! git -C "$bundle_root" diff --cached --quiet; then
+		git -C "$bundle_root" commit -m "Current directory-exception bundle" >/dev/null
+	fi
+	printf '%s\n' "${bundle_root}/scripts/manage-downstream.sh"
+}
+
 create_script_only_installer_copy() {
 	local name="$1"
 	local source_installer_path="$2"

@@ -19,9 +19,9 @@ Bright Builds Rules publishes a conservative approximation of the instruction co
 | Baseline           | Included files                        | UTF-8 bytes | Estimated tokens |
 | ------------------ | ------------------------------------- | ----------: | ---------------: |
 | Skill instructions | `skills/bright-builds-rules/SKILL.md` |       8,593 |            2,865 |
-| Adoption path      | Skill instructions + `AI-ADOPTION.md` |      31,114 |           10,372 |
+| Adoption path      | Skill instructions + `AI-ADOPTION.md` |      31,233 |           10,412 |
 
-Latest snapshot: `2026-07-27T03:06:56.052Z` from base commit `326a9c8a3b1d`. Estimator: `utf8-bytes-ceil-div-3-v1`, calculated per file and then summed.
+Latest snapshot: `2026-07-27T19:52:00.970Z` from base commit `de249d5462e7`. Estimator: `utf8-bytes-ceil-div-3-v1`, calculated per file and then summed.
 
 This is a rough context approximation, not API billing or cached-token usage. Skill metadata, this README, and task-specific standards pages are excluded; standards pages are variable additional context selected for the task.
 
@@ -171,10 +171,10 @@ Omitting the subcommand defaults to `all`. Exit `0` means the requested checks p
 Intentional exceptions live in the optional user-owned `.bright-builds-rules-checks.tsv`:
 
 ```text
-check-id<TAB>repo-relative-exact-path<TAB>required reason
+check-id<TAB>repo-relative-file-or-directory/<TAB>required reason
 ```
 
-Supported check IDs are `file-lengths` and `lessons`. Paths must be safe, exact, current repo-relative paths, and each check/path pair may appear only once. The installer never creates, edits, manages, or removes this file.
+Supported check IDs are `file-lengths` and `lessons`. Non-trailing paths are exact current files. For `file-lengths`, a current directory path ending in `/` recursively excludes its tracked source descendants and emits one reasoned directory notice; directory exceptions are not supported for `lessons`. Paths must be safe and repo-relative, globs and root exclusions are rejected, and directory exceptions may not overlap each other or exact-file exceptions. The installer never creates, edits, manages, or removes this file.
 
 For a verifiably GitHub-backed repository, the manager also installs `.github/workflows/bright-builds-checks.yml`, which runs the full checker on pull requests, every push, and manual dispatch with read-only contents access and Bun 1.3.9. Non-GitHub repositories still receive the local checker. The audit and `status` output record `Checks CI: enabled|disabled` and the reason.
 

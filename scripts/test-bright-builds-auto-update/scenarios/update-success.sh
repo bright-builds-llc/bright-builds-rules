@@ -225,6 +225,66 @@ test_refreshes_managed_standards_files() {
 	fi
 }
 
+test_auto_update_adds_directory_exception_support() {
+	local allowlist_hash=""
+	local current_bundle_root=""
+	local fake_bin=""
+	local old_bundle_root=""
+	local remote_path=""
+	local repo_path=""
+
+	old_bundle_root="$(create_pre_directory_exception_source_bundle directory-exception-old)"
+	current_bundle_root="$(create_source_bundle directory-exception-current)"
+	repo_path="$(create_repo directory-exception-repo)"
+	remote_path="$(create_bare_remote directory-exception-origin)"
+	fake_bin="${temp_root}/directory-exception-bin"
+
+	init_git_repo "$repo_path"
+	git -C "$repo_path" remote add origin "$remote_path"
+	install_auto_update_repo "$old_bundle_root" "$repo_path"
+	replace_markdown_value "${repo_path}/bright-builds-rules.audit.md" "Exact commit" "$pre_directory_exception_ref"
+	replace_markdown_value "${repo_path}/AGENTS.bright-builds.md" "Exact commit" "$pre_directory_exception_ref"
+	mkdir -p "${repo_path}/external/vendor-sdk"
+	printf 'line\n%.0s' {1..629} >"${repo_path}/external/vendor-sdk/library.ts"
+	write_file \
+		"${repo_path}/.bright-builds-rules-checks.tsv" \
+		$'file-lengths\texternal/vendor-sdk/\tThird-party source maintained upstream\n'
+	git -C "$repo_path" add -A
+	allowlist_hash="$(git -C "$repo_path" hash-object .bright-builds-rules-checks.tsv)"
+
+	set +e
+	run_output="$(cd "$repo_path" && bun scripts/bright-builds-check.ts file-lengths 2>&1)"
+	run_status=$?
+	set -e
+	assert_eq "$run_status" "1" "pre-directory-exception checker should prove the scheduled-update failure"
+	assert_contains "$run_output" "FAIL file-lengths external/vendor-sdk/library.ts" "old scheduled checker should not understand directory exceptions"
+
+	commit_all "$repo_path" "Initial managed install"
+	git -C "$repo_path" push -u origin main >/dev/null
+	create_fake_curl_bin \
+		"$fake_bin" \
+		"$current_bundle_root" \
+		"$current_bundle_root" \
+		"$current_bundle_root" \
+		"" \
+		"" \
+		"$pre_directory_exception_ref" \
+		"$old_bundle_root"
+
+	run_auto_update "$repo_path" "$fake_bin"
+	assert_eq "$run_status" "0" "auto-update should install directory exception support"
+	assert_contains "$run_output" "Pushed managed updates directly to main" "directory exception update should use the direct push path"
+	assert_eq "$(git -C "$repo_path" hash-object .bright-builds-rules-checks.tsv)" "$allowlist_hash" "auto-update should preserve the directory exception file byte-for-byte"
+
+	set +e
+	run_output="$(cd "$repo_path" && bun scripts/bright-builds-check.ts file-lengths 2>&1)"
+	run_status=$?
+	set -e
+	assert_eq "$run_status" "0" "auto-updated checker should honor the directory exception"
+	assert_contains "$run_output" "EXCEPTION file-lengths external/vendor-sdk/: excluded 1 tracked source files" "auto-updated checker should report the directory exception"
+	assert_not_contains "$run_output" "FAIL file-lengths external/vendor-sdk/library.ts" "auto-updated checker should exclude third-party source"
+}
+
 test_legacy_helper_without_standards_staging_commits_backfilled_standards() {
 	local old_bundle_root=""
 	local current_bundle_root=""

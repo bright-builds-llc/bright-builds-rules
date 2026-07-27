@@ -12,6 +12,7 @@ current_bright_builds_url="https://github.com/bright-builds-llc/bright-builds-ru
 current_bright_builds_raw_base_url="https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main"
 legacy_audit_destination="coding-and-architecture-requirements.audit.md"
 legacy_repo_ref="0d5dce1^"
+pre_directory_exception_ref="de249d5462e72728085ae270a62b57949e2d2f79"
 pre_local_standards_ref="05f8d7a6c9c2e157ec4f922a05273e72dab97676"
 run_output=""
 run_status=0
@@ -32,6 +33,7 @@ test_noop_when_no_changes_exist
 test_noop_when_mdformat_is_absent
 test_pushes_directly_when_push_succeeds
 test_refreshes_managed_standards_files
+test_auto_update_adds_directory_exception_support
 test_legacy_helper_without_standards_staging_commits_backfilled_standards
 test_refreshes_old_managed_canonical_badge_to_flat_default_when_upstream_is_otherwise_unchanged
 test_legacy_helper_migrates_prerename_install_with_current_manager

@@ -110,6 +110,52 @@ test_update_replaces_pre_lint_guard_checker_notices() {
 	assert_file_not_contains "${repo_path}/scripts/bright-builds-check.ts" "$warning_budget_template" "update should remove the old warning-budget template literal"
 }
 
+test_update_adds_directory_exception_support() {
+	local allowlist_hash=""
+	local current_installer_path=""
+	local installer_path=""
+	local repo_path=""
+
+	installer_path="$(create_pre_directory_exception_installer_bundle pre-directory-exception)"
+	current_installer_path="$(create_history_aware_current_installer_bundle current-directory-exception)"
+	repo_path="$(create_repo pre-directory-exception)"
+	git -C "$repo_path" init >/dev/null 2>&1
+
+	run_manage_with_script "$installer_path" "$repo_path" install
+	assert_eq "$run_status" "0" "pre-directory-exception install should succeed"
+	replace_markdown_value "${repo_path}/bright-builds-rules.audit.md" "Exact commit" "$pre_directory_exception_ref"
+	replace_markdown_value "${repo_path}/AGENTS.bright-builds.md" "Exact commit" "$pre_directory_exception_ref"
+	mkdir -p "${repo_path}/external/vendor-sdk"
+	printf 'line\n%.0s' {1..629} >"${repo_path}/external/vendor-sdk/library.ts"
+	write_file \
+		"${repo_path}/.bright-builds-rules-checks.tsv" \
+		$'file-lengths\texternal/vendor-sdk/\tThird-party source maintained upstream\n'
+	git -C "$repo_path" add -A
+	allowlist_hash="$(git -C "$repo_path" hash-object .bright-builds-rules-checks.tsv)"
+
+	set +e
+	run_output="$(cd "$repo_path" && bun scripts/bright-builds-check.ts file-lengths 2>&1)"
+	run_status=$?
+	set -e
+	assert_eq "$run_status" "1" "pre-directory-exception checker should prove the legacy failure"
+	assert_contains "$run_output" "FAIL file-lengths external/vendor-sdk/library.ts" "legacy checker should not understand directory exceptions"
+
+	run_manage_with_script "$current_installer_path" "$repo_path" status
+	assert_eq "$run_status" "0" "status should recognize a clean pre-directory-exception install"
+	assert_contains "$run_output" "Repo state: installed" "pre-directory-exception install should remain updateable"
+	run_manage_with_script "$current_installer_path" "$repo_path" update
+	assert_eq "$run_status" "0" "update should install directory exception support"
+	assert_eq "$(git -C "$repo_path" hash-object .bright-builds-rules-checks.tsv)" "$allowlist_hash" "update should preserve the directory exception file byte-for-byte"
+
+	set +e
+	run_output="$(cd "$repo_path" && bun scripts/bright-builds-check.ts file-lengths 2>&1)"
+	run_status=$?
+	set -e
+	assert_eq "$run_status" "0" "updated checker should honor the directory exception"
+	assert_contains "$run_output" "EXCEPTION file-lengths external/vendor-sdk/: excluded 1 tracked source files" "updated checker should report the directory exception"
+	assert_not_contains "$run_output" "FAIL file-lengths external/vendor-sdk/library.ts" "updated checker should exclude third-party source"
+}
+
 test_pre_frontend_ui_audit_manifest_remains_updateable() {
 	local repo_path=""
 

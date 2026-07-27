@@ -92,9 +92,11 @@ const lessonFieldPattern =
   /^(?:-\s+|\d+\.\s+)(Date|What went wrong|Preventive rule|Trigger signal(?: to catch it earlier)?):\s*(.*)$/u;
 
 type CheckId = "file-lengths" | "lessons";
+type AllowlistEntryKind = "directory" | "file";
 
 interface AllowlistEntry {
   checkId: CheckId;
+  kind: AllowlistEntryKind;
   path: string;
   reason: string;
 }
@@ -128,19 +130,29 @@ Lesson sources:
 
 Optional exceptions:
   ${ALLOWLIST_PATH}
-  check-id<TAB>repo-relative-exact-path<TAB>required reason
+  check-id<TAB>repo-relative-file-or-directory/<TAB>required reason
 
 Supported check IDs are file-lengths and lessons. Blank lines and lines beginning
-with # are ignored. The allowlist is user-owned and is never changed by Bright Builds.
+with # are ignored. File paths are exact. Directory paths must end with /, apply
+only to file-lengths, and recursively exclude descendants. Globs are not supported.
+The allowlist is user-owned and is never changed by Bright Builds.
 `;
 
 const normalizeRelativePath = (candidatePath: string): string => {
+  if (/[*?[\]{}]/u.test(candidatePath)) {
+    throw new CheckConfigurationError(
+      `allowlist path globs are not supported: ${candidatePath}`,
+    );
+  }
+
+  const normalizedPath = path.posix.normalize(candidatePath);
   if (
     candidatePath.length === 0 ||
     candidatePath.includes("\\") ||
     path.posix.isAbsolute(candidatePath) ||
-    path.posix.normalize(candidatePath) !== candidatePath ||
-    candidatePath === "." ||
+    normalizedPath !== candidatePath ||
+    normalizedPath === "." ||
+    normalizedPath === "./" ||
     candidatePath.startsWith("../")
   ) {
     throw new CheckConfigurationError(
@@ -181,6 +193,36 @@ export const countPhysicalLines = (contents: Buffer): number => {
   return lineCount;
 };
 
+const validateAllowlistOverlaps = (entries: Map<string, AllowlistEntry>): void => {
+  const allEntries = [...entries.values()];
+  const directoryEntries = allEntries.filter(({ kind }) => kind === "directory");
+
+  for (const [index, directory] of directoryEntries.entries()) {
+    for (const otherDirectory of directoryEntries.slice(index + 1)) {
+      if (
+        directory.path.startsWith(otherDirectory.path) ||
+        otherDirectory.path.startsWith(directory.path)
+      ) {
+        throw new CheckConfigurationError(
+          `${ALLOWLIST_PATH} has overlapping directory exceptions: ${directory.path} and ${otherDirectory.path}`,
+        );
+      }
+    }
+
+    const maybeCoveredFile = allEntries.find(
+      (entry) =>
+        entry.kind === "file" &&
+        entry.checkId === directory.checkId &&
+        entry.path.startsWith(directory.path),
+    );
+    if (maybeCoveredFile) {
+      throw new CheckConfigurationError(
+        `${ALLOWLIST_PATH} file exception ${maybeCoveredFile.path} is already covered by directory exception ${directory.path}`,
+      );
+    }
+  }
+};
+
 const loadAllowlist = (repoRoot: string): Map<string, AllowlistEntry> => {
   const absoluteAllowlistPath = path.join(repoRoot, ALLOWLIST_PATH);
   const entries = new Map<string, AllowlistEntry>();
@@ -209,15 +251,35 @@ const loadAllowlist = (repoRoot: string): Map<string, AllowlistEntry> => {
     }
 
     const relativePath = normalizeRelativePath(rawPath);
+    const kind: AllowlistEntryKind = relativePath.endsWith("/") ? "directory" : "file";
     const reason = rawReason.trim();
     if (reason.length === 0) {
       throw new CheckConfigurationError(
         `${ALLOWLIST_PATH}:${index + 1} must include a non-empty reason`,
       );
     }
-    if (!fs.existsSync(path.join(repoRoot, relativePath))) {
+    const filesystemRelativePath =
+      kind === "directory" ? relativePath.slice(0, -1) : relativePath;
+    const absolutePath = path.join(repoRoot, filesystemRelativePath);
+    if (!fs.existsSync(absolutePath)) {
       throw new CheckConfigurationError(
         `${ALLOWLIST_PATH}:${index + 1} references a stale path: ${relativePath}`,
+      );
+    }
+    const pathStats = fs.statSync(absolutePath);
+    if (kind === "directory" && maybeCheckId !== "file-lengths") {
+      throw new CheckConfigurationError(
+        `${ALLOWLIST_PATH}:${index + 1} directory exceptions are supported only for file-lengths`,
+      );
+    }
+    if (kind === "directory" && !pathStats.isDirectory()) {
+      throw new CheckConfigurationError(
+        `${ALLOWLIST_PATH}:${index + 1} directory exception does not resolve to a directory: ${relativePath}`,
+      );
+    }
+    if (kind === "file" && pathStats.isDirectory()) {
+      throw new CheckConfigurationError(
+        `${ALLOWLIST_PATH}:${index + 1} directory exception paths must end with /: ${relativePath}`,
       );
     }
 
@@ -229,11 +291,13 @@ const loadAllowlist = (repoRoot: string): Map<string, AllowlistEntry> => {
     }
     entries.set(key, {
       checkId: maybeCheckId as CheckId,
+      kind,
       path: relativePath,
       reason,
     });
   }
 
+  validateAllowlistOverlaps(entries);
   return entries;
 };
 
@@ -273,7 +337,26 @@ export const checkFileLengths = (
   const findings: string[] = [];
   const messages: string[] = [];
   let exceptionCount = 0;
-  const sourcePaths = listTrackedFiles(repoRoot).filter(isApplicableSourcePath);
+  const applicableSourcePaths = listTrackedFiles(repoRoot).filter(isApplicableSourcePath);
+  const directoryExceptions = [...allowlist.values()].filter(
+    (entry) => entry.checkId === "file-lengths" && entry.kind === "directory",
+  );
+  const excludedSourcePaths = new Set<string>();
+  for (const exception of directoryExceptions) {
+    const matchingSourcePaths = applicableSourcePaths.filter((relativePath) =>
+      relativePath.startsWith(exception.path),
+    );
+    for (const relativePath of matchingSourcePaths) {
+      excludedSourcePaths.add(relativePath);
+    }
+    exceptionCount += 1;
+    messages.push(
+      `EXCEPTION file-lengths ${exception.path}: excluded ${matchingSourcePaths.length} tracked source files; ${exception.reason}`,
+    );
+  }
+  const sourcePaths = applicableSourcePaths.filter(
+    (relativePath) => !excludedSourcePaths.has(relativePath),
+  );
 
   for (const relativePath of sourcePaths) {
     const absolutePath = path.join(repoRoot, relativePath);

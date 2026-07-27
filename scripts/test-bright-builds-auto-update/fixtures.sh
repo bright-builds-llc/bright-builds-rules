@@ -225,6 +225,26 @@ create_pre_local_standards_source_bundle() {
 	printf '%s\n' "$bundle_root"
 }
 
+create_pre_directory_exception_source_bundle() {
+	local name="$1"
+	local bundle_root="${temp_root}/${name}-pre-directory-exception-bundle"
+
+	mkdir -p "$bundle_root"
+	git -C "$repo_root" archive "$pre_directory_exception_ref" \
+		scripts/manage-downstream.sh \
+		scripts/manage-downstream \
+		templates \
+		standards | tar -x -C "$bundle_root"
+
+	chmod +x "${bundle_root}/scripts/manage-downstream.sh"
+	git -C "$bundle_root" init -b main >/dev/null 2>&1
+	git -C "$bundle_root" config user.name "Bundle User"
+	git -C "$bundle_root" config user.email "bundle@example.com"
+	git -C "$bundle_root" add -A
+	git -C "$bundle_root" commit -m "Pre-directory-exception bundle" >/dev/null
+	printf '%s\n' "$bundle_root"
+}
+
 init_git_repo() {
 	local repo_path="$1"
 
@@ -287,6 +307,8 @@ create_fake_curl_bin() {
 	local legacy_script_source_root="${4:-$current_source_root}"
 	local stale_ref="${5:-}"
 	local pre_local_standards_source_root="${6:-}"
+	local historical_ref="${7:-}"
+	local historical_source_root="${8:-}"
 
 	mkdir -p "$bin_dir"
 	cp "${repo_root}/scripts/test-support/fake-remote-curl.sh" "${bin_dir}/curl"
@@ -299,6 +321,8 @@ create_fake_curl_bin() {
 	FAKE_CURL_STALE_REF="$stale_ref"
 	FAKE_CURL_PRE_LOCAL_STANDARDS_REF="$pre_local_standards_ref"
 	FAKE_CURL_PRE_LOCAL_STANDARDS_SOURCE_ROOT="$pre_local_standards_source_root"
+	FAKE_CURL_HISTORICAL_REF="$historical_ref"
+	FAKE_CURL_HISTORICAL_SOURCE_ROOT="$historical_source_root"
 	FAKE_CURL_FAIL_PATH=""
 	FAKE_CURL_FAIL_START_ATTEMPT=""
 	FAKE_CURL_FAIL_ATTEMPTS=""
@@ -315,6 +339,8 @@ create_fake_curl_bin() {
 	export FAKE_CURL_STALE_REF
 	export FAKE_CURL_PRE_LOCAL_STANDARDS_REF
 	export FAKE_CURL_PRE_LOCAL_STANDARDS_SOURCE_ROOT
+	export FAKE_CURL_HISTORICAL_REF
+	export FAKE_CURL_HISTORICAL_SOURCE_ROOT
 	export FAKE_CURL_FAIL_PATH
 	export FAKE_CURL_FAIL_START_ATTEMPT
 	export FAKE_CURL_FAIL_ATTEMPTS

@@ -160,7 +160,7 @@ Managed starter checks behave this way:
 - lesson-budget threshold notices do not fail because the standard defines bounded loading above the budget
 - exit `0` means pass or notices only, exit `1` means standards findings remain, and exit `2` means invalid invocation, environment, or allowlist configuration
 - `bun scripts/bright-builds-check.ts --help` documents the checks, exclusions, and optional TSV format
-- `.bright-builds-rules-checks.tsv` entries use `check-id<TAB>repo-relative-exact-path<TAB>required reason`; supported IDs are `file-lengths` and `lessons`
+- `.bright-builds-rules-checks.tsv` entries use `check-id<TAB>repo-relative-file-or-directory/<TAB>required reason`; non-trailing paths are exact files, while trailing-slash directories recursively exclude descendants only for `file-lengths`; globs and overlaps are rejected
 
 For a Bright Builds-managed repository, repair the token and rerun the workflow without exposing the token value:
 

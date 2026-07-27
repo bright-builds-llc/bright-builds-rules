@@ -237,6 +237,31 @@ test_trusted_github_user_enables_auto_update_by_default() {
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "Auto-update reason: \`trusted GitHub user pRizz\`" "audit should record the GitHub-user trust decision"
 }
 
+test_installed_checker_supports_directory_exceptions() {
+	local repo_path=""
+
+	repo_path="$(create_repo checker-directory-exception)"
+	init_git_repo_with_origin "$repo_path" "git@github.com:someone-else/checker-directory-exception.git"
+
+	run_manage "$repo_path" install
+	assert_eq "$run_status" "0" "directory-exception checker install should succeed"
+	mkdir -p "${repo_path}/external/vendor-sdk"
+	printf 'line\n%.0s' {1..629} >"${repo_path}/external/vendor-sdk/library.ts"
+	write_file \
+		"${repo_path}/.bright-builds-rules-checks.tsv" \
+		$'file-lengths\texternal/vendor-sdk/\tThird-party source maintained upstream\n'
+	git -C "$repo_path" add -A
+
+	set +e
+	run_output="$(cd "$repo_path" && bun scripts/bright-builds-check.ts file-lengths 2>&1)"
+	run_status=$?
+	set -e
+
+	assert_eq "$run_status" "0" "installed checker should accept a directory exception"
+	assert_contains "$run_output" "EXCEPTION file-lengths external/vendor-sdk/: excluded 1 tracked source files; Third-party source maintained upstream" "installed checker should report one directory exception"
+	assert_not_contains "$run_output" "FAIL file-lengths external/vendor-sdk/library.ts" "installed checker should not flag excluded third-party source"
+}
+
 test_managed_checks_conflicts_force_repair_and_uninstall() {
 	local repo_path=""
 	local conflict_repo_path=""
