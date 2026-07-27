@@ -444,9 +444,10 @@ Run the docs hygiene checks with:
 ```bash
 pipx install 'mdformat==1.0.0' --python python3.13
 pipx inject mdformat 'mdformat-frontmatter==2.1.2' 'mdformat-gfm==1.0.0'
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
-The script verifies the core version and both extension capabilities before running the repository's frontmatter/GFM-aware managed-template check. CI additionally checks all non-compatibility Markdown through the canonical `.mdformat.toml`. Bare mdformat is intentionally unsupported.
+The script verifies the resolved `mdformat` path, core version, and both extension capabilities before running the repository's frontmatter/GFM-aware managed-template check. CI additionally checks all non-compatibility Markdown through the canonical `.mdformat.toml`. Bare mdformat is intentionally unsupported. If another install shadows pipx, such as a Homebrew `mdformat`, put the pipx app directory first on `PATH` and confirm `mdformat --version` includes `mdformat-gfm 1.0.0` and `mdformat_frontmatter 2.1.2`.
 
 Run the managed shell template checks with:
 
@@ -454,11 +455,18 @@ Run the managed shell template checks with:
 ./scripts/verify-managed-shells.sh
 ```
 
-Run the TypeScript typecheck and managed checker unit tests with:
+Run linting, the TypeScript typecheck, and managed checker unit tests with:
 
 ```bash
+bun run lint
 bun run typecheck
 bun run test:checks
+```
+
+Run the local aggregate gate with:
+
+```bash
+bun run check
 ```
 
 Run the downstream manager integration checks with:

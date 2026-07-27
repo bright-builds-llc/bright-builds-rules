@@ -10,5 +10,5 @@
     "target": "ES2022",
     "types": ["node"]
   },
-  "include": ["scripts/**/*.ts"]
+  "include": ["scripts/**/*.ts", "templates/**/*.ts"]
 }

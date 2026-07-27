@@ -9,18 +9,23 @@ print_mdformat_install_instructions() {
 Install the required Markdown formatter stack with Python 3.13+:
   pipx install 'mdformat==1.0.0' --python python3.13
   pipx inject mdformat 'mdformat-frontmatter==2.1.2' 'mdformat-gfm==1.0.0'
+  export PATH="$HOME/.local/bin:$PATH"
+
+If `mdformat` is also installed elsewhere, make sure the pipx app directory appears first:
+  command -v mdformat
+  mdformat --version
 EOF
 }
 
-command -v mdformat >/dev/null 2>&1 || {
+if ! mdformat_path="$(command -v mdformat)"; then
   echo "mdformat 1.0.0 with the frontmatter 2.1.2 and GFM 1.0.0 extensions must be available on PATH" >&2
   print_mdformat_install_instructions
   exit 1
-}
+fi
 
-mdformat_version="$(mdformat --version)"
+mdformat_version="$("$mdformat_path" --version)"
 if [[ "$mdformat_version" != "mdformat 1.0.0" && "$mdformat_version" != "mdformat 1.0.0 ("* ]]; then
-  echo "incompatible mdformat core version: expected 1.0.0, found '$mdformat_version'" >&2
+  echo "incompatible mdformat core version at ${mdformat_path}: expected 1.0.0, found '$mdformat_version'" >&2
   print_mdformat_install_instructions
   exit 1
 fi
@@ -37,7 +42,7 @@ printf '%s\n' \
   '| ------------------- | ------- |' \
   '| frontmatter and GFM | true    |' >"$mdformat_probe"
 
-if ! mdformat \
+if ! "$mdformat_path" \
   --check \
   --extensions gfm \
   --extensions frontmatter \
@@ -45,7 +50,7 @@ if ! mdformat \
   --wrap keep \
   --end-of-line lf \
   "$mdformat_probe" >/dev/null 2>&1; then
-  echo "mdformat cannot load the required frontmatter and GFM extensions" >&2
+  echo "mdformat at ${mdformat_path} cannot load the required frontmatter and GFM extensions" >&2
   print_mdformat_install_instructions
   exit 1
 fi
@@ -59,7 +64,7 @@ npx --yes markdownlint-cli2@0.18.1 \
   "skills/**/*.md" \
   "standards/**/*.md" \
   "templates/**/*.md"
-mdformat \
+"$mdformat_path" \
   --check \
   --extensions gfm \
   --extensions frontmatter \

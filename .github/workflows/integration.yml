@@ -1,0 +1,66 @@
+name: Integration
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/integration.yml"
+      - "scripts/**/*.sh"
+      - "standards/**"
+      - "templates/**"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/integration.yml"
+      - "scripts/**/*.sh"
+      - "standards/**"
+      - "templates/**"
+
+permissions:
+  contents: read
+
+jobs:
+  verify-integration:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        suite:
+          - auto-update
+          - downstream-manager
+    steps:
+      - name: Check out repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.9"
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install integration prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ripgrep shfmt
+          python -m pip install --disable-pip-version-check --no-input \
+            mdformat==1.0.0 \
+            mdformat-frontmatter==2.1.2 \
+            mdformat-gfm==1.0.0
+
+      - name: Verify managed shell scripts
+        if: matrix.suite == 'downstream-manager'
+        run: ./scripts/verify-managed-shells.sh
+
+      - name: Test downstream manager
+        if: matrix.suite == 'downstream-manager'
+        run: env -u GITHUB_ACTIONS bash ./scripts/test-manage-downstream.sh
+
+      - name: Test managed auto-update
+        if: matrix.suite == 'auto-update'
+        run: bash ./scripts/test-bright-builds-auto-update.sh

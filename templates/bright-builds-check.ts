@@ -415,14 +415,14 @@ export const checkLessons = (
 
   if (totalBytes > LESSON_BYTE_BUDGET || estimatedTokens > LESSON_TOKEN_BUDGET) {
     messages.push(
-      `NOTICE lessons active set exceeds the startup budget; use bounded whole-block loading and audit the ledger when required`,
+      "NOTICE lessons active set exceeds the startup budget; use bounded whole-block loading and audit the ledger when required",
     );
   } else if (
     totalBytes >= LESSON_BYTE_BUDGET * 0.75 ||
     estimatedTokens >= LESSON_TOKEN_BUDGET * 0.75
   ) {
     messages.push(
-      `NOTICE lessons active set is at least 75% of the startup budget; check whether the first-crossing audit trigger applies`,
+      "NOTICE lessons active set is at least 75% of the startup budget; check whether the first-crossing audit trigger applies",
     );
   }
 

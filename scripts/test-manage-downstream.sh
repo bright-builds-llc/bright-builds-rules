@@ -16,6 +16,7 @@ legacy_readme_badges_begin="<!-- coding-and-architecture-requirements-readme-bad
 legacy_readme_badges_end="<!-- coding-and-architecture-requirements-readme-badges:end -->"
 legacy_audit_destination="coding-and-architecture-requirements.audit.md"
 legacy_repo_ref="0d5dce1^"
+pre_lint_guard_ref="85588ad75ba23d917a58ecf0a9b911922cc5ffab"
 pre_local_standards_ref="05f8d7a6c9c2e157ec4f922a05273e72dab97676"
 temp_root="$(mktemp -d "${TMPDIR:-/tmp}/bright-builds-rules-tests.XXXXXX")"
 repo_exact_commit="$(git -C "${repo_root}" rev-parse HEAD)"
@@ -58,6 +59,7 @@ test_explicit_auto_update_disable_persists_across_update
 test_auto_update_enabled_files_are_restored_on_update
 test_update_preserves_local_agents_and_overrides
 test_update_backfills_missing_local_standards
+test_update_replaces_pre_lint_guard_checker_notices
 test_pre_frontend_ui_audit_manifest_remains_updateable
 test_managed_markdown_status_and_update_bootstrap_mdformat_in_github_actions
 test_install_status_and_update_preserve_downstream_markdown_dialect

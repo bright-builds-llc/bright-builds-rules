@@ -8,16 +8,20 @@
     "badge:site:flat": "bun scripts/generate-flat-site-badge.ts",
     "branding:assets": "bun run badge:site && bun run badge:site:flat && bun scripts/generate-readme-badge-assets.ts",
     "branding:assets:check": "bun scripts/generate-site-badge.ts --check && bun scripts/generate-flat-site-badge.ts --check && bun scripts/generate-readme-badge-assets.ts --check",
+    "check": "bun run lint && bun run typecheck && bun run test:checks && bun run branding:assets:check",
     "context-cost:update": "bun scripts/manage-context-cost.ts update",
     "context-cost:check": "bun scripts/manage-context-cost.ts check",
     "context-cost:precommit": "bun scripts/manage-context-cost.ts precommit",
     "hooks:install": "bun scripts/install-git-hooks.ts",
+    "lint": "bunx @biomejs/biome lint . --files-ignore-unknown=true",
+    "lint:check": "bun run lint",
     "typecheck": "tsc --noEmit",
     "test:badges": "bun test scripts/site-badge.test.ts scripts/flat-site-badge.test.ts scripts/readme-badge-assets.test.ts",
     "test:checks": "bun test scripts/bright-builds-check.test.ts",
     "test:context-cost": "bun test scripts/context-cost.test.ts"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.5",
     "@types/node": "^24.9.1",
     "badge-maker": "^5.0.2",
     "typescript": "^5.9.3"
