@@ -463,6 +463,14 @@ bun run typecheck
 bun run test:checks
 ```
 
+Run the canonical Bright Builds checker against this repository with:
+
+```bash
+bun run rules:check
+```
+
+This command is part of the local aggregate gate and `.github/workflows/canonical-self-validation.yml` runs it on every push, pull request, and manual dispatch.
+
 Run the local aggregate gate with:
 
 ```bash

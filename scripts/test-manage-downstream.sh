@@ -33,6 +33,7 @@ for test_module in \
 	"${test_module_dir}/helpers.sh" \
 	"${test_module_dir}/fixtures.sh" \
 	"${test_module_dir}/scenarios/install-update-status.sh" \
+	"${test_module_dir}/scenarios/update-migrations.sh" \
 	"${test_module_dir}/scenarios/markdown-dialects.sh" \
 	"${test_module_dir}/scenarios/compatibility-stdin.sh" \
 	"${test_module_dir}/scenarios/readme-badges.sh" \

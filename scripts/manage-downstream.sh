@@ -7,6 +7,7 @@ manager_entrypoint_path="${BASH_SOURCE[0]-}"
 manager_bootstrap_tmp_dir=""
 manager_module_paths=(
 	"scripts/manage-downstream/core.sh"
+	"scripts/manage-downstream/source-resolution.sh"
 	"scripts/manage-downstream/source-rendering.sh"
 	"scripts/manage-downstream/badges.sh"
 	"scripts/manage-downstream/downstream-detection.sh"
