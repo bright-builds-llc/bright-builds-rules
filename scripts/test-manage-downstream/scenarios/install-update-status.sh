@@ -508,17 +508,9 @@ test_update_preserves_local_agents_and_overrides() {
 }
 
 test_update_backfills_missing_local_standards() {
-	local over_budget_normal=""
-	local over_budget_template=""
 	local repo_path=""
-	local warning_budget_normal=""
-	local warning_budget_template=""
 
 	repo_path="$(create_repo backfill-standards)"
-	over_budget_normal='"NOTICE lessons active set exceeds the startup budget; use bounded whole-block loading and audit the ledger when required"'
-	over_budget_template='`NOTICE lessons active set exceeds the startup budget; use bounded whole-block loading and audit the ledger when required`'
-	warning_budget_normal='"NOTICE lessons active set is at least 75% of the startup budget; check whether the first-crossing audit trigger applies"'
-	warning_budget_template='`NOTICE lessons active set is at least 75% of the startup budget; check whether the first-crossing audit trigger applies`'
 
 	run_manage "$repo_path" install
 	assert_eq "$run_status" "0" "backfill setup install should succeed"
@@ -534,14 +526,45 @@ test_update_backfills_missing_local_standards() {
 	assert_eq "$run_status" "0" "update should backfill missing local standards"
 	assert_managed_standards_exist "$repo_path"
 	assert_file_exists "${repo_path}/scripts/bright-builds-check.ts"
-	assert_file_contains "${repo_path}/scripts/bright-builds-check.ts" "$over_budget_normal" "update should install the lint-fixed over-budget notice"
-	assert_file_contains "${repo_path}/scripts/bright-builds-check.ts" "$warning_budget_normal" "update should install the lint-fixed warning-budget notice"
-	assert_file_not_contains "${repo_path}/scripts/bright-builds-check.ts" "$over_budget_template" "update should avoid the old non-interpolated over-budget template literal"
-	assert_file_not_contains "${repo_path}/scripts/bright-builds-check.ts" "$warning_budget_template" "update should avoid the old non-interpolated warning-budget template literal"
 	assert_file_missing "${repo_path}/.github/workflows/bright-builds-checks.yml"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "\`standards/languages/typescript-javascript.md\`" "update should add standards to the audit manifest"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "\`scripts/bright-builds-check.ts\`" "update should add the checker to the audit manifest"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "Checks CI: \`disabled\`" "non-GitHub updates should record disabled checks CI"
+}
+
+test_update_replaces_pre_lint_guard_checker_notices() {
+	local installer_path=""
+	local over_budget_normal=""
+	local over_budget_template=""
+	local repo_path=""
+	local warning_budget_normal=""
+	local warning_budget_template=""
+
+	installer_path="$(create_pre_lint_guard_installer_bundle pre-lint-guard-checker)"
+	repo_path="$(create_repo pre-lint-guard-checker)"
+	over_budget_normal='"NOTICE lessons active set exceeds the startup budget; use bounded whole-block loading and audit the ledger when required"'
+	over_budget_template='`NOTICE lessons active set exceeds the startup budget; use bounded whole-block loading and audit the ledger when required`'
+	warning_budget_normal='"NOTICE lessons active set is at least 75% of the startup budget; check whether the first-crossing audit trigger applies"'
+	warning_budget_template='`NOTICE lessons active set is at least 75% of the startup budget; check whether the first-crossing audit trigger applies`'
+
+	run_manage_with_script "$installer_path" "$repo_path" install
+	assert_eq "$run_status" "0" "pre-lint-guard checker fixture install should succeed"
+	replace_markdown_value "${repo_path}/bright-builds-rules.audit.md" "Exact commit" "$pre_lint_guard_ref"
+	replace_markdown_value "${repo_path}/AGENTS.bright-builds.md" "Exact commit" "$pre_lint_guard_ref"
+	assert_file_contains "${repo_path}/scripts/bright-builds-check.ts" "$over_budget_template" "fixture should start with the old over-budget template literal"
+	assert_file_contains "${repo_path}/scripts/bright-builds-check.ts" "$warning_budget_template" "fixture should start with the old warning-budget template literal"
+
+	run_manage "$repo_path" status
+	assert_eq "$run_status" "0" "status should succeed for a clean pre-lint-guard checker"
+	assert_contains "$run_output" "Repo state: installed" "clean pre-lint-guard checkers should remain updateable"
+	assert_not_contains "$run_output" "Blocking paths: scripts/bright-builds-check.ts" "clean pre-lint-guard checkers should not be treated as drift"
+
+	run_manage "$repo_path" update
+	assert_eq "$run_status" "0" "update should refresh a clean pre-lint-guard checker"
+	assert_file_contains "${repo_path}/scripts/bright-builds-check.ts" "$over_budget_normal" "update should install the lint-fixed over-budget notice"
+	assert_file_contains "${repo_path}/scripts/bright-builds-check.ts" "$warning_budget_normal" "update should install the lint-fixed warning-budget notice"
+	assert_file_not_contains "${repo_path}/scripts/bright-builds-check.ts" "$over_budget_template" "update should remove the old over-budget template literal"
+	assert_file_not_contains "${repo_path}/scripts/bright-builds-check.ts" "$warning_budget_template" "update should remove the old warning-budget template literal"
 }
 
 test_pre_frontend_ui_audit_manifest_remains_updateable() {

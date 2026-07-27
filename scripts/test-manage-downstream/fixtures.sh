@@ -231,6 +231,26 @@ create_pre_local_standards_installer_bundle() {
 	printf '%s\n' "${bundle_root}/scripts/manage-downstream.sh"
 }
 
+create_pre_lint_guard_installer_bundle() {
+	local name="$1"
+	local bundle_root="${temp_root}/${name}-pre-lint-guard-bundle"
+
+	mkdir -p "$bundle_root"
+	git -C "$repo_root" archive "$pre_lint_guard_ref" \
+		scripts/manage-downstream.sh \
+		scripts/manage-downstream \
+		templates \
+		standards | tar -x -C "$bundle_root"
+
+	chmod +x "${bundle_root}/scripts/manage-downstream.sh"
+	git -C "$bundle_root" init -b main >/dev/null 2>&1
+	git -C "$bundle_root" config user.name "Bundle User"
+	git -C "$bundle_root" config user.email "bundle@example.com"
+	git -C "$bundle_root" add -A
+	git -C "$bundle_root" commit -m "Pre-lint-guard bundle" >/dev/null
+	printf '%s\n' "${bundle_root}/scripts/manage-downstream.sh"
+}
+
 create_script_only_installer_copy() {
 	local name="$1"
 	local source_installer_path="$2"

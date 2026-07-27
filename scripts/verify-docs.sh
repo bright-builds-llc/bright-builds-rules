@@ -17,12 +17,11 @@ If `mdformat` is also installed elsewhere, make sure the pipx app directory appe
 EOF
 }
 
-mdformat_path="$(command -v mdformat || true)"
-[[ -n "$mdformat_path" ]] || {
+if ! mdformat_path="$(command -v mdformat)"; then
   echo "mdformat 1.0.0 with the frontmatter 2.1.2 and GFM 1.0.0 extensions must be available on PATH" >&2
   print_mdformat_install_instructions
   exit 1
-}
+fi
 
 mdformat_version="$("$mdformat_path" --version)"
 if [[ "$mdformat_version" != "mdformat 1.0.0" && "$mdformat_version" != "mdformat 1.0.0 ("* ]]; then
