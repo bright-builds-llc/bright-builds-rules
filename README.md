@@ -454,11 +454,18 @@ Run the managed shell template checks with:
 ./scripts/verify-managed-shells.sh
 ```
 
-Run the TypeScript typecheck and managed checker unit tests with:
+Run linting, the TypeScript typecheck, and managed checker unit tests with:
 
 ```bash
+bun run lint
 bun run typecheck
 bun run test:checks
+```
+
+Run the local aggregate gate with:
+
+```bash
+bun run check
 ```
 
 Run the downstream manager integration checks with:

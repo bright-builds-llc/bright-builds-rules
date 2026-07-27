@@ -277,6 +277,28 @@ replace_markdown_value() {
 	mv "$updated_path" "$file_path"
 }
 
+write_legacy_checker_notice_literals() {
+	local checker_path="$1"
+	local updated_path="${checker_path}.updated"
+
+	awk '
+    $0 == "      \"NOTICE lessons active set exceeds the startup budget; use bounded whole-block loading and audit the ledger when required\"," {
+      print "      `NOTICE lessons active set exceeds the startup budget; use bounded whole-block loading and audit the ledger when required`,"
+      next
+    }
+
+    $0 == "      \"NOTICE lessons active set is at least 75% of the startup budget; check whether the first-crossing audit trigger applies\"," {
+      print "      `NOTICE lessons active set is at least 75% of the startup budget; check whether the first-crossing audit trigger applies`,"
+      next
+    }
+
+    {
+      print
+    }
+  ' "$checker_path" >"$updated_path"
+	mv "$updated_path" "$checker_path"
+}
+
 create_source_bundle() {
 	local name="$1"
 	local bundle_root="${temp_root}/${name}-bundle"
@@ -626,8 +648,19 @@ test_refreshes_managed_standards_files() {
 	local fake_bin=""
 	local latest_subject=""
 	local lessons_hash=""
+	local over_budget_normal=""
+	local over_budget_template=""
+	local warning_budget_normal=""
+	local warning_budget_template=""
 
 	bundle_root="$(create_source_bundle standards-refresh)"
+	write_legacy_checker_notice_literals "${bundle_root}/templates/bright-builds-check.ts"
+	git -C "$bundle_root" add -A
+	git -C "$bundle_root" commit -m "Old checker template" >/dev/null
+	over_budget_normal='"NOTICE lessons active set exceeds the startup budget; use bounded whole-block loading and audit the ledger when required"'
+	over_budget_template='`NOTICE lessons active set exceeds the startup budget; use bounded whole-block loading and audit the ledger when required`'
+	warning_budget_normal='"NOTICE lessons active set is at least 75% of the startup budget; check whether the first-crossing audit trigger applies"'
+	warning_budget_template='`NOTICE lessons active set is at least 75% of the startup budget; check whether the first-crossing audit trigger applies`'
 	repo_path="$(create_repo standards-refresh-repo)"
 	remote_path="$(create_bare_remote standards-refresh-origin)"
 	fake_bin="${temp_root}/standards-refresh-bin"
@@ -639,6 +672,8 @@ test_refreshes_managed_standards_files() {
 		"https://github.com/example/standards-refresh.git"
 	install_auto_update_repo "$bundle_root" "$repo_path"
 	assert_file_exists "${repo_path}/.github/workflows/bright-builds-checks.yml"
+	assert_file_contains "${repo_path}/scripts/bright-builds-check.ts" "$over_budget_template" "fixture should start with the old over-budget template literal"
+	assert_file_contains "${repo_path}/scripts/bright-builds-check.ts" "$warning_budget_template" "fixture should start with the old warning-budget template literal"
 	write_file "${repo_path}/.codex/tasks/lessons.md" $'# Lessons\n\n## lesson-local | 2026-07-19\n\n1. Date: 2026-07-19\n2. What went wrong: Local fixture.\n3. Preventive rule: Preserve this file.\n4. Trigger signal: A managed update runs.\n'
 	write_file "${repo_path}/.codex/tasks/lesson-audits.md" $'# Lesson Audits\n\n## lesson-audit-local | 2026-07-19\n\n- Retained: lesson-local\n'
 	write_file "${repo_path}/.codex/tasks/lessons-archive.md" $'# Lesson Archive\n\n## lesson-archived-local | 2026-07-19\n\n- Archive reason: Fixture.\n'
@@ -647,6 +682,7 @@ test_refreshes_managed_standards_files() {
 	archive_hash="$(git -C "$repo_path" hash-object .codex/tasks/lessons-archive.md)"
 	commit_all "$repo_path" "Initial managed install"
 	git -C "$repo_path" push -u origin main >/dev/null
+	cp "${repo_root}/templates/bright-builds-check.ts" "${bundle_root}/templates/bright-builds-check.ts"
 	printf '\n- Added auto-update lesson-standard marker.\n' >>"${bundle_root}/standards/core/local-guidance.md"
 	printf '\n- Added auto-update lesson-sidecar marker.\n' >>"${bundle_root}/templates/AGENTS.bright-builds.md"
 	printf '\n// Added scheduled checker marker.\n' >>"${bundle_root}/templates/bright-builds-check.ts"
@@ -661,6 +697,10 @@ test_refreshes_managed_standards_files() {
 	assert_file_contains "${repo_path}/standards/core/local-guidance.md" "Added auto-update lesson-standard marker." "auto-update should refresh the managed lesson-loading standard"
 	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "Added auto-update lesson-sidecar marker." "auto-update should refresh the managed lesson-loading sidecar"
 	assert_file_contains "${repo_path}/scripts/bright-builds-check.ts" "Added scheduled checker marker." "auto-update should refresh the managed starter checker"
+	assert_file_contains "${repo_path}/scripts/bright-builds-check.ts" "$over_budget_normal" "auto-update should install the lint-fixed over-budget notice"
+	assert_file_contains "${repo_path}/scripts/bright-builds-check.ts" "$warning_budget_normal" "auto-update should install the lint-fixed warning-budget notice"
+	assert_file_not_contains "${repo_path}/scripts/bright-builds-check.ts" "$over_budget_template" "auto-update should remove the old non-interpolated over-budget template literal"
+	assert_file_not_contains "${repo_path}/scripts/bright-builds-check.ts" "$warning_budget_template" "auto-update should remove the old non-interpolated warning-budget template literal"
 	assert_file_contains "${repo_path}/.github/workflows/bright-builds-checks.yml" "Added scheduled checks-workflow marker." "auto-update should refresh the managed checks workflow"
 	assert_eq "$(git -C "$repo_path" hash-object .codex/tasks/lessons.md)" "$lessons_hash" "auto-update should preserve downstream lessons byte-for-byte"
 	assert_eq "$(git -C "$repo_path" hash-object .codex/tasks/lesson-audits.md)" "$audit_hash" "auto-update should preserve downstream lesson audits byte-for-byte"
