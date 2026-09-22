@@ -18,10 +18,10 @@ Bright Builds Rules publishes a conservative approximation of the instruction co
 
 | Baseline           | Included files                        | UTF-8 bytes | Estimated tokens |
 | ------------------ | ------------------------------------- | ----------: | ---------------: |
-| Skill instructions | `skills/bright-builds-rules/SKILL.md` |       8,593 |            2,865 |
-| Adoption path      | Skill instructions + `AI-ADOPTION.md` |      31,233 |           10,412 |
+| Skill instructions | `skills/bright-builds-rules/SKILL.md` |      10,528 |            3,510 |
+| Adoption path      | Skill instructions + `AI-ADOPTION.md` |      34,798 |           11,600 |
 
-Latest snapshot: `2026-07-27T19:52:00.970Z` from base commit `de249d5462e7`. Estimator: `utf8-bytes-ceil-div-3-v1`, calculated per file and then summed.
+Latest snapshot: `2026-09-22T17:04:29.321Z` from base commit `e1feedf637a3`. Estimator: `utf8-bytes-ceil-div-3-v1`, calculated per file and then summed.
 
 This is a rough context approximation, not API billing or cached-token usage. Skill metadata, this README, and task-specific standards pages are excluded; standards pages are variable additional context selected for the task.
 

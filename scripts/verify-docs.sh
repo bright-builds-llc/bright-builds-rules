@@ -175,6 +175,9 @@ rg -Fq 'https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/
 rg -Fq 'https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/assets/badges/bright-builds-rules-compact.svg' README.md
 rg -Fq '[![Bright Builds: Rules](https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/public/badges/bright-builds-rules-flat.svg)](https://github.com/bright-builds-llc/bright-builds-rules)' README.md
 rg -Fq 'For downstream repos with Bright Builds Rules installed, the required reading order is:' skills/bright-builds-rules/SKILL.md
+rg -Fq 'Let `install` and `update` perform the one-time hook installation' skills/bright-builds-rules/SKILL.md
+rg -Fq 'set it once with `git config --local core.hooksPath .githooks`' skills/bright-builds-rules/SKILL.md
+rg -Fq 'perform the one-time hook installation for that clone' AI-ADOPTION.md
 
 old_skill_slug_part_one='personal'
 old_skill_slug_part_two='coding-standards'

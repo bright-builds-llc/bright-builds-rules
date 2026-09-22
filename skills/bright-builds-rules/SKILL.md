@@ -64,6 +64,16 @@ Use this skill when the user wants to:
    - if carrying prior behavior forward would require re-drifting a fully managed file, inventing a new contract, or making a non-obvious semantic choice, stop and ask the user instead of guessing
    - if `README.md` is the blocking path, keep the managed badge block immediately after the first H1 and only restore prior top-of-file badges or content below it when that does not recreate ambiguity
 
+1. Manage the starter-check hook when you adopt, refresh, or continue work in an installed downstream repo:
+
+   - Let `install` and `update` perform the one-time hook installation for the clone where the manager runs. They write the executable `.githooks/pre-commit` hook and set repo-local `core.hooksPath` to `.githooks`. Do not copy the hook in by hand.
+   - After install or update, confirm `.githooks/pre-commit` is executable and `git config --local --get core.hooksPath` prints `.githooks`. Include that result in the adoption summary.
+   - `core.hooksPath` is local Git config and is not committed. On a later clone, cloud VM, or worktree where the managed hook file is already present and `core.hooksPath` is unset, set it once with `git config --local core.hooksPath .githooks`. If it is already `.githooks`, leave it. If it is a different path, stop and ask before replacing it.
+   - The hook runs `bun scripts/bright-builds-check.ts all` and fails the commit on any finding. `--no-verify` is not an acceptable skip. Deliberate exceptions stay in the user-owned `.bright-builds-rules-checks.tsv`. Do not edit the managed hook or `scripts/bright-builds-check.ts` to hide a finding.
+   - If `bun` is missing, the hook fails closed. When the user wants the hook to run, install Bun 1.3.9 with `curl -fsSL https://bun.sh/install | bash -s -- bun-v1.3.9` and retry. A missing tool is not a pass.
+   - A drifted `.githooks/pre-commit` blocks `status` and `update`. Use the blocked-file path above. Do not hand-edit the managed hook.
+   - `bun run hooks:install` belongs to this canonical repository's context-cost hook. Downstream repos use the managed starter-check hook instead.
+
 1. Use `../../templates/` as source material only when editing the managed downstream assets in this repository. Do not bypass the manager flow by manually copying template files into a downstream repo unless the user explicitly wants that lower-level maintenance work.
 
 1. For review, audit, and audit-and-fix work, apply the downstream reading order before evaluating the work: local `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md` when present, then the relevant local managed standards pages.
@@ -101,6 +111,7 @@ Use this skill when the user wants to:
 ## Output expectations
 
 - When handling Bright Builds Rules adoption, status, or refresh work, state which helper or manager command you used and why.
+- When reporting that work, say whether `.githooks/pre-commit` is present and executable and whether this clone's `core.hooksPath` is `.githooks`.
 - When using the blocked merge-assisted path, state that explicit user approval was required for `install --force`, then summarize what was safely folded back in and what still needs user judgment.
 - When no clear context is available, offer the short action menu instead of failing or inventing intent.
 - When reviewing, focus findings on standards violations and note any documented exception.
