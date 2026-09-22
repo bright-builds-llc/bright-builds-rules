@@ -22,6 +22,7 @@ test_fresh_install_and_reinstall() {
 	assert_file_exists "${repo_path}/.github/pull_request_template.md"
 	assert_file_exists "${repo_path}/bright-builds-rules.audit.md"
 	assert_file_exists "${repo_path}/scripts/bright-builds-check.ts"
+	assert_file_exists "${repo_path}/.githooks/pre-commit"
 	assert_file_exists "${repo_path}/standards-overrides.md"
 	assert_managed_standards_exist "$repo_path"
 	assert_file_contains "${repo_path}/standards/languages/typescript-javascript.md" "Do Not Add Python Scripts To Bun-Friendly JS/TS Repositories" "fresh install should copy the TypeScript/JavaScript standards page"
@@ -135,12 +136,18 @@ test_fresh_install_and_reinstall() {
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "Checks CI: \`disabled\`" "audit trail should record disabled checks CI"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "Checks CI reason: \`non-GitHub repository\`" "audit trail should record the checks CI reason"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "\`scripts/bright-builds-check.ts\`" "audit trail should list the managed checker"
+	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "\`.githooks/pre-commit\`" "audit trail should list the managed starter-check hook"
+	assert_file_contains "${repo_path}/.githooks/pre-commit" "$(managed_file_marker ".githooks/pre-commit")" "starter-check hook should include the shell whole-file marker"
+	assert_file_contains "${repo_path}/AGENTS.md" "Before every commit, run \`bun scripts/bright-builds-check.ts all\` and do not commit if it fails." "root AGENTS should require the starter check before every commit"
+	assert_file_contains "${repo_path}/AGENTS.bright-builds.md" "The managed \`.githooks/pre-commit\` hook is the starter-check gate." "sidecar should name the starter-check hook as the commit gate"
+	[[ -x "${repo_path}/.githooks/pre-commit" ]] || fail "starter-check hook should be executable"
 	assert_file_contains "${repo_path}/scripts/bright-builds-check.ts" "$(managed_file_marker "scripts/bright-builds-check.ts")" "checker should include the TypeScript whole-file marker"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "\`standards/languages/typescript-javascript.md\`" "audit trail should list the managed standards corpus"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "$(managed_file_marker "bright-builds-rules.audit.md")" "audit trail should include the whole-file managed marker"
 
 	run_manage "$repo_path" install
 	assert_eq "$run_status" "0" "reinstall should be safe"
+	assert_contains "$run_output" "Skipped core.hooksPath because the target is not a Git work tree." "install outside a Git work tree should skip hooksPath"
 	assert_exact_line_count "${repo_path}/AGENTS.md" "$agents_block_begin" "1"
 	assert_exact_line_count "${repo_path}/AGENTS.md" "$agents_block_end" "1"
 
@@ -305,6 +312,7 @@ test_managed_checks_conflicts_force_repair_and_uninstall() {
 	run_manage "$repo_path" uninstall
 	assert_eq "$run_status" "0" "uninstall should remove clean managed checks"
 	assert_file_missing "${repo_path}/scripts/bright-builds-check.ts"
+	assert_file_missing "${repo_path}/.githooks/pre-commit"
 	assert_file_missing "${repo_path}/.github/workflows/bright-builds-checks.yml"
 	assert_file_exists "${repo_path}/.bright-builds-rules-checks.tsv"
 

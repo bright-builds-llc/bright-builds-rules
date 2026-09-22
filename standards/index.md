@@ -38,7 +38,7 @@ The supported downstream interfaces for v1 are:
 - this index page as the discovery entrypoint
 - the rule-card format used by each standards page
 - the templates in `templates/`
-- the managed downstream starter-check CLI at `scripts/bright-builds-check.ts`
+- the managed downstream starter-check CLI at `scripts/bright-builds-check.ts` and its `.githooks/pre-commit` gate
 - the optional Codex skill in `skills/bright-builds-rules/`
 
 ## Review model

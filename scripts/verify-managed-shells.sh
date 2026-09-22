@@ -21,6 +21,7 @@ shell_scripts_to_verify=(
 	scripts/test-bright-builds-auto-update/scenarios/*.sh
 	"scripts/verify-managed-shells.sh"
 	"templates/bright-builds-auto-update.sh"
+	"templates/githooks/pre-commit"
 )
 
 for script_path in "${shell_scripts_to_verify[@]}"; do

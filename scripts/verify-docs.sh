@@ -80,6 +80,7 @@ rg -Fq 'Use this routing map when deciding what to load next:' templates/AGENTS.
 rg -Fq 'use the managed standards page `standards/core/frontend-ui.md`' templates/AGENTS.md
 rg -Fq 'use the managed standards page `standards/core/verification.md`' templates/AGENTS.md
 rg -Fq 'bun scripts/bright-builds-check.ts all' templates/AGENTS.md
+rg -Fq 'Before every commit, run `bun scripts/bright-builds-check.ts all` and do not commit if it fails. A phase plan, skill, or task verification list does not replace this check.' templates/AGENTS.md
 rg -Fq '`AGENTS.md` is the entrypoint for repo-local instructions, not a complete Bright Builds Rules spec.' templates/AGENTS.bright-builds.md
 rg -Fq '## Routing hints' templates/AGENTS.bright-builds.md
 rg -Fq 'Use the managed standards page `standards/core/frontend-ui.md` for frontend visual defaults, theme defaults, dark-mode decisions, and public open-source source/FOSS/maintainer disclosure.' templates/AGENTS.bright-builds.md
@@ -116,6 +117,8 @@ rg -Fq 'Before substantive implementation work, sync first: fetch remote state b
 rg -Fq '`git pull --rebase` when local guidance uses it' templates/AGENTS.bright-builds.md
 rg -Fq 'Never fall back to bare `mdformat` when required plugins are unavailable.' templates/AGENTS.bright-builds.md
 rg -Fq 'optional user-owned `.bright-builds-rules-checks.tsv`' templates/AGENTS.bright-builds.md
+rg -Fq 'The managed `.githooks/pre-commit` hook is the starter-check gate.' templates/AGENTS.bright-builds.md
+rg -Fq '`--no-verify` is not an acceptable skip.' templates/AGENTS.bright-builds.md
 rg -Fq 'Before substantive implementation work, sync first: fetch remote state before editing;' templates/CONTRIBUTING.md
 rg -Fq '`git pull --rebase` when local guidance uses it' templates/CONTRIBUTING.md
 rg -Fq 'Never fall back to bare `mdformat` when required plugins are unavailable.' templates/CONTRIBUTING.md
@@ -134,6 +137,8 @@ rg -Fq 'directory exceptions are intentionally unavailable for lesson sources' s
 rg -Fq 'bun scripts/bright-builds-check.ts file-lengths' standards/core/code-shape.md
 rg -Fq 'bun scripts/bright-builds-check.ts lessons' standards/core/local-guidance.md
 rg -Fq 'When the managed `scripts/bright-builds-check.ts` exists' standards/core/verification.md
+rg -Fq 'The managed `.githooks/pre-commit` hook is the starter-check gate:' standards/core/verification.md
+rg -Fq '`git commit --no-verify` is not an acceptable skip.' standards/core/verification.md
 rg -Fq 'mdformat 1.0.0' .mdformat.toml
 rg -Fq 'mdformat-frontmatter 2.1.2' .mdformat.toml
 rg -Fq 'mdformat-gfm 1.0.0' .mdformat.toml
@@ -158,6 +163,7 @@ rg -Fq 'Because new TypeScript and JavaScript web frontends should default to So
 rg -Fq 'pin the GitHub dependency to the latest available commit SHA at the time of adoption or update' standards/languages/typescript-javascript.md
 rg -Fq 'Use the [MysticUI README](https://github.com/pRizz/mystic-ui/blob/main/README.md) as the source of truth' standards/languages/typescript-javascript.md
 rg -Fq 'This repository uses Bun and TypeScript for repo-owned scripting.' AGENTS.md
+rg -Fq 'Downstream install and update write the managed starter-check hook at `.githooks/pre-commit`' AGENTS.md
 rg -Fq 'Treat `.codex/tasks/lessons.md` as this repository'\''s active lesson ledger.' AGENTS.md
 rg -Fq 'This append-only log is operational metadata and is not part of normal startup lesson context.' .codex/tasks/lesson-audits.md
 rg -Fq '## lesson-audit-baseline-20260719 | 2026-07-19 13:19 CDT' .codex/tasks/lesson-audits.md
@@ -169,6 +175,9 @@ rg -Fq 'https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/
 rg -Fq 'https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/assets/badges/bright-builds-rules-compact.svg' README.md
 rg -Fq '[![Bright Builds: Rules](https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/public/badges/bright-builds-rules-flat.svg)](https://github.com/bright-builds-llc/bright-builds-rules)' README.md
 rg -Fq 'For downstream repos with Bright Builds Rules installed, the required reading order is:' skills/bright-builds-rules/SKILL.md
+rg -Fq 'Let `install` and `update` perform the one-time hook installation' skills/bright-builds-rules/SKILL.md
+rg -Fq 'set it once with `git config --local core.hooksPath .githooks`' skills/bright-builds-rules/SKILL.md
+rg -Fq 'perform the one-time hook installation for that clone' AI-ADOPTION.md
 
 old_skill_slug_part_one='personal'
 old_skill_slug_part_two='coding-standards'

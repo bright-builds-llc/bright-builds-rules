@@ -29,7 +29,7 @@ REPLACE_WITH_MANAGED_FILES_LIST
 ## Why this exists
 
 - It provides a visible paper trail for install, update, and uninstall operations.
-- The installer manages a bounded block inside `AGENTS.md`, a bounded README badge block when applicable, local standards files under `standards/`, and marked whole-file managed surfaces such as the sidecar, audit trail, contribution guide, PR template, starter checker, conditional checks workflow, and optional auto-update files.
+- The installer manages a bounded block inside `AGENTS.md`, a bounded README badge block when applicable, local standards files under `standards/`, and marked whole-file managed surfaces such as the sidecar, audit trail, contribution guide, PR template, starter checker, starter-check pre-commit hook, conditional checks workflow, and optional auto-update files.
 - `standards-overrides.md` remains repo-local and is preserved during update and uninstall.
 - `.bright-builds-rules-checks.tsv` is an optional user-owned exact-file and trailing-slash `file-lengths` directory exception file and is never created, modified, managed, or removed by the installer.
 - It helps humans and tools debug which standards revision a repository is pinned to.

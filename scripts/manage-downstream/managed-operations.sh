@@ -151,6 +151,10 @@ stage_legacy_auto_update_standards_for_github_actions() {
 		git -C "$repo_root" ls-files --error-unmatch -- "$checks_workflow_destination" >/dev/null 2>&1; then
 		managed_paths+=("$checks_workflow_destination")
 	fi
+	if [[ -e "${repo_root}/${starter_hook_destination}" ]] ||
+		git -C "$repo_root" ls-files --error-unmatch -- "$starter_hook_destination" >/dev/null 2>&1; then
+		managed_paths+=("$starter_hook_destination")
+	fi
 
 	git -C "$repo_root" add -f -A -- "${managed_paths[@]}"
 	note "Staged managed standards and starter checks for legacy auto-update helper compatibility."
@@ -437,6 +441,62 @@ EOF
 	# Old pre-rename helpers rewrite repo-local identity before committing.
 	# Use a one-shot post-commit hook so that migration runs restore the prior local config.
 	git -C "$repo_root" config --local core.hooksPath "$hook_dir"
+}
+
+configure_starter_check_hook() {
+	local hook_path="${repo_root}/${starter_hook_destination}"
+	local previous_hooks_path=""
+
+	if [[ -f "$hook_path" ]]; then
+		chmod +x "$hook_path"
+	fi
+
+	if ! command -v git >/dev/null 2>&1; then
+		note "Skipped core.hooksPath because git is unavailable."
+		return
+	fi
+
+	if ! git -C "$repo_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+		note "Skipped core.hooksPath because the target is not a Git work tree."
+		return
+	fi
+
+	previous_hooks_path="$(read_repo_local_git_config_value "core.hooksPath")"
+	git -C "$repo_root" config --local core.hooksPath ".githooks"
+	if [[ -n "$previous_hooks_path" && "$previous_hooks_path" != ".githooks" ]]; then
+		note "Replaced core.hooksPath ${previous_hooks_path} with .githooks"
+		return
+	fi
+
+	note "Set core.hooksPath to .githooks"
+}
+
+clear_starter_check_hooks_path_after_uninstall() {
+	local hooks_path=""
+	local remaining_hook=""
+
+	if ! command -v git >/dev/null 2>&1; then
+		return
+	fi
+
+	if ! git -C "$repo_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+		return
+	fi
+
+	hooks_path="$(read_repo_local_git_config_value "core.hooksPath")"
+	[[ "$hooks_path" == ".githooks" ]] || return 0
+
+	if [[ -d "${repo_root}/.githooks" ]]; then
+		remaining_hook="$(find "${repo_root}/.githooks" -type f -print -quit)"
+		if [[ -n "$remaining_hook" ]]; then
+			return
+		fi
+	fi
+
+	set +e
+	git -C "$repo_root" config --local --unset-all core.hooksPath >/dev/null 2>&1
+	set -e
+	note "Unset core.hooksPath"
 }
 
 resolve_current_install_metadata() {

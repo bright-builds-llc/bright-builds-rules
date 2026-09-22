@@ -54,7 +54,7 @@ determine_repo_state() {
 	fi
 
 	if [[ "$installed_signal" -ne 1 ]]; then
-		for path in ".github/pull_request_template.md" "${checks_script_destination}" "${effective_audit_destination}"; do
+		for path in ".github/pull_request_template.md" "${checks_script_destination}" "${starter_hook_destination}" "${effective_audit_destination}"; do
 			if [[ -f "${repo_root}/${path}" ]]; then
 				append_unique_blocking_path "$path"
 			fi
@@ -149,6 +149,7 @@ clear_blocking_paths() {
 
 	rmdir "${repo_root}/.github/workflows" 2>/dev/null || true
 	rmdir "${repo_root}/.github" 2>/dev/null || true
+	rmdir "${repo_root}/.githooks" 2>/dev/null || true
 }
 
 install_or_update() {
@@ -171,6 +172,7 @@ install_or_update() {
 	write_or_update_readme_file
 	sync_auto_update_files
 	sync_checks_workflow
+	configure_starter_check_hook
 	print_legacy_auto_update_token_repair_advisory
 	write_audit_manifest "$operation"
 	remove_legacy_audit_manifest_if_migrated
@@ -323,6 +325,8 @@ uninstall() {
 	rmdir "${repo_root}/standards" 2>/dev/null || true
 	rmdir "${repo_root}/.github/workflows" 2>/dev/null || true
 	rmdir "${repo_root}/.github" 2>/dev/null || true
+	clear_starter_check_hooks_path_after_uninstall
+	rmdir "${repo_root}/.githooks" 2>/dev/null || true
 }
 
 manage_downstream_main() {

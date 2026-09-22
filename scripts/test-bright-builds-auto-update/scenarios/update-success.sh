@@ -460,3 +460,47 @@ test_legacy_helper_falls_back_from_stale_exact_commit_during_status() {
 	commit_count="$(git -C "$repo_path" rev-list --count HEAD)"
 	assert_eq "$commit_count" "2" "stale exact-commit fallback should still create one update commit"
 }
+
+test_auto_update_installs_starter_check_hook() {
+	local bundle_root=""
+	local fake_bin=""
+	local hooks_path=""
+	local remote_path=""
+	local repo_path=""
+
+	bundle_root="$(create_source_bundle starter-hook)"
+	repo_path="$(create_repo starter-hook-repo)"
+	remote_path="$(create_bare_remote starter-hook-origin)"
+	fake_bin="${temp_root}/starter-hook-bin"
+
+	init_git_repo "$repo_path"
+	git -C "$repo_path" remote add origin "https://github.com/example/starter-hook.git"
+	git -C "$repo_path" config \
+		"url.file://${remote_path}.insteadOf" \
+		"https://github.com/example/starter-hook.git"
+	install_auto_update_repo "$bundle_root" "$repo_path"
+	rm -f "${repo_path}/.githooks/pre-commit"
+	rmdir "${repo_path}/.githooks" 2>/dev/null || true
+	awk -v entry='- `.githooks/pre-commit`' '$0 != entry { print }' \
+		"${repo_path}/bright-builds-rules.audit.md" >"${repo_path}/bright-builds-rules.audit.md.updated"
+	mv "${repo_path}/bright-builds-rules.audit.md.updated" "${repo_path}/bright-builds-rules.audit.md"
+	git -C "$repo_path" config --local --unset-all core.hooksPath
+	commit_all "$repo_path" "Initial managed install without starter hook"
+	git -C "$repo_path" push -u origin main >/dev/null
+	create_fake_curl_bin "$fake_bin" "$bundle_root"
+
+	run_auto_update "$repo_path" "$fake_bin"
+	assert_eq "$run_status" "0" "starter-hook auto-update should succeed"
+	assert_contains "$run_output" "Pushed managed updates directly to main" "starter-hook auto-update should publish the hook"
+	assert_file_exists "${repo_path}/.githooks/pre-commit"
+	assert_file_contains "${repo_path}/.githooks/pre-commit" "bun scripts/bright-builds-check.ts all" "auto-update should install the starter-check hook"
+	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "\`.githooks/pre-commit\`" "auto-update should record the starter-check hook"
+	hooks_path="$(git -C "$repo_path" config --local --get core.hooksPath)"
+	assert_eq "$hooks_path" ".githooks" "auto-update should set core.hooksPath to .githooks"
+	if ! git --git-dir="$remote_path" ls-tree -r --name-only refs/heads/main | grep -Fxq ".githooks/pre-commit"; then
+		fail "scheduled auto-update should commit the starter-check hook"
+	fi
+	if ! git --git-dir="$remote_path" show refs/heads/main:.githooks/pre-commit | grep -Fq "bun scripts/bright-builds-check.ts all"; then
+		fail "scheduled auto-update should commit the managed starter-check command"
+	fi
+}
