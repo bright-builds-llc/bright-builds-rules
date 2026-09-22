@@ -203,6 +203,15 @@ resolve_whole_file_managed_state() {
 	local pre_standards_managed_files_markdown=""
 	local pre_standards_marked_path=""
 	local pre_standards_legacy_path=""
+	local pre_starter_hook_managed_files_markdown=""
+	local pre_starter_hook_marked_path=""
+	local pre_starter_hook_legacy_path=""
+	local pre_frontend_ui_with_hook_managed_files_markdown=""
+	local pre_frontend_ui_with_hook_marked_path=""
+	local pre_frontend_ui_with_hook_legacy_path=""
+	local pre_standards_with_hook_managed_files_markdown=""
+	local pre_standards_with_hook_marked_path=""
+	local pre_standards_with_hook_legacy_path=""
 	local pre_frontend_ui_managed_files_markdown=""
 	local pre_frontend_ui_marked_path=""
 	local pre_frontend_ui_legacy_path=""
@@ -232,6 +241,40 @@ resolve_whole_file_managed_state() {
 	fi
 
 	if [[ "$actual_relative_destination" == "$audit_destination" || "$actual_relative_destination" == "$legacy_audit_destination" ]]; then
+		pre_starter_hook_managed_files_markdown="$(build_current_pre_starter_hook_managed_files_markdown)"
+		pre_starter_hook_marked_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").pre-starter-hook.marked" "$relative_destination" "$pre_starter_hook_managed_files_markdown" "enabled")"
+		if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$pre_starter_hook_marked_path" "$actual_relative_destination"; then
+			printf 'legacy\n'
+			return
+		fi
+		if marked_candidate_path_matches_destination_as_legacy_exact_match "$destination_path" "$pre_starter_hook_marked_path" "$actual_relative_destination"; then
+			printf 'legacy\n'
+			return
+		fi
+
+		pre_starter_hook_legacy_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").pre-starter-hook.legacy" "$relative_destination" "$pre_starter_hook_managed_files_markdown" "disabled")"
+		if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$pre_starter_hook_legacy_path" "$actual_relative_destination"; then
+			printf 'legacy\n'
+			return
+		fi
+
+		pre_frontend_ui_with_hook_managed_files_markdown="$(build_current_pre_frontend_ui_with_starter_hook_managed_files_markdown)"
+		pre_frontend_ui_with_hook_marked_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").pre-frontend-ui-hook.marked" "$relative_destination" "$pre_frontend_ui_with_hook_managed_files_markdown" "enabled")"
+		if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$pre_frontend_ui_with_hook_marked_path" "$actual_relative_destination"; then
+			printf 'legacy\n'
+			return
+		fi
+		if marked_candidate_path_matches_destination_as_legacy_exact_match "$destination_path" "$pre_frontend_ui_with_hook_marked_path" "$actual_relative_destination"; then
+			printf 'legacy\n'
+			return
+		fi
+
+		pre_frontend_ui_with_hook_legacy_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").pre-frontend-ui-hook.legacy" "$relative_destination" "$pre_frontend_ui_with_hook_managed_files_markdown" "disabled")"
+		if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$pre_frontend_ui_with_hook_legacy_path" "$actual_relative_destination"; then
+			printf 'legacy\n'
+			return
+		fi
+
 		pre_frontend_ui_managed_files_markdown="$(build_current_pre_frontend_ui_managed_files_markdown)"
 		pre_frontend_ui_marked_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").pre-frontend-ui.marked" "$relative_destination" "$pre_frontend_ui_managed_files_markdown" "enabled")"
 		if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$pre_frontend_ui_marked_path" "$actual_relative_destination"; then
@@ -245,6 +288,23 @@ resolve_whole_file_managed_state() {
 
 		pre_frontend_ui_legacy_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").pre-frontend-ui.legacy" "$relative_destination" "$pre_frontend_ui_managed_files_markdown" "disabled")"
 		if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$pre_frontend_ui_legacy_path" "$actual_relative_destination"; then
+			printf 'legacy\n'
+			return
+		fi
+
+		pre_standards_with_hook_managed_files_markdown="$(build_current_pre_standards_with_starter_hook_managed_files_markdown)"
+		pre_standards_with_hook_marked_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").pre-standards-hook.marked" "$relative_destination" "$pre_standards_with_hook_managed_files_markdown" "enabled")"
+		if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$pre_standards_with_hook_marked_path" "$actual_relative_destination"; then
+			printf 'legacy\n'
+			return
+		fi
+		if marked_candidate_path_matches_destination_as_legacy_exact_match "$destination_path" "$pre_standards_with_hook_marked_path" "$actual_relative_destination"; then
+			printf 'legacy\n'
+			return
+		fi
+
+		pre_standards_with_hook_legacy_path="$(render_template_to_tmp_path_for_install_state "$source_path" "$(basename "$relative_destination").pre-standards-hook.legacy" "$relative_destination" "$pre_standards_with_hook_managed_files_markdown" "disabled")"
+		if candidate_path_matches_destination_or_mdformat_variant "$destination_path" "$pre_standards_with_hook_legacy_path" "$actual_relative_destination"; then
 			printf 'legacy\n'
 			return
 		fi

@@ -10,6 +10,7 @@ strip_whole_file_managed_markers() {
 		".github/pull_request_template.md" \
 		"bright-builds-rules.audit.md" \
 		"scripts/bright-builds-check.ts" \
+		".githooks/pre-commit" \
 		".github/workflows/bright-builds-checks.yml" \
 		"scripts/bright-builds-auto-update.sh" \
 		".github/workflows/bright-builds-auto-update.yml"; do

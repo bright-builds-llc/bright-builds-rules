@@ -23,6 +23,8 @@ auto_update_workflow_source="templates/bright-builds-auto-update.yml"
 auto_update_workflow_destination=".github/workflows/bright-builds-auto-update.yml"
 checks_script_source="templates/bright-builds-check.ts"
 checks_script_destination="scripts/bright-builds-check.ts"
+starter_hook_source="templates/githooks/pre-commit"
+starter_hook_destination=".githooks/pre-commit"
 checks_workflow_source="templates/bright-builds-checks.yml"
 checks_workflow_destination=".github/workflows/bright-builds-checks.yml"
 prerename_compat_auto_update_script_source="templates/compat/prerename/bright-builds-auto-update.sh"
@@ -68,6 +70,7 @@ base_managed_pairs=(
 	"${sidecar_source}|${sidecar_destination}"
 	"templates/pull_request_template.md|.github/pull_request_template.md"
 	"${checks_script_source}|${checks_script_destination}"
+	"${starter_hook_source}|${starter_hook_destination}"
 )
 managed_standards_paths=(
 	"standards/index.md"
@@ -85,6 +88,7 @@ base_whole_file_managed_pairs=(
 	"${sidecar_source}|${sidecar_destination}"
 	"templates/pull_request_template.md|.github/pull_request_template.md"
 	"${checks_script_source}|${checks_script_destination}"
+	"${starter_hook_source}|${starter_hook_destination}"
 	"${audit_source}|${audit_destination}"
 )
 base_managed_status_paths=(

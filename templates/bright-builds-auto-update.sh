@@ -194,6 +194,7 @@ stage_managed_paths() {
 		coding-and-architecture-requirements.audit.md \
 		.github/pull_request_template.md \
 		.github/workflows/bright-builds-checks.yml \
+		.githooks/pre-commit \
 		scripts/bright-builds-check.ts \
 		standards/index.md \
 		standards/core/architecture.md \
@@ -236,6 +237,7 @@ restore_audit_if_only_runtime_changed() {
 		README.md \
 		.github/pull_request_template.md \
 		.github/workflows/bright-builds-checks.yml \
+		.githooks/pre-commit \
 		scripts/bright-builds-check.ts \
 		standards/index.md \
 		standards/core/architecture.md \

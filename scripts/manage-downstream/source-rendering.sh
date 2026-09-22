@@ -333,7 +333,7 @@ rewrite_rendered_file_for_legacy_identity() {
 				*"standards/"*" \\")
 					continue
 					;;
-				*".github/workflows/bright-builds-checks.yml"* | *"scripts/bright-builds-check.ts"*)
+				*".github/workflows/bright-builds-checks.yml"* | *"scripts/bright-builds-check.ts"* | *".githooks/pre-commit"*)
 					continue
 					;;
 				esac
@@ -621,5 +621,8 @@ write_rendered_file() {
 	cp "$rendered_path" "$updated_path"
 	maybe_mdformat_whole_file_managed_markdown "$updated_path" "$relative_destination"
 	mv "$updated_path" "$destination_path"
+	if [[ "$relative_destination" == "$starter_hook_destination" ]]; then
+		chmod +x "$destination_path"
+	fi
 	note "Wrote ${relative_destination}"
 }

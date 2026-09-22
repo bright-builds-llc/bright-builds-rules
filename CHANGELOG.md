@@ -4,6 +4,7 @@ This repository uses a simple release-notes model instead of a heavyweight chang
 
 ## Unreleased
 
+- Added a managed downstream `.githooks/pre-commit` starter-check gate that runs `bun scripts/bright-builds-check.ts all`, fails closed when Bun is missing, and is activated by install and update setting repo-local `core.hooksPath` to `.githooks`.
 - Added reasoned trailing-slash directory exceptions for the downstream file-length checker, with recursive path-boundary matching, overlap validation, one notice per excluded directory, and update compatibility for existing managed installations.
 - Added a fail-by-default Bun starter checker for downstream source-file length and active lesson-ledger structure, optional reasoned exact-path exceptions, and a GitHub-only managed checks workflow that propagates through install, update, auto-update, drift repair, audit, and uninstall.
 - Hardened managed-source downloads with bounded transient retries, non-empty response validation, and atomic replacement so failed fetches cannot empty or publish managed files.

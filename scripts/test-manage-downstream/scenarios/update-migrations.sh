@@ -456,3 +456,114 @@ test_prerename_clean_install_is_installed_and_update_migrates_legacy_layout() {
 		"${repo_path}/CONTRIBUTING.md" \
 		"${repo_path}/README.md"
 }
+
+test_update_backfills_missing_starter_check_hook() {
+	local hooks_path=""
+	local repo_path=""
+
+	repo_path="$(create_repo pre-starter-hook)"
+	init_git_repo_with_origin "$repo_path" "git@github.com:someone-else/pre-starter-hook.git"
+
+	run_manage "$repo_path" install
+	assert_eq "$run_status" "0" "pre-starter-hook setup install should succeed"
+	rm -f "${repo_path}/.githooks/pre-commit"
+	rmdir "${repo_path}/.githooks" 2>/dev/null || true
+	remove_audit_entry "${repo_path}/bright-builds-rules.audit.md" ".githooks/pre-commit"
+	git -C "$repo_path" config --local --unset-all core.hooksPath
+
+	run_manage "$repo_path" status
+	assert_eq "$run_status" "0" "status should succeed for a pre-starter-hook audit manifest"
+	assert_contains "$run_output" "Repo state: installed" "pre-starter-hook installs should remain updateable"
+	assert_not_contains "$run_output" "Blocking paths:" "a missing starter-check hook should not block update"
+	assert_contains "$run_output" "[missing] .githooks/pre-commit" "status should report the missing starter-check hook"
+
+	run_manage "$repo_path" update
+	assert_eq "$run_status" "0" "update should install the missing starter-check hook"
+	assert_file_exists "${repo_path}/.githooks/pre-commit"
+	assert_file_contains "${repo_path}/.githooks/pre-commit" "bun scripts/bright-builds-check.ts all" "updated hook should run the starter check"
+	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "\`.githooks/pre-commit\`" "update should add the starter-check hook to the audit manifest"
+	hooks_path="$(git -C "$repo_path" config --local --get core.hooksPath)"
+	assert_eq "$hooks_path" ".githooks" "update should set core.hooksPath to .githooks"
+}
+
+test_starter_check_hook_fails_closed_and_blocks_drift() {
+	local conflict_repo_path=""
+	local hook_bin=""
+	local hook_output=""
+	local hook_status=0
+	local hooks_path=""
+	local repo_path=""
+
+	repo_path="$(create_repo starter-hook-gate)"
+	init_git_repo_with_origin "$repo_path" "git@github.com:someone-else/starter-hook-gate.git"
+	git -C "$repo_path" config --local core.hooksPath .husky
+
+	run_manage "$repo_path" install
+	assert_eq "$run_status" "0" "starter-check hook install should succeed"
+	assert_contains "$run_output" "Replaced core.hooksPath .husky with .githooks" "install should replace a different hooks path"
+	hooks_path="$(git -C "$repo_path" config --local --get core.hooksPath)"
+	assert_eq "$hooks_path" ".githooks" "install should set core.hooksPath to .githooks"
+	[[ -x "${repo_path}/.githooks/pre-commit" ]] || fail "installed starter-check hook should be executable"
+
+	hook_bin="${temp_root}/starter-hook-bin"
+	mkdir -p "$hook_bin"
+	ln -s "$(command -v bash)" "${hook_bin}/bash"
+	ln -s "$(command -v git)" "${hook_bin}/git"
+	set +e
+	hook_output="$(cd "$repo_path" && env PATH="${hook_bin}" ./.githooks/pre-commit 2>&1)"
+	hook_status=$?
+	set -e
+	assert_eq "$hook_status" "1" "starter-check hook should fail when bun is missing"
+	assert_contains "$hook_output" "error: bun is required to run Bright Builds checks before commit." "missing bun should be reported as an error"
+	assert_contains "$hook_output" "curl -fsSL https://bun.sh/install | bash -s -- bun-v1.3.9" "missing bun should print the setup command"
+
+	printf 'line\n%.0s' {1..629} >"${repo_path}/oversized.ts"
+	git -C "$repo_path" add oversized.ts
+	set +e
+	hook_output="$(cd "$repo_path" && ./.githooks/pre-commit 2>&1)"
+	hook_status=$?
+	set -e
+	assert_eq "$hook_status" "1" "starter-check hook should fail when the checker reports a finding"
+	assert_contains "$hook_output" "FAIL file-lengths oversized.ts" "starter-check hook should surface the checker finding"
+
+	rm -f "${repo_path}/oversized.ts"
+	git -C "$repo_path" add -A
+	set +e
+	hook_output="$(cd "$repo_path" && ./.githooks/pre-commit 2>&1)"
+	hook_status=$?
+	set -e
+	assert_eq "$hook_status" "0" "starter-check hook should pass when the checker reports no findings"
+
+	printf '\n# downstream hook drift\n' >>"${repo_path}/.githooks/pre-commit"
+	run_manage "$repo_path" status
+	assert_eq "$run_status" "0" "drifted starter-check hook status should complete"
+	assert_contains "$run_output" "Repo state: blocked" "a drifted starter-check hook should block updates"
+	assert_contains "$run_output" "Blocking paths: .githooks/pre-commit" "status should identify the drifted starter-check hook"
+
+	run_manage "$repo_path" uninstall
+	assert_eq "$run_status" "0" "uninstall should keep a drifted starter-check hook"
+	assert_file_contains "${repo_path}/.githooks/pre-commit" "downstream hook drift" "uninstall should preserve drifted starter-check hook content"
+	hooks_path="$(git -C "$repo_path" config --local --get core.hooksPath || true)"
+	assert_eq "$hooks_path" ".githooks" "uninstall should keep core.hooksPath when other hook files remain"
+
+	conflict_repo_path="$(create_repo starter-hook-conflict)"
+	init_git_repo_with_origin "$conflict_repo_path" "git@github.com:someone-else/starter-hook-conflict.git"
+	write_file "${conflict_repo_path}/.githooks/pre-commit" $'#!/usr/bin/env bash\necho local hook\n'
+	run_manage "$conflict_repo_path" status
+	assert_eq "$run_status" "0" "existing starter-check hook status should complete"
+	assert_contains "$run_output" "Repo state: blocked" "an existing pre-commit hook should block fresh install"
+	assert_contains "$run_output" ".githooks/pre-commit" "status should identify the pre-commit conflict"
+
+	run_manage "$conflict_repo_path" install --force
+	assert_eq "$run_status" "0" "force install should replace a conflicting pre-commit hook"
+	assert_file_contains "${conflict_repo_path}/.githooks/pre-commit" "bun scripts/bright-builds-check.ts all" "force install should write the managed starter-check hook"
+	assert_file_not_contains "${conflict_repo_path}/.githooks/pre-commit" "echo local hook" "force install should remove the conflicting hook body"
+	hooks_path="$(git -C "$conflict_repo_path" config --local --get core.hooksPath)"
+	assert_eq "$hooks_path" ".githooks" "force install should set core.hooksPath"
+
+	run_manage "$conflict_repo_path" uninstall
+	assert_eq "$run_status" "0" "clean starter-check hook uninstall should succeed"
+	assert_file_missing "${conflict_repo_path}/.githooks/pre-commit"
+	hooks_path="$(git -C "$conflict_repo_path" config --local --get core.hooksPath || true)"
+	assert_eq "$hooks_path" "" "uninstall should unset core.hooksPath when .githooks is empty"
+}

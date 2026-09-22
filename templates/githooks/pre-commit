@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# REPLACE_WITH_MANAGED_FILE_MARKER
+# Managed upstream by bright-builds-rules.
+# If this hook needs a fix, open an upstream PR or issue instead of editing the downstream managed copy.
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+if ! command -v bun >/dev/null 2>&1; then
+	printf '%s\n' "error: bun is required to run Bright Builds checks before commit." >&2
+	printf '%s\n' "Install Bun 1.3.9, then retry the commit:" >&2
+	printf '%s\n' "  curl -fsSL https://bun.sh/install | bash -s -- bun-v1.3.9" >&2
+	exit 1
+fi
+
+bun scripts/bright-builds-check.ts all
