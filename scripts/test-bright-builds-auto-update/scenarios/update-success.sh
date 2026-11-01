@@ -374,6 +374,36 @@ test_refreshes_old_managed_canonical_badge_to_flat_default_when_upstream_is_othe
 	assert_eq "$latest_subject" "chore: update Bright Builds Rules" "managed badge default refresh should create the standard auto-update commit"
 }
 
+test_publishes_badge_refresh_in_a_lowercase_readme() {
+	local bundle_root=""
+	local repo_path=""
+	local remote_path=""
+	local fake_bin=""
+	local old_managed_badge=""
+	local current_badge=""
+
+	bundle_root="$(create_source_bundle readme-lowercase)"
+	repo_path="$(create_repo readme-lowercase-repo)"
+	remote_path="$(create_bare_remote readme-lowercase-origin)"
+	fake_bin="${temp_root}/readme-lowercase-bin"
+
+	init_git_repo "$repo_path"
+	git -C "$repo_path" remote add origin "$remote_path"
+	write_file "${repo_path}/readme.md" $'# Demo App\n\nBody text remains.\n'
+	write_file "${repo_path}/package.json" $'{\n  "devDependencies": {\n    "typescript": "5.9.2"\n  }\n}\n'
+	install_auto_update_repo "$bundle_root" "$repo_path"
+	old_managed_badge="$(current_bright_builds_canonical_badge)"
+	current_badge="$(current_bright_builds_flat_badge)"
+	replace_exact_line "${repo_path}/readme.md" "$current_badge" "$old_managed_badge"
+	commit_all "$repo_path" "Initial managed install"
+	git -C "$repo_path" push -u origin main >/dev/null
+	create_fake_curl_bin "$fake_bin" "$bundle_root"
+
+	run_auto_update "$repo_path" "$fake_bin"
+	assert_eq "$run_status" "0" "auto-update should succeed on a lowercase readme"
+	assert_contains "$(git --git-dir="$remote_path" show refs/heads/main:readme.md)" "$current_badge" "auto-update should publish the refreshed badge in the lowercase readme"
+}
+
 test_legacy_helper_migrates_prerename_install_with_current_manager() {
 	local legacy_bundle_root=""
 	local current_bundle_root=""

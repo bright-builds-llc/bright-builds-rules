@@ -308,3 +308,23 @@ test_rich_readme_badge_detection() {
 	assert_line_order "${repo_path}/README.md" "Go 1.23.0" "Bright Builds: Rules"
 	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "README.md (managed badges block)" "audit should track the managed README badge block when present"
 }
+
+test_lowercase_readme_keeps_its_name_and_stays_installed() {
+	local repo_path=""
+
+	repo_path="$(create_repo readme-lowercase)"
+	write_file "${repo_path}/readme.md" $'# Demo App\n\nBody text remains.\n'
+	write_file "${repo_path}/package.json" $'{\n  "devDependencies": {\n    "typescript": "5.9.2"\n  }\n}\n'
+
+	run_manage "$repo_path" install
+	assert_eq "$run_status" "0" "install should add badges to a lowercase readme"
+	assert_exact_line_count "${repo_path}/readme.md" "$readme_badges_begin" "1"
+	assert_file_contains "${repo_path}/bright-builds-rules.audit.md" "README.md (managed badges block)" "audit should record the canonical README name"
+
+	run_manage "$repo_path" status
+	assert_eq "$run_status" "0" "status should succeed on a lowercase readme"
+	assert_contains "$run_output" "Repo state: installed" "a lowercase readme should not block the audit manifest"
+	assert_contains "$run_output" "README badge block: present" "status should find the badges in a lowercase readme"
+
+	assert_eq "$(find "$repo_path" -maxdepth 1 -iname README.md -exec basename {} \;)" "readme.md" "the manager should keep the readme's name and create no second file"
+}
