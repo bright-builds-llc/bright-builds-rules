@@ -172,7 +172,7 @@ build_managed_files_markdown_for_state() {
 	fi
 
 	if [[ "$current_readme_badge_state" == "present" ]]; then
-		entries+=("${readme_destination} (managed badges block)")
+		entries+=("${readme_canonical_name} (managed badges block)")
 	fi
 
 	if [[ "$current_auto_update_mode" == "enabled" ]]; then
@@ -246,7 +246,7 @@ build_current_pre_frontend_ui_managed_files_markdown() {
 	done
 
 	if [[ "$readme_badge_state" == "present" ]]; then
-		entries+=("${readme_destination} (managed badges block)")
+		entries+=("${readme_canonical_name} (managed badges block)")
 	fi
 
 	if [[ "$current_auto_update_mode" == "enabled" ]]; then

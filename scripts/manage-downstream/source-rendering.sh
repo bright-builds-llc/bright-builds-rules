@@ -299,6 +299,7 @@ rewrite_rendered_file_for_legacy_identity() {
 				fi
 				;;
 			"${auto_update_script_destination}")
+				line="${line//\':(icase)README.md\'/README.md}"
 				if [[ "$line" == '# Managed upstream by bright-builds-rules.' ]]; then
 					continue
 				fi

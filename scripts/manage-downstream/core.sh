@@ -38,7 +38,8 @@ contributing_block_end="<!-- bright-builds-rules-contributing:end -->"
 managed_file_marker_placeholder="REPLACE_WITH_MANAGED_FILE_MARKER"
 managed_file_marker_prefix="bright-builds-rules-managed-file"
 legacy_managed_file_marker_prefix="coding-and-architecture-requirements-managed-file"
-readme_destination="README.md"
+readme_canonical_name="README.md"
+readme_destination="$readme_canonical_name"
 readme_badges_begin="<!-- bright-builds-rules-readme-badges:begin -->"
 readme_badges_end="<!-- bright-builds-rules-readme-badges:end -->"
 legacy_readme_badges_begin="<!-- coding-and-architecture-requirements-readme-badges:begin -->"
@@ -460,6 +461,16 @@ normalize_personal_owner_identity() {
 
 is_legacy_source_repository_url() {
 	[[ "${1:-}" == "$legacy_bright_builds_url" ]]
+}
+
+# A downstream README keeps its own name, so a lowercase readme.md reads the same on case-sensitive and case-insensitive file systems. The audit manifest always records the canonical name.
+resolve_readme_destination() {
+	local maybe_readme_name=""
+
+	maybe_readme_name="$(find "$repo_root" -maxdepth 1 \( -type f -o -type l \) -iname "$readme_canonical_name" -exec basename {} \; | LC_ALL=C sort | sed -n 1p)"
+	if [[ -n "$maybe_readme_name" ]]; then
+		readme_destination="$maybe_readme_name"
+	fi
 }
 
 resolve_effective_audit_destination() {

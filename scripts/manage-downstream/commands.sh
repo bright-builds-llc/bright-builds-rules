@@ -379,6 +379,7 @@ manage_downstream_main() {
 
 	[[ -d "$repo_root" ]] || die "repo root does not exist: $repo_root"
 	repo_root="$(cd "$repo_root" && pwd)"
+	resolve_readme_destination
 
 	resolve_current_install_metadata
 
